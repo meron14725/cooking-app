@@ -695,7 +695,7 @@ export function PlanPage() {
   const title = status === 'shopping' || status === 'prepping' ? TITLES[status] : TITLES.draft
   return (
     <>
-      <PageHeader title={title} meta={status && PLAN_STATUS_LABELS[status]} />
+      <PageHeader title={title} meta={status && PLAN_STATUS_LABELS[status]} backTo="/" />
       {/* 下ごしらえ中は下ごしらえ → 袋詰めの中で進み具合を出す */}
       {current.isSuccess && status !== 'prepping' && (
         <PlanProgress current={status === 'shopping' ? 'shopping' : 'plan'} />

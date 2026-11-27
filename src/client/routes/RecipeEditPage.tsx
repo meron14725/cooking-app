@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { normalizeUnit, toBaseQuantity, toGrams, type UnitMaster } from '../../shared/domain/units'
 import type { Ingredient } from '../../shared/schemas/ingredient'
 import {
@@ -18,7 +18,7 @@ import { aiErrorMessage, useDeleteRecipe, useEstimateCalories, useRecipe, useSav
 import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
 import { Icon } from '../components/Icon'
 import { IngredientSelect, unitChoices } from '../components/ingredientInputs'
-import { PageHeader } from '../components/PageHeader'
+import { PageHeader, useGoBack } from '../components/PageHeader'
 import { QuickAddIngredient } from '../components/QuickAddIngredient'
 import { RecipePhoto } from '../components/RecipePhoto'
 
@@ -246,12 +246,12 @@ function OfficialInfo({ info }: { info: RecipeDraftOfficial | null }) {
 
 export function RecipeEditPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const location = useLocation()
   /** URL 取り込み（S11）や AI 補完提案（S03）から来たときの下書き。returnTo は保存・やめたときの戻り先 */
   const state = id ? null : (location.state as { draft?: RecipeDraft; returnTo?: string } | null)
   const draft = state?.draft
   const back = state?.returnTo ?? '/recipes'
+  const goBack = useGoBack(back)
   const existing = useRecipe(id)
   const estimate = useEstimateCalories()
   const [estimateError, setEstimateError] = useState<string | null>(null)
@@ -314,7 +314,7 @@ export function RecipeEditPage() {
     setErrors({})
     try {
       await save.mutateAsync(input)
-      navigate(back)
+      goBack()
     } catch (err) {
       setErrors({ form: err instanceof ApiRequestError ? err.message : '保存できませんでした' })
     }
@@ -342,7 +342,7 @@ export function RecipeEditPage() {
     setDeleteError(null)
     try {
       await remove.mutateAsync(id)
-      navigate('/recipes')
+      goBack()
     } catch (err) {
       setDeleteError(err instanceof ApiRequestError ? err.message : '削除できませんでした')
     }
@@ -355,7 +355,7 @@ export function RecipeEditPage() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
-      <PageHeader title={id ? 'レシピを編集' : 'レシピを追加'} backTo="/recipes" />
+      <PageHeader title={id ? 'レシピを編集' : 'レシピを追加'} backTo={back} />
       {existing.data && (
         <p className="-mt-3 text-xs text-ink-muted">作成元: {SOURCE_TYPE_LABELS[existing.data.sourceType]}</p>
       )}
@@ -667,7 +667,7 @@ export function RecipeEditPage() {
         <Button type="submit" disabled={save.isPending} className="flex-1">
           {save.isPending ? '保存中…' : '保存'}
         </Button>
-        <Button variant="secondary" onClick={() => navigate(back)}>
+        <Button variant="secondary" onClick={() => goBack()}>
           戻る
         </Button>
       </div>
