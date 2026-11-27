@@ -1,5 +1,5 @@
 import { type ZodType, z } from 'zod'
-import { ingredientClassifySchema, recipeClassifySchema } from '../../shared/schemas/attributes'
+import { ingredientClassifySchema, priceEstimateSchema, recipeClassifySchema } from '../../shared/schemas/attributes'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
 import {
   CALORIE_SYSTEM,
@@ -8,6 +8,8 @@ import {
   extractPrompt,
   INGREDIENT_CLASSIFY_SYSTEM,
   ingredientClassifyPrompt,
+  PRICE_ESTIMATE_SYSTEM,
+  priceEstimatePrompt,
   RECIPE_CLASSIFY_SYSTEM,
   recipeClassifyPrompt,
   SUGGEST_SYSTEM,
@@ -85,6 +87,10 @@ export class GeminiProvider implements AiProvider {
 
   classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0]) {
     return this.generate(INGREDIENT_CLASSIFY_SYSTEM, ingredientClassifyPrompt(items), ingredientClassifySchema)
+  }
+
+  estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0]) {
+    return this.generate(PRICE_ESTIMATE_SYSTEM, priceEstimatePrompt(items), priceEstimateSchema)
   }
 
   classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {

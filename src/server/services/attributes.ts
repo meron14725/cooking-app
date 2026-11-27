@@ -2,15 +2,18 @@
  * 「まとめて推定」（docs/design/09-recommendation-v2.md「区分・系統の推定」「食材マスタの手直し」）。
  * 段ごとに、ルールで決めてから、決まらなかったものだけを limit 件ずつ AI に聞く。
  * 1 回の呼び出しでは、AI に聞く必要が残っている最初の段だけ AI を使う（画面は remaining が 0 になるまで呼び続ける）。
- * 段の順: 食材の分類・重さ → レシピの区分・系統（区分の判定に食材の分類を使うため）
+ * 段の順: 食材の分類・重さ → 食材の価格（docs/design/10-cost.md。g 換算を使うため）→ レシピの区分・系統（区分の判定に食材の分類を使うため）
  */
-import { and, asc, eq, isNull, or } from 'drizzle-orm'
+import { and, asc, eq, isNull, lt, or } from 'drizzle-orm'
+import { PRICE_STALE_DAYS } from '../../shared/domain/constants'
+import { representativeLabel } from '../../shared/domain/cost'
 import { fixIngredientByRule } from '../../shared/domain/ingredientAttributes'
+import { priceByRule } from '../../shared/domain/priceRules'
 import { deriveAttributes } from '../../shared/domain/recipeAttributes'
 import type { EstimateAttributesResponse, StageProgress } from '../../shared/schemas/attributes'
 import type { AiProvider } from '../ai/provider'
 import type { Db } from '../db/client'
-import { ingredients, recipeIngredients, recipes } from '../db/schema'
+import { ingredients, packageUnits, recipeIngredients, recipes } from '../db/schema'
 
 /** D1 の batch 1 回に入れる文の数 */
 const BATCH_CHUNK = 50
@@ -81,6 +84,117 @@ async function ingredientStage(db: Db, ai: () => AiProvider, limit: number, useA
           attributesSource: 'ai',
         })
         .where(eq(ingredients.id, p.row.id))
+    }),
+  )
+  return { updated: updates.length + batch.length, remaining: pending.length - batch.length }
+}
+
+// ---------- 価格 ----------
+
+/** AI の答えで保存してよい価格（円）の範囲 */
+const AI_PRICE_MIN_YEN = 1
+const AI_PRICE_MAX_YEN = 20_000
+
+/**
+ * 価格の段の対象: 削除されていない、常備品でない、価格が未設定の食材のうち、まだ推定していないもの。
+ * AI が答えられなかった食材は price_yen を NULL のまま price_updated_at だけ入れ、次からは聞かない
+ */
+const priceTarget = () =>
+  and(
+    isNull(ingredients.archivedAt),
+    eq(ingredients.isStaple, false),
+    isNull(ingredients.priceYen),
+    isNull(ingredients.priceUpdatedAt),
+  )
+
+/** 推定中に手で直された値を上書きしない */
+const notManual = () => or(isNull(ingredients.priceSource), eq(ingredients.priceSource, 'default'))
+
+/**
+ * 365 日より前に入れた目安（default）と、365 日より前に AI が答えられなかった印を、未設定に戻す。
+ * 手で入れた価格（manual）は触らない
+ */
+async function resetStalePrices(db: Db, now: Date) {
+  const cutoff = new Date(now.getTime() - PRICE_STALE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  await db
+    .update(ingredients)
+    .set({ priceYen: null, priceSource: null, priceUpdatedAt: null })
+    .where(
+      and(
+        lt(ingredients.priceUpdatedAt, cutoff),
+        or(eq(ingredients.priceSource, 'default'), and(isNull(ingredients.priceSource), isNull(ingredients.priceYen))),
+      ),
+    )
+}
+
+async function priceStage(db: Db, ai: () => AiProvider, limit: number, useAi: boolean): Promise<StageProgress> {
+  const target = priceTarget()
+  const rows = await db
+    .select({
+      id: ingredients.id,
+      name: ingredients.name,
+      aliases: ingredients.aliases,
+      unit: ingredients.unit,
+      gramsPerUnit: ingredients.gramsPerUnit,
+    })
+    .from(ingredients)
+    .where(target)
+    .orderBy(asc(ingredients.name))
+  if (rows.length === 0) return { updated: 0, remaining: 0 }
+
+  // ID を IN に並べず、同じ条件で JOIN して販売単位を取る（D1 の変数の上限）
+  const units = await db
+    .select({
+      ingredientId: packageUnits.ingredientId,
+      label: packageUnits.label,
+      quantity: packageUnits.quantity,
+      isDefault: packageUnits.isDefault,
+    })
+    .from(packageUnits)
+    .innerJoin(ingredients, eq(ingredients.id, packageUnits.ingredientId))
+    .where(priceTarget())
+    .orderBy(asc(packageUnits.createdAt), asc(packageUnits.id))
+  const unitsByIngredient = new Map<string, typeof units>()
+  for (const u of units) {
+    const list = unitsByIngredient.get(u.ingredientId) ?? []
+    list.push(u)
+    unitsByIngredient.set(u.ingredientId, list)
+  }
+
+  const now = new Date().toISOString()
+  const save = (id: string, priceYen: number | null) =>
+    db
+      .update(ingredients)
+      .set({ priceYen, priceSource: priceYen === null ? null : 'default', priceUpdatedAt: now })
+      .where(and(eq(ingredients.id, id), isNull(ingredients.priceYen), notManual()))
+
+  const updates: Parameters<Db['batch']>[0][number][] = []
+  const pending: { id: string; name: string; unit: string; basis: string }[] = []
+  for (const row of rows) {
+    const ing = { ...row, packageUnits: unitsByIngredient.get(row.id) ?? [] }
+    const price = priceByRule(ing)
+    if (price !== null) updates.push(save(row.id, price))
+    else pending.push({ id: row.id, name: row.name, unit: row.unit, basis: representativeLabel(ing) })
+  }
+  await runInChunks(db, updates)
+  if (!useAi || pending.length === 0) return { updated: updates.length, remaining: pending.length }
+
+  const batch = pending.slice(0, limit)
+  const result = await ai().estimatePrices(
+    batch.map((p) => ({ key: p.id, name: p.name, unit: p.unit, basis: p.basis })),
+  )
+  const byKey = new Map(result.items.map((i) => [i.key, i.priceYen]))
+  // 答えがない・範囲外・整数でない答えは捨て、未設定のまま印だけ付ける（同じ食材を何度も聞かない）
+  await runInChunks(
+    db,
+    batch.map((p) => {
+      const answer = byKey.get(p.id)
+      const ok =
+        typeof answer === 'number' &&
+        Number.isInteger(answer) &&
+        answer >= AI_PRICE_MIN_YEN &&
+        answer <= AI_PRICE_MAX_YEN
+      return save(p.id, ok ? answer : null)
     }),
   )
   return { updated: updates.length + batch.length, remaining: pending.length - batch.length }
@@ -203,10 +317,19 @@ async function recipeStage(db: Db, ai: () => AiProvider, limit: number, useAi: b
 export async function estimateAttributes(
   db: Db,
   ai: () => AiProvider,
-  limit: number,
+  input: { limit: number; refreshStalePrices: boolean },
 ): Promise<EstimateAttributesResponse> {
+  const { limit } = input
+  if (input.refreshStalePrices) await resetStalePrices(db, new Date())
   const ingredientProgress = await ingredientStage(db, ai, limit, true)
-  // 食材の AI が残っているあいだは、レシピは数えるだけ（食材の分類が直ってから区分を決めるため）
-  const recipeProgress = await recipeStage(db, ai, limit, ingredientProgress.remaining === 0)
-  return { ingredients: ingredientProgress, recipes: recipeProgress }
+  // 前の段の AI が残っているあいだは、後の段はルールだけで進めて数える
+  // （価格は g 換算を、レシピの区分は食材の分類を使うため）
+  const priceProgress = await priceStage(db, ai, limit, ingredientProgress.remaining === 0)
+  const recipeProgress = await recipeStage(
+    db,
+    ai,
+    limit,
+    ingredientProgress.remaining === 0 && priceProgress.remaining === 0,
+  )
+  return { ingredients: ingredientProgress, prices: priceProgress, recipes: recipeProgress }
 }

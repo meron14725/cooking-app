@@ -9,6 +9,11 @@ import { cuisineSchema, dishTypeSchema } from './recipe'
 export const estimateAttributesInputSchema = z.object({
   /** 1 回で AI に聞く件数 */
   limit: z.number().int().min(1).max(40).default(20),
+  /**
+   * 1 年より前に入れた目安の価格（default）を未設定に戻してから推定し直す（docs/design/10-cost.md「価格が古くなったとき」）。
+   * 手で入れた価格（manual）は触らない。最初の 1 回だけ true で呼ぶ
+   */
+  refreshStalePrices: z.boolean().default(false),
 })
 export type EstimateAttributesInput = z.input<typeof estimateAttributesInputSchema>
 
@@ -16,8 +21,26 @@ export type StageProgress = { updated: number; remaining: number }
 
 export type EstimateAttributesResponse = {
   ingredients: StageProgress
+  /** 食材の価格の目安（docs/design/10-cost.md） */
+  prices: StageProgress
   recipes: StageProgress
 }
+
+/** AI に渡す食材（名前・基準単位・代表量の名前だけ） */
+export type PriceEstimateItem = { key: string; name: string; unit: string; basis: string }
+
+export const priceEstimateSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        key: z.string(),
+        /** basis あたりの価格（円）。分からなければ null。範囲外は捨てる */
+        priceYen: z.number().nullable(),
+      }),
+    )
+    .max(40),
+})
+export type PriceEstimateResult = z.infer<typeof priceEstimateSchema>
 
 /** AI に渡す食材（名前と単位だけ） */
 export type IngredientClassifyItem = { key: string; name: string; unit: string; needsGrams: boolean }

@@ -1,4 +1,4 @@
-import type { IngredientClassifyItem, RecipeClassifyItem } from '../../shared/schemas/attributes'
+import type { IngredientClassifyItem, PriceEstimateItem, RecipeClassifyItem } from '../../shared/schemas/attributes'
 import type { EstimateCaloriesInput } from '../../shared/schemas/recipeDraft'
 import type { MasterRef, SuggestPromptInput, TextDraftPromptInput } from './provider'
 
@@ -100,6 +100,14 @@ export const INGREDIENT_CLASSIFY_SYSTEM = `あなたは食材の分類を手伝�
 key は入力のまま返してください。`
 
 export function ingredientClassifyPrompt(items: IngredientClassifyItem[]): string {
+  return `食材:\n${JSON.stringify(items)}`
+}
+
+export const PRICE_ESTIMATE_SYSTEM = `あなたは日本の家庭の買い物を手伝うアシスタントです。食材ごとに、首都圏のふつうのスーパーで特売でないときの値段の目安（税込み、円の整数）を答えてください。
+- priceYen: basis（例: 「3個入り」「100g」「1丁」）あたりの値段。見当がつかなければ null
+key は入力のまま返してください。`
+
+export function priceEstimatePrompt(items: PriceEstimateItem[]): string {
   return `食材:\n${JSON.stringify(items)}`
 }
 

@@ -98,6 +98,11 @@ export class FakeProvider implements AiProvider {
     }
   }
 
+  /** 名前に「高級」があれば答えない（null）、ほかは 1 個 100 円 */
+  async estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0]) {
+    return { items: items.map((i) => ({ key: i.key, priceYen: i.name.includes('高級') ? null : 100 })) }
+  }
+
   /** 名前に「汁」があれば汁物、ほかは副菜。系統は和 */
   async classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
     return {
