@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm'
 import { DEFAULT_SERVINGS } from '../../shared/domain/constants'
+import { costOfEvaluation } from '../../shared/domain/cost'
 import {
   type AvailableStock,
   evaluatePlan,
@@ -19,39 +20,15 @@ import type {
   RecommendationsResponse,
 } from '../../shared/schemas/plan'
 import type { Db } from '../db/client'
-import { ingredients, packageUnits, planRecipes, plans, recipeIngredients, recipes, shoppingItems } from '../db/schema'
+import { planRecipes, plans, recipeIngredients, recipes, shoppingItems } from '../db/schema'
 import { ApiError } from '../errors'
 import { listInventory } from './inventory'
+import { loadRecIngredients } from './recIngredients'
 import { shoppingRowsFromLines } from './shopping'
 
 const IN_PROGRESS: PlanStatus[] = ['draft', 'shopping', 'prepping']
 
 // ---------- レコメンドの入力を DB から作る ----------
-
-/** 食材マスタ（削除済みも含む。レシピから参照されていることがあるため）と販売単位（登録順） */
-async function loadRecIngredients(db: Db): Promise<Map<string, RecIngredient>> {
-  const [rows, units] = await Promise.all([
-    db.select().from(ingredients),
-    db.select().from(packageUnits).orderBy(asc(packageUnits.createdAt), asc(packageUnits.id)),
-  ])
-  return new Map(
-    rows.map((r) => [
-      r.id,
-      {
-        id: r.id,
-        name: r.name,
-        unit: r.unit,
-        isStaple: r.isStaple,
-        canFreeze: r.canFreeze,
-        pantryDays: r.pantryDays,
-        preppedFridgeDays: r.preppedFridgeDays,
-        packageUnits: units
-          .filter((u) => u.ingredientId === r.id)
-          .map((u) => ({ id: u.id, label: u.label, quantity: u.quantity, isDefault: u.isDefault })),
-      },
-    ]),
-  )
-}
 
 /** 登録レシピ（削除済みを除く）と材料 */
 async function loadRecRecipes(db: Db, includeIds: string[] = []): Promise<RecRecipe[]> {
@@ -194,6 +171,14 @@ export async function recommendForPlan(
       return recipe ? [{ recipe, servings: r.servings }] : []
     })
   if (anchors.length === 0) throw new ApiError(409, 'INVALID_STATE', '食べたい料理が選ばれていません')
+  const fixed = (opts.fixed ?? []).map((f) => ({ recipe: byId.get(f.recipeId), servings: f.servings }))
+  const missing = (opts.fixed ?? []).filter((_, i) => {
+    const recipe = fixed[i]?.recipe
+    return !recipe || recipe.archived
+  })
+  if (missing.length > 0) {
+    throw new ApiError(400, 'UNKNOWN_RECIPE', 'レシピが見つかりません', { recipeIds: missing.map((f) => f.recipeId) })
+  }
   const result = recommend({
     anchors,
     catalog: catalog.filter((r) => !r.archived),
@@ -201,18 +186,21 @@ export async function recommendForPlan(
     ingredients: ingredientMap,
     today,
     exclude: opts.exclude,
+    fixed: fixed.flatMap((f) => (f.recipe ? [{ recipe: f.recipe, servings: f.servings }] : [])),
     options: { maxProposals: opts.maxProposals },
   })
   return {
     aiSuggestionRecommended: result.aiSuggestionRecommended,
     hasMore: result.hasMore,
-    proposals: result.proposals.map((p) => toView(p, byId)),
+    proposals: result.proposals.map((p) => toView(p, byId, ingredientMap)),
   }
 }
 
-function toView(p: Proposal, byId: Map<string, RecRecipe>): ProposalView {
+function toView(p: Proposal, byId: Map<string, RecRecipe>, ingredientMap: Map<string, RecIngredient>): ProposalView {
+  const totalMeals = p.recipes.reduce((sum, r) => sum + r.servings, 0)
   return {
     ...p,
+    cost: costOfEvaluation(p, ingredientMap, totalMeals),
     recipes: p.recipes.map((r) => ({
       ...r,
       title: byId.get(r.recipeId)?.title ?? '',
@@ -245,7 +233,7 @@ async function evaluateRecipes(
     const recipe = byId.get(r.recipeId)
     return recipe ? [{ recipe, servings: r.servings, role: r.role, dayIndex: r.dayIndex }] : []
   })
-  const view = toView(evaluatePlan({ items, available, ingredients: ingredientMap, today }), byId)
+  const view = toView(evaluatePlan({ items, available, ingredients: ingredientMap, today }), byId, ingredientMap)
   const archived = items.filter((i) => i.recipe.archived).map((i) => `${i.recipe.title}: 削除済みのレシピです`)
   return { ...view, warnings: [...archived, ...view.warnings] }
 }

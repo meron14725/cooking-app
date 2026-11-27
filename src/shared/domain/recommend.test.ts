@@ -277,6 +277,73 @@ describe('recommend', () => {
     })
   })
 
+  describe('鍵で固定（fixed）', () => {
+    const tofuHalf = recipe('tofuHalf', [['tofu', 0.5]])
+    const catalog = [
+      anchor,
+      tofuHalf,
+      recipe('tofuHalf2', [['tofu', 0.5]]),
+      recipe('porkOnly', [['pork', 200]]),
+      recipe('carrotOnly', [['carrot', 3]]),
+    ]
+    const run = (fixed: { recipe: RecRecipe; servings: number }[], exclude: string[][] = []) =>
+      recommend({
+        anchors: [{ recipe: anchor, servings: 1 }],
+        catalog,
+        available: [],
+        ingredients,
+        today,
+        fixed,
+        exclude,
+      })
+
+    it('固定した追加料理は必ず入り、食数はそのまま。残りは固定した料理の余りを使う組み合わせから選ぶ', () => {
+      const r = run([{ recipe: tofuHalf, servings: 1 }])
+      expect(r.proposals.length).toBeGreaterThan(0)
+      for (const p of r.proposals) {
+        expect(p.recipes).toContainEqual(expect.objectContaining({ recipeId: 'tofuHalf', role: 'added', servings: 1 }))
+        expect(p.recipes).toHaveLength(3)
+      }
+      // 豆腐 1 丁を半分ずつ使い切る相方が一番上
+      expect(r.proposals[0]?.recipes.map((x) => x.recipeId)).toContain('tofuHalf2')
+    })
+
+    it('anchor を固定するとその食数を使う', () => {
+      const r = run([{ recipe: anchor, servings: 3 }])
+      expect(r.proposals[0]?.recipes.find((x) => x.recipeId === 'anchor')).toMatchObject({
+        role: 'anchor',
+        servings: 3,
+      })
+    })
+
+    it('別の案（exclude）でも固定は残り、固定した料理を含めて渡しても比べられる', () => {
+      const first = run([{ recipe: tofuHalf, servings: 1 }])
+      const exclude = first.proposals.map((p) => p.recipes.map((x) => x.recipeId))
+      const second = run([{ recipe: tofuHalf, servings: 1 }], exclude)
+      const key = (ids: string[]) => [...ids].sort().join()
+      for (const p of second.proposals) {
+        expect(p.recipes.map((x) => x.recipeId)).toContain('tofuHalf')
+        expect(exclude.map(key)).not.toContain(key(p.recipes.map((x) => x.recipeId)))
+      }
+    })
+
+    it('固定だけで品数に届いたら、その 1 案だけ', () => {
+      const r = run([
+        { recipe: tofuHalf, servings: 1 },
+        { recipe: catalog[3] as RecRecipe, servings: 2 },
+      ])
+      expect(r.proposals).toHaveLength(1)
+      expect(r.hasMore).toBe(false)
+      expect(r.proposals[0]?.recipes.map((x) => [x.recipeId, x.servings])).toEqual(
+        expect.arrayContaining([
+          ['anchor', 1],
+          ['tofuHalf', 1],
+          ['porkOnly', 2],
+        ]),
+      )
+    })
+  })
+
   it('上位の案どうしで追加料理が重ならない（候補が十分あるとき）', () => {
     const catalog = [anchor, ...['a', 'b', 'c', 'd', 'e', 'f'].map((id) => recipe(id, [['onion', 1]]))]
     const result = recommend({ anchors: [{ recipe: anchor, servings: 1 }], catalog, available: [], ingredients, today })

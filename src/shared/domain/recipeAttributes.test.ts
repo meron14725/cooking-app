@@ -35,6 +35,9 @@ describe('parseCookMinutes', () => {
     ['', null],
     [null, null],
     ['すぐ', null],
+    // 保存できる範囲（1〜600 分）の外は null
+    ['0分', null],
+    ['12時間', null],
   ])('%s → %s', (text, minutes) => {
     expect(parseCookMinutes(text)).toBe(minutes)
   })
@@ -51,16 +54,22 @@ describe('ホットクックの設定から', () => {
   it('調理時間 = 加熱時間 + 下ごしらえ 10 分', () => {
     expect(cookMinutesFromHotcookMode('手動 > 煮物を作る > まぜる > 25分')).toBe(35)
     expect(cookMinutesFromHotcookMode('メニュー番号で探す → No.063')).toBeNull()
+    expect(cookMinutesFromHotcookMode('手動 > 煮物を作る > まぜない > 999分')).toBeNull()
   })
 })
 
 describe('inferDishType', () => {
   const base = { servings: 2, hotcookMode: null }
-  it('名前のキーワード: おやつ → 汁物 → ご飯もの', () => {
+  it('名前のキーワード: おやつ → 汁物 → ご飯もの・麺（主菜）', () => {
     expect(inferDishType({ ...base, title: 'おしるこ', ingredients: [] })).toBe('other')
     expect(inferDishType({ ...base, title: '豚汁', ingredients: [] })).toBe('soup')
     expect(inferDishType({ ...base, title: 'かぼちゃのポタージュ', ingredients: [] })).toBe('soup')
-    expect(inferDishType({ ...base, title: '鶏の炊き込みご飯', ingredients: [] })).toBe('other')
+    // ご飯もの・麺は 1 品で主菜を兼ねるので主菜（肉が少なくても）
+    expect(inferDishType({ ...base, title: '鶏の炊き込みご飯', ingredients: [] })).toBe('main')
+    expect(inferDishType({ ...base, title: 'チキンカレー', ingredients: [ing('鶏もも肉', 'meat', 50)] })).toBe('main')
+    expect(inferDishType({ ...base, title: '親子丼', ingredients: [] })).toBe('main')
+    // スープカレーは汁物
+    expect(inferDishType({ ...base, title: 'スープカレー', ingredients: [] })).toBe('soup')
   })
 
   it('1 人前の肉・魚・大豆製品・卵が 60g 以上なら主菜、なければ副菜', () => {
@@ -108,6 +117,10 @@ describe('inferCuisine', () => {
     )
     expect(inferCuisine({ title: 'ポークカレー', ingredients: [ing('カレールウ', 'other', 100)] })).toBe('western')
     expect(inferCuisine({ title: '麻婆豆腐', ingredients: [seasoning('豆板醤')] })).toBe('chinese')
+    // 「中華だし」は和のだしに数えない
+    expect(
+      inferCuisine({ title: 'なすの炒め煮', ingredients: [seasoning('中華だし'), seasoning('オイスターソース')] }),
+    ).toBe('chinese')
     expect(
       inferCuisine({
         title: 'グリーンカレー',
