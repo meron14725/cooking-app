@@ -155,9 +155,9 @@ check / uncheck を冪等にしておくと、通信が不安定な店内で再�
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/plans/:id/prep` | 食材ごとに集約した下ごしらえ（今切るもの / 切らずに残すもの） |
-| GET | `/api/plans/:id/kits/preview` | 袋詰めの下書き（中身、冷蔵/冷凍の初期値、使用期限、直前作業） |
-| POST | `/api/plans/:id/kits` | 袋を保存。packed の在庫を減らし、before_cook を確保として記録し、prepping → stored にする（すべて 1 つの batch）。`{ kits: [{ recipeId, location }] }` |
+| GET | `/api/plans/:id/prep` | 保存場所の初期値での `{ kits, prep: { cutNow, keepWhole, asIs }, shortages }`。shortages は袋に入れる分のうち在庫が足りない量 |
+| POST | `/api/plans/:id/kits/preview` | 袋詰めの下書き（中身、冷蔵/冷凍の初期値、使用期限、直前作業）と下ごしらえ。`{ kits?: [{ recipeId, location }] }` で保存場所を変えて計算し直す。レスポンスは `/prep` と同じ |
+| POST | `/api/plans/:id/kits` | 袋を保存。packed の在庫を減らし（期限の近い行から。他の袋の確保分には手を付けない）、before_cook を確保として記録し、prepping → stored にする（すべて 1 つの batch）。`{ kits: [{ recipeId, location }] }`（省略した料理は初期値） |
 
 ## ミールキット・調理
 

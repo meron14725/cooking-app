@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { todayJst } from '../../shared/domain/date'
+import { kitsInputSchema } from '../../shared/schemas/kit'
 import {
   planConfirmSchema,
   planCreateSchema,
@@ -9,6 +10,7 @@ import {
 import { shoppingAddSchema } from '../../shared/schemas/shopping'
 import type { AppEnv } from '../app'
 import { createDb } from '../db/client'
+import { previewPrep, saveKits } from '../services/kits'
 import {
   confirmPlan,
   createPlan,
@@ -48,6 +50,15 @@ export const planRoutes = new Hono<AppEnv>()
   .post('/:id/shopping/complete', async (c) => {
     await completeShopping(createDb(c.env.DB), c.req.param('id'))
     return c.json(await getPlan(createDb(c.env.DB), c.req.param('id')))
+  })
+  .get('/:id/prep', async (c) => c.json(await previewPrep(createDb(c.env.DB), c.req.param('id'), todayJst())))
+  .post('/:id/kits/preview', validate('json', kitsInputSchema), async (c) => {
+    const locations = new Map(c.req.valid('json').kits.map((k) => [k.recipeId, k.location]))
+    return c.json(await previewPrep(createDb(c.env.DB), c.req.param('id'), todayJst(), locations))
+  })
+  .post('/:id/kits', validate('json', kitsInputSchema), async (c) => {
+    const kits = await saveKits(createDb(c.env.DB), c.req.param('id'), c.req.valid('json'), todayJst())
+    return c.json({ kits }, 201)
   })
   .delete('/:id', async (c) => {
     await deletePlan(createDb(c.env.DB), c.req.param('id'))

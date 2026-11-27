@@ -22,6 +22,20 @@
       "when": 1795762660012,
       "tag": "0002_seed_recipes",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795765376224,
+      "tag": "0003_inventory_shopping_item_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795765805396,
+      "tag": "0004_meal_kits_plan_recipe_unique",
+      "breakpoints": true
     }
   ]
 }

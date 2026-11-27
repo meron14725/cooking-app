@@ -1,0 +1,2 @@
+DROP INDEX `inventory_items_shopping_item_idx`;--> statement-breakpoint
+CREATE UNIQUE INDEX `inventory_items_shopping_item_unique` ON `inventory_items` (`shopping_item_id`) WHERE shopping_item_id IS NOT NULL;
