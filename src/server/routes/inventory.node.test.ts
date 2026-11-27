@@ -62,6 +62,17 @@ describe('在庫 API', () => {
     expect(frozen.status).toBe(400)
   })
 
+  it('期限が買った日より前だと 400（追加・修正とも）', async () => {
+    const bad = await add({ ingredientId: pork.id, quantity: 200, purchasedOn: today, expiresOn: addDays(today, -1) })
+    expect(bad.status).toBe(400)
+    expect(bad.body).toMatchObject({ error: { code: 'VALIDATION_ERROR' } })
+    const item = (await add({ ingredientId: pork.id, quantity: 200, purchasedOn: today })).body
+    const patched = await api.call('PATCH', `/inventory/${item.id}`, { expiresOn: addDays(today, -1) })
+    expect(patched.status).toBe(400)
+    // 同じ日は OK
+    expect((await api.call('PATCH', `/inventory/${item.id}`, { expiresOn: today })).status).toBe(200)
+  })
+
   it('一覧は期限の近い順', async () => {
     await add({ ingredientId: tofu.id, quantity: 1 })
     await add({ ingredientId: pork.id, quantity: 200 })

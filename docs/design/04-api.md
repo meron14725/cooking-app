@@ -110,16 +110,17 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | POST | `/api/plans` | 献立を作る（`{ anchors: [{ recipeId, servings? }] }`）。status = draft。進行中の献立があれば 409 |
 | GET | `/api/plans/:id` | 詳細（レシピ、状態） |
 | POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals? }` |
+| GET | `/api/plans/:id/evaluation` | いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。形は提案 1 件と同じ。draft のみ |
 | PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える。`{ recipes: [{ recipeId, role, servings, dayIndex }] }` |
 | POST | `/api/plans/:id/confirm` | 確定。`{ startsOn }`。買い物リストを生成。draft → shopping |
 | POST | `/api/plans/:id/shopping/complete` | 買い物完了。shopping → prepping |
-| DELETE | `/api/plans/:id` | draft のときだけ破棄できる |
+| DELETE | `/api/plans/:id` | draft / shopping のときだけ破棄できる（下ごしらえを始めたら不可） |
 
 ```ts
 // POST /api/plans/:id/recommendations のレスポンス
 {
   proposals: {
-    recipes: { recipeId: string, servings: number, dayIndex: number }[]  // anchor + 追加。dayIndex は初期値
+    recipes: { recipeId: string, role: 'anchor' | 'added', title: string, caloriesKcal: number | null, servings: number, dayIndex: number }[]  // anchor + 追加。dayIndex は初期値
     kitLocations: { recipeId: string, location: 'fridge' | 'freezer' }[]   // 食べる順から決まる袋の保存場所
     score: number
     shopping: { ingredientId, name, needQuantity, packageUnitId, packageLabel, packageCount, buyQuantity }[]
@@ -127,6 +128,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
     usesInventory: { inventoryItemId, name, quantity, expiresOn, isExpiringSoon }[]
     totalCaloriesKcal: number | null  // Σ 1人前カロリー × 食数。不明なレシピがあれば null
     warnings: string[]                // 「1.6L に収まるか未確認」など
+    maxPerishableLeftoverPacks: number // 冷蔵のみの食材の余りの最大（代表量の何パック分か）
   }[]
   aiSuggestionRecommended: boolean   // 余りが大きく、登録レシピで埋まらない
 }

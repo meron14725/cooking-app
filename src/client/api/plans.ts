@@ -1,0 +1,89 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type {
+  Plan,
+  PlanCreateInput,
+  PlanRecipesInput,
+  ProposalView,
+  RecommendationsResponse,
+} from '../../shared/schemas/plan'
+import { apiFetch } from './client'
+
+const keys = {
+  current: ['plans', 'current'] as const,
+  recommendations: (id: string) => ['plans', id, 'recommendations'] as const,
+  evaluation: (id: string) => ['plans', id, 'evaluation'] as const,
+}
+
+export function useCurrentPlan() {
+  return useQuery({
+    queryKey: keys.current,
+    queryFn: () => apiFetch<{ plan: Plan | null }>('/plans/current'),
+    select: (d) => d.plan,
+  })
+}
+
+/** 提案は保存しない計算結果。在庫やレシピが変わったら取り直す */
+export function useRecommendations(planId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: keys.recommendations(planId ?? ''),
+    queryFn: () =>
+      apiFetch<RecommendationsResponse>(`/plans/${planId}/recommendations`, { method: 'POST', body: '{}' }),
+    enabled: Boolean(planId) && enabled,
+  })
+}
+
+export function usePlanEvaluation(planId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: keys.evaluation(planId ?? ''),
+    queryFn: () => apiFetch<ProposalView>(`/plans/${planId}/evaluation`),
+    enabled: Boolean(planId) && enabled,
+  })
+}
+
+function useSetCurrent() {
+  const qc = useQueryClient()
+  return async (plan: Plan | null) => {
+    qc.setQueryData(keys.current, { plan })
+    const others = {
+      queryKey: ['plans'],
+      predicate: (q: { queryKey: readonly unknown[] }) => q.queryKey[1] !== 'current',
+    }
+    // 確定・破棄の後は提案や評価を取り直さない（draft 以外では 409 になる）
+    if (plan?.status === 'draft') await qc.invalidateQueries(others)
+    else qc.removeQueries(others)
+  }
+}
+
+export function useCreatePlan() {
+  const setCurrent = useSetCurrent()
+  return useMutation({
+    mutationFn: (input: PlanCreateInput) => apiFetch<Plan>('/plans', { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: setCurrent,
+  })
+}
+
+export function useReplacePlanRecipes(planId: string) {
+  const setCurrent = useSetCurrent()
+  return useMutation({
+    mutationFn: (input: PlanRecipesInput) =>
+      apiFetch<Plan>(`/plans/${planId}/recipes`, { method: 'PUT', body: JSON.stringify(input) }),
+    onSuccess: setCurrent,
+  })
+}
+
+export function useConfirmPlan(planId: string) {
+  const setCurrent = useSetCurrent()
+  return useMutation({
+    mutationFn: (startsOn: string) =>
+      apiFetch<Plan>(`/plans/${planId}/confirm`, { method: 'POST', body: JSON.stringify({ startsOn }) }),
+    onSuccess: setCurrent,
+  })
+}
+
+export function useDeletePlan() {
+  const setCurrent = useSetCurrent()
+  return useMutation({
+    mutationFn: (planId: string) => apiFetch<void>(`/plans/${planId}`, { method: 'DELETE' }),
+    onSuccess: () => setCurrent(null),
+  })
+}

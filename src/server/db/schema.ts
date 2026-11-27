@@ -8,10 +8,11 @@
  */
 import { sql } from 'drizzle-orm'
 import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { PLAN_RECIPE_ROLES, PLAN_STATUSES } from '../../shared/schemas/plan'
 import { RECIPE_SOURCE_TYPES, STEP_PHASES } from '../../shared/schemas/recipe'
 import { ulid } from '../../shared/ulid'
 
-export { RECIPE_SOURCE_TYPES, STEP_PHASES }
+export { PLAN_RECIPE_ROLES, PLAN_STATUSES, RECIPE_SOURCE_TYPES, STEP_PHASES }
 
 // ---------- 共通 ----------
 
@@ -37,8 +38,6 @@ export const CATEGORIES = ['vegetable', 'meat', 'fish', 'tofu_egg_dairy', 'seaso
 export const STORAGE_LOCATIONS = ['fridge', 'freezer', 'pantry'] as const
 export const KIT_LOCATIONS = ['fridge', 'freezer'] as const
 export const INVENTORY_SOURCES = ['shopping', 'leftover', 'manual'] as const
-export const PLAN_STATUSES = ['draft', 'shopping', 'prepping', 'stored', 'done'] as const
-export const PLAN_RECIPE_ROLES = ['anchor', 'added'] as const
 export const KIT_STATUSES = ['stored', 'cooked', 'discarded'] as const
 export const KIT_ITEM_STATES = ['packed', 'before_cook', 'seasoning_packed'] as const
 

@@ -81,6 +81,14 @@ function assertLocation(master: { name: string; canFreeze: boolean }, location: 
   }
 }
 
+function assertExpiryOrder(purchasedOn: string, expiresOn: string) {
+  if (expiresOn < purchasedOn) {
+    throw new ApiError(400, 'VALIDATION_ERROR', '期限が買った日より前になっています', [
+      { path: 'expiresOn', message: '期限は買った日以降にしてください' },
+    ])
+  }
+}
+
 /** 手で在庫を足す。期限は省略時に購入日 + 保存場所の日持ちで計算する */
 export async function createInventoryItem(db: Db, input: InventoryCreateInput, today: string): Promise<InventoryItem> {
   const master = await getMaster(db, input.ingredientId)
@@ -88,6 +96,8 @@ export async function createInventoryItem(db: Db, input: InventoryCreateInput, t
   const location = input.location ?? master.defaultLocation
   assertLocation(master, location)
   const purchasedOn = input.purchasedOn ?? today
+  const expiresOn = input.expiresOn ?? computeExpiresOn(purchasedOn, location, master)
+  assertExpiryOrder(purchasedOn, expiresOn)
   const [row] = await db
     .insert(inventoryItems)
     .values({
@@ -95,7 +105,7 @@ export async function createInventoryItem(db: Db, input: InventoryCreateInput, t
       quantity: input.quantity,
       location,
       purchasedOn,
-      expiresOn: input.expiresOn ?? computeExpiresOn(purchasedOn, location, master),
+      expiresOn,
       source: 'manual',
     })
     .returning({ id: inventoryItems.id })
@@ -126,6 +136,7 @@ export async function updateInventoryItem(
     (input.location && input.location !== current.location
       ? computeExpiresOn(current.purchasedOn, location, master)
       : current.expiresOn)
+  if (input.expiresOn) assertExpiryOrder(current.purchasedOn, expiresOn)
 
   const usedUp = input.quantity === 0
   await db

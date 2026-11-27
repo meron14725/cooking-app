@@ -154,7 +154,13 @@ function AddStockForm({ onDone }: { onDone: () => void }) {
         </label>
         <label className="text-xs text-stone-600">
           期限（空なら自動）
-          <input type="date" value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} className={inputClass} />
+          <input
+            type="date"
+            value={expiresOn}
+            min={purchasedOn}
+            onChange={(e) => setExpiresOn(e.target.value)}
+            className={inputClass}
+          />
         </label>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -180,6 +186,8 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
   const [location, setLocation] = useState<StorageLocation>(item.location)
   const [expiresOn, setExpiresOn] = useState(item.expiresOn)
   const [error, setError] = useState<string | null>(null)
+  const typed = parseNumber(quantity)
+  const reservedShort = typed !== null && typed < item.reservedQuantity
 
   async function onSave() {
     setError(null)
@@ -240,9 +248,22 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
       </div>
       <label className="block text-xs text-stone-600">
         期限{location !== item.location && expiresOn === item.expiresOn ? '（場所を変えると計算し直します）' : ''}
-        <input type="date" value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} className={inputClass} />
+        <input
+          type="date"
+          value={expiresOn}
+          min={item.purchasedOn}
+          onChange={(e) => setExpiresOn(e.target.value)}
+          className={inputClass}
+        />
       </label>
       <p className="text-xs text-stone-500">買った日: {item.purchasedOn}</p>
+      {item.reservedQuantity > 0 && (
+        <p className={`text-xs ${reservedShort ? 'font-bold text-red-600' : 'text-sky-700'}`}>
+          うち {item.reservedQuantity}
+          {item.unit} は {item.reservedFor.join('、')} 用に確保しています
+          {reservedShort && '。この量だと袋の分が足りません'}
+        </p>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSave} disabled={update.isPending} className="flex-1">
