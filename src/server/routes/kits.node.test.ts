@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { addDays, todayJst } from '../../shared/domain/date'
 import type { Ingredient, IngredientInput } from '../../shared/schemas/ingredient'
 import type { FridgeEntry, InventoryItem } from '../../shared/schemas/inventory'
-import type { PrepView } from '../../shared/schemas/kit'
+import type { CookView, MealKit, PrepView } from '../../shared/schemas/kit'
 import type { Plan } from '../../shared/schemas/plan'
 import type { Recipe, RecipeInput } from '../../shared/schemas/recipe'
 import type { ShoppingList } from '../../shared/schemas/shopping'
@@ -207,5 +207,103 @@ describe('下ごしらえ・袋詰め', () => {
     const p2 = await prepping()
     const res = await api.call('POST', `/plans/${p2.id}/kits`, { kits: [{ recipeId: 'nope', location: 'fridge' }] })
     expect(res.status).toBe(400)
+  })
+})
+
+/** 袋を保存したところまで進める */
+async function stored(): Promise<{ plan: Plan; kits: MealKit[] }> {
+  const plan = await prepping()
+  await api.call('POST', `/plans/${plan.id}/kits`, {})
+  const kits = (await api.call<{ items: MealKit[] }>('GET', '/kits')).body.items
+  return { plan, kits }
+}
+
+const stock = async () => (await api.call<{ items: InventoryItem[] }>('GET', '/inventory')).body.items
+const kitOf = (kits: MealKit[], title: string) => kits.find((k) => k.title === title) as MealKit
+
+describe('保存中の袋と調理', () => {
+  it('一覧は食べる日順。今日の袋は plannedOnOrBefore で絞れる', async () => {
+    const { kits } = await stored()
+    expect(kits.map((k) => [k.title, k.plannedOn, k.status])).toEqual([
+      ['肉じゃが', tomorrow, 'stored'],
+      ['豆腐と豚の煮物', addDays(today, 2), 'stored'],
+    ])
+    const due = (await api.call<{ items: MealKit[] }>('GET', `/kits?plannedOnOrBefore=${tomorrow}`)).body.items
+    expect(due.map((k) => k.title)).toEqual(['肉じゃが'])
+  })
+
+  it('調理画面: 直前作業、入れる順（袋 / 直前 / いま入れる）、冷凍の注意、余りの見込み', async () => {
+    const { kits } = await stored()
+    const view = (await api.call<CookView>('GET', `/kits/${kitOf(kits, '豆腐と豚の煮物').id}/cook`)).body
+    expect(view.beforeCook.map((b) => [b.name, b.task])).toEqual([
+      ['木綿豆腐', '2cm角に切る'],
+      ['じゃがいも', '冷凍できないので直前に切る（乱切り）'],
+    ])
+    expect(view.addOrder.map((a) => [a.name, a.quantity, a.from])).toEqual([
+      ['木綿豆腐', 1, 'before_cook'],
+      ['豚こま切れ肉', 100, 'kit'],
+      ['玉ねぎ', 0.5, 'kit'],
+      ['じゃがいも', 1, 'before_cook'],
+    ])
+    expect(view.cookSteps).toEqual(['内鍋に入れて加熱する'])
+    expect(view.frozenNotes.length).toBeGreaterThan(0)
+    expect(view.expectedLeftovers.map((l) => [l.name, l.quantity]).sort()).toEqual([
+      ['じゃがいも', 0],
+      ['木綿豆腐', 0],
+    ])
+    const fridgeKit = (await api.call<CookView>('GET', `/kits/${kitOf(kits, '肉じゃが').id}/cook`)).body
+    expect(fridgeKit.frozenNotes).toEqual([])
+    expect(fridgeKit.beforeCook).toEqual([])
+  })
+
+  it('作った: 直前に使った分を減らし、余りの修正を反映。全部作ると献立は done', async () => {
+    const { plan, kits } = await stored()
+    const nimonoKit = kitOf(kits, '豆腐と豚の煮物')
+    const view = (await api.call<CookView>('GET', `/kits/${nimonoKit.id}/cook`)).body
+    const potatoRow = view.expectedLeftovers.find((l) => l.name === 'じゃがいも')
+    const res = await api.call<MealKit>('POST', `/kits/${nimonoKit.id}/cooked`, {
+      leftovers: [{ inventoryItemId: potatoRow?.inventoryItemId, quantity: 0.3 }],
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('cooked')
+    expect((await stock()).map((i) => [i.name, i.quantity, i.reservedQuantity])).toEqual([['じゃがいも', 0.3, 0]])
+    expect((await api.call<Plan>('GET', `/plans/${plan.id}`)).body.status).toBe('stored')
+
+    expect((await api.call('POST', `/kits/${kitOf(kits, '肉じゃが').id}/cooked`, {})).status).toBe(200)
+    expect((await api.call<Plan>('GET', `/plans/${plan.id}`)).body.status).toBe('done')
+    expect((await api.call<{ items: MealKit[] }>('GET', '/kits')).body.items).toEqual([])
+    expect((await api.call('POST', `/kits/${nimonoKit.id}/cooked`, {})).status).toBe(409)
+  })
+
+  it('作ったが同時に何本届いても、在庫は 1 回分だけ減る', async () => {
+    const { kits } = await stored()
+    const id = kitOf(kits, '豆腐と豚の煮物').id
+    // じゃがいもを 2 個足しておく（直前に 1 個使うと 2 個残る。二重に減ると 1 個になる）
+    const potato = (await stock()).find((i) => i.name === 'じゃがいも')
+    await api.call('POST', '/inventory', { ingredientId: potato?.ingredientId, quantity: 2 })
+    const results = await Promise.all(Array.from({ length: 3 }, () => api.call('POST', `/kits/${id}/cooked`, {})))
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409, 409])
+    const left = (await stock()).filter((i) => i.name === 'じゃがいも')
+    expect(left.reduce((sum, i) => sum + i.quantity, 0)).toBe(2)
+  })
+
+  it('捨てた: 在庫は減らさず、確保が外れる', async () => {
+    const { kits } = await stored()
+    const res = await api.call<MealKit>('POST', `/kits/${kitOf(kits, '豆腐と豚の煮物').id}/discard`)
+    expect(res.body.status).toBe('discarded')
+    expect((await stock()).map((i) => [i.name, i.quantity, i.reservedQuantity]).sort()).toEqual([
+      ['じゃがいも', 1, 0],
+      ['木綿豆腐', 1, 0],
+    ])
+  })
+
+  it('保存場所を変えると使用期限を計算し直す', async () => {
+    const { kits } = await stored()
+    const kit = kitOf(kits, '豆腐と豚の煮物')
+    const res = await api.call<MealKit>('PATCH', `/kits/${kit.id}`, { location: 'fridge' })
+    // 袋に入っているのは豚（切った後 2 日）と玉ねぎ（3 日）
+    expect(res.body).toMatchObject({ location: 'fridge', useBy: addDays(today, 2) })
+    const fixed = await api.call<MealKit>('PATCH', `/kits/${kit.id}`, { useBy: addDays(today, 1) })
+    expect(fixed.body.useBy).toBe(addDays(today, 1))
   })
 })
