@@ -15,7 +15,7 @@ const item = (
   role,
   wantedServings: wanted,
 })
-const terms = (items: ScoredItem[]) => scoreProposal(items, 0, features).breakdown
+const terms = (items: ScoredItem[]) => scoreProposal(items, { shopping: 0, buyYen: 0 }, features).breakdown
 
 describe('recipeFeatures', () => {
   it('主な食材は肉・魚・大豆製品・卵を優先し、野菜は 1 食あたりの g', () => {
@@ -91,8 +91,14 @@ describe('scoreProposal の項目', () => {
   })
 
   it('内訳を足すと score', () => {
-    const { score, breakdown } = scoreProposal([item('curry', 4, 'anchor', 2), item('misoSoup', 2)], 1.5, features)
+    const { score, breakdown } = scoreProposal(
+      [item('curry', 4, 'anchor', 2), item('misoSoup', 2)],
+      { shopping: 1.5, buyYen: 1200 },
+      features,
+    )
     expect(breakdown.shopping).toBe(1.5)
+    // 0.2 × 1200 円 ÷ 6 食 ÷ 100 円
+    expect(breakdown.cost).toBeCloseTo(0.4)
     expect(Object.values(breakdown).reduce((a, b) => a + b, 0)).toBeCloseTo(score, 2)
   })
 })
