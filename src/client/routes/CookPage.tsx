@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { shortDate } from '../../shared/domain/date'
 import type { CookView } from '../../shared/schemas/kit'
 import { ApiRequestError } from '../api/client'
 import { useCookKit, useCookView, useDiscardKit, useUpdateKit } from '../api/mealKits'
@@ -9,7 +10,6 @@ import { PageHeader } from '../components/PageHeader'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 const fmt = (n: number | null, unit: string) => (n === null ? '' : `${Math.round(n * 100) / 100}${unit}`)
-const shortDate = (iso: string) => iso.slice(5).replace('-', '/')
 
 const FROM_LABEL: Record<CookView['addOrder'][number]['from'], { label: string; className: string }> = {
   kit: { label: '袋から', className: 'bg-orange-100 text-orange-800' },

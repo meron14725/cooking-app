@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { shortDate } from '../../shared/domain/date'
 import type { KitDraft, KitLocation } from '../../shared/domain/prep'
 import { ApiRequestError } from '../api/client'
 import { usePrepPreview, useSaveKits } from '../api/kits'
@@ -8,7 +9,6 @@ import { Button } from './form'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 const fmt = (n: number | null, unit: string) => (n === null ? '少々' : `${Math.round(n * 100) / 100}${unit}`)
-const shortDate = (iso: string) => iso.slice(5).replace('-', '/')
 
 function StepTabs({ step, onChange }: { step: 'prep' | 'pack'; onChange: (s: 'prep' | 'pack') => void }) {
   const tab = (value: 'prep' | 'pack', label: string) => (

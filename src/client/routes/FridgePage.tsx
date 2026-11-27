@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { todayJst } from '../../shared/domain/date'
+import { shortDate, todayJst } from '../../shared/domain/date'
 import { toBaseQuantity } from '../../shared/domain/units'
 import { LOCATION_OPTIONS, locationLabel, type StorageLocation } from '../../shared/schemas/ingredient'
 import type { FridgeEntry, InventoryItem } from '../../shared/schemas/inventory'
@@ -16,11 +16,51 @@ import {
 } from '../api/inventory'
 import { ExpiryBadge } from '../components/ExpiryBadge'
 import { Button, inputBaseClass, inputClass, parseNumber } from '../components/form'
+import { Icon, type IconName } from '../components/Icon'
 import { IngredientSelect, unitChoices } from '../components/ingredientInputs'
 import { PageHeader } from '../components/PageHeader'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
+/** 保存場所の切り替え（デザインの溝のあるセグメント） */
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T | ''
+  options: { value: T | ''; label: string }[]
+  onChange: (v: T | '') => void
+  label: string
+}) {
+  return (
+    <fieldset
+      className="grid gap-1 rounded-control bg-sunken p-1"
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
+      <legend className="sr-only">{label}</legend>
+      {options.map((o) => {
+        const on = value === o.value
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            aria-pressed={on}
+            className={`min-h-10 rounded-[10px] text-sm ${
+              on ? 'bg-surface font-bold text-ink shadow-[0_1px_2px_rgba(60,40,20,0.12)]' : 'font-medium text-ink-soft'
+            }`}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </fieldset>
+  )
+}
+
+/** 種類の絞り込み（丸いチップ） */
 function Chips<T extends string>({
   value,
   options,
@@ -35,21 +75,22 @@ function Chips<T extends string>({
   return (
     <fieldset className="flex flex-wrap gap-2">
       <legend className="sr-only">{label}</legend>
-      {options.map((o) => (
-        <button
-          key={o.value}
-          type="button"
-          onClick={() => onChange(o.value)}
-          aria-pressed={value === o.value}
-          className={`min-h-9 rounded-full border px-3 text-sm ${
-            value === o.value
-              ? 'border-orange-600 bg-orange-600 font-bold text-white'
-              : 'border-stone-300 bg-white text-stone-700'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
+      {options.map((o) => {
+        const on = value === o.value
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            aria-pressed={on}
+            className={`min-h-9 rounded-full border px-3.5 text-[13px] ${
+              on ? 'border-ink bg-ink font-bold text-white' : 'border-line-strong bg-surface font-medium text-ink-soft'
+            }`}
+          >
+            {o.label}
+          </button>
+        )
+      })}
     </fieldset>
   )
 }
@@ -92,7 +133,7 @@ function AddStockForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="mb-4 space-y-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
+    <div className="space-y-3 rounded-card border border-accent-line bg-accent-wash p-4">
       <IngredientSelect
         value={ingredientId}
         onChange={(id) => {
@@ -144,7 +185,7 @@ function AddStockForm({ onDone }: { onDone: () => void }) {
         </select>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-stone-600">
+        <label className="text-xs text-ink-soft">
           買った日
           <input
             type="date"
@@ -153,7 +194,7 @@ function AddStockForm({ onDone }: { onDone: () => void }) {
             className={inputClass}
           />
         </label>
-        <label className="text-xs text-stone-600">
+        <label className="text-xs text-ink-soft">
           期限（空なら自動）
           <input
             type="date"
@@ -164,7 +205,7 @@ function AddStockForm({ onDone }: { onDone: () => void }) {
           />
         </label>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSubmit} disabled={add.isPending} className="flex-1">
           {add.isPending ? '追加中…' : '冷蔵庫に入れる'}
@@ -218,9 +259,9 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
   }
 
   return (
-    <div className="space-y-2 border-t border-stone-100 bg-stone-50 px-4 py-3">
+    <div className="space-y-2 border-t border-line-soft bg-ground px-4 py-3">
       <div className="flex gap-2">
-        <label className="min-w-0 flex-1 text-xs text-stone-600">
+        <label className="min-w-0 flex-1 text-xs text-ink-soft">
           残り（{item.unit}）
           <input
             type="number"
@@ -232,7 +273,7 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
             className={inputClass}
           />
         </label>
-        <label className="w-28 shrink-0 text-xs text-stone-600">
+        <label className="w-28 shrink-0 text-xs text-ink-soft">
           場所
           <select
             value={location}
@@ -247,7 +288,7 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
           </select>
         </label>
       </div>
-      <label className="block text-xs text-stone-600">
+      <label className="block text-xs text-ink-soft">
         期限{location !== item.location && expiresOn === item.expiresOn ? '（場所を変えると計算し直します）' : ''}
         <input
           type="date"
@@ -257,15 +298,15 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
           className={inputClass}
         />
       </label>
-      <p className="text-xs text-stone-500">買った日: {item.purchasedOn}</p>
+      <p className="text-xs text-ink-muted">買った日: {item.purchasedOn}</p>
       {item.reservedQuantity > 0 && (
-        <p className={`text-xs ${reservedShort ? 'font-bold text-red-600' : 'text-sky-700'}`}>
+        <p className={`text-xs ${reservedShort ? 'font-bold text-danger' : 'text-frozen'}`}>
           うち {item.reservedQuantity}
           {item.unit} は {item.reservedFor.join('、')} 用に確保しています
           {reservedShort && '。この量だと袋の分が足りません'}
         </p>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSave} disabled={update.isPending} className="flex-1">
           保存
@@ -275,6 +316,24 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
         </Button>
       </div>
     </div>
+  )
+}
+
+const LOCATION_ICON = {
+  fridge: { icon: 'chilled', className: 'bg-leaf-soft text-leaf' },
+  freezer: { icon: 'frozen', className: 'bg-frozen-soft text-frozen' },
+  pantry: { icon: 'pantry', className: 'bg-pantry-soft text-pantry' },
+} as const satisfies Record<StorageLocation, { icon: IconName; className: string }>
+
+function EntryIcon({ entry }: { entry: FridgeEntry }) {
+  const { icon, className } =
+    entry.kind === 'meal_kit'
+      ? { icon: 'bag' as const, className: 'bg-accent-soft text-accent' }
+      : LOCATION_ICON[entry.location]
+  return (
+    <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${className}`}>
+      <Icon name={icon} />
+    </span>
   )
 }
 
@@ -290,36 +349,34 @@ function EntryRow({
   onToggle: () => void
 }) {
   const content = (
-    <>
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate font-bold">
-          {entry.kind === 'meal_kit' && <span className="mr-1">🛍️</span>}
-          {entry.name}
+    <span className="flex items-center gap-3">
+      <EntryIcon entry={entry} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-bold">{entry.name}</span>
+        <span className="mt-0.5 block truncate text-xs text-ink-muted">
+          {entry.kind === 'meal_kit' && '袋 ・ '}
+          {locationLabel(entry.location)}
+          {entry.quantityText && ` ・ ${entry.quantityText}`} ・ 期限 {shortDate(entry.expiresOn)}
+          {entry.plannedOn && ` ・ ${shortDate(entry.plannedOn)} に食べる`}
         </span>
-        <ExpiryBadge daysLeft={entry.daysLeft} status={entry.expiryStatus} />
-      </div>
-      <div className="mt-0.5 text-xs text-stone-500">
-        {locationLabel(entry.location)}
-        {entry.quantityText && ` ・ ${entry.quantityText}`} ・ 期限 {entry.expiresOn.slice(5).replace('-', '/')}
-        {entry.plannedOn && ` ・ ${entry.plannedOn.slice(5).replace('-', '/')} に食べる予定`}
-      </div>
-      {entry.reservedFor && <div className="mt-0.5 text-xs text-sky-700">{entry.reservedFor}</div>}
-    </>
+        {entry.reservedFor && <span className="mt-0.5 block truncate text-xs text-frozen">{entry.reservedFor}</span>}
+      </span>
+      <ExpiryBadge daysLeft={entry.daysLeft} status={entry.expiryStatus} />
+    </span>
   )
-  const tone =
-    entry.expiryStatus === 'expired'
-      ? 'border-l-4 border-l-red-400'
-      : entry.expiryStatus === 'soon'
-        ? 'border-l-4 border-l-amber-400'
-        : ''
   return (
-    <li className={tone}>
+    <li>
       {entry.kind === 'ingredient' ? (
-        <button type="button" onClick={onToggle} aria-expanded={open} className="block w-full px-4 py-3 text-left">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="block min-h-16 w-full px-4 py-3 text-left"
+        >
           {content}
         </button>
       ) : (
-        <Link to={`/kits/${entry.id}/cook`} className="block px-4 py-3">
+        <Link to={`/kits/${entry.id}/cook`} className="block min-h-16 px-4 py-3">
           {content}
         </Link>
       )}
@@ -339,19 +396,10 @@ export function FridgePage() {
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <PageHeader title="冷蔵庫" />
-        {!adding && (
-          <Button onClick={() => setAdding(true)} className="mb-4">
-            ＋ 追加
-          </Button>
-        )}
-      </div>
+      <PageHeader title="冷蔵庫" meta={data && `期限が近い順 ・ ${data.length}件`} />
 
-      {adding && <AddStockForm onDone={() => setAdding(false)} />}
-
-      <div className="mb-4 space-y-2">
-        <Chips
+      <div className="mb-4 flex flex-col gap-3">
+        <Segmented
           label="保存場所"
           value={location}
           onChange={setLocation}
@@ -369,15 +417,15 @@ export function FridgePage() {
         />
       </div>
 
-      {isPending && <p className="text-stone-500">読み込み中…</p>}
-      {isError && <p className="text-red-600">読み込めませんでした</p>}
+      {isPending && <p className="text-ink-muted">読み込み中…</p>}
+      {isError && <p className="text-danger">読み込めませんでした</p>}
       {data && data.length === 0 && (
-        <p className="text-stone-500">
-          {location || kind ? '当てはまるものはありません' : '空っぽです。買ったものは「＋ 追加」から入れられます'}
+        <p className="py-4 text-center text-sm text-ink-muted">
+          {location || kind ? '該当するものはありません' : '空っぽです。買ったものは「食材を足す」から入れられます'}
         </p>
       )}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white">
+        <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
           {data.map((entry) => (
             <EntryRow
               key={`${entry.kind}-${entry.id}`}
@@ -389,6 +437,21 @@ export function FridgePage() {
           ))}
         </ul>
       )}
+
+      <div className="mt-4">
+        {adding ? (
+          <AddStockForm onDone={() => setAdding(false)} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="flex min-h-12 w-full items-center justify-center gap-1.5 rounded-control border border-dashed border-line-dashed font-bold text-ink-soft"
+          >
+            <Icon name="plus" size={18} strokeWidth={2} />
+            食材を足す
+          </button>
+        )}
+      </div>
     </>
   )
 }

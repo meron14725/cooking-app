@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 /** 入力欄の見た目（幅は含まない） */
 export const inputBaseClass =
-  'rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-base focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 disabled:bg-stone-100 disabled:text-stone-400'
+  'rounded-control border border-line-strong bg-surface px-3.5 py-2.5 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line disabled:bg-sunken disabled:text-ink-muted'
 
 export const inputClass = `w-full ${inputBaseClass}`
 
@@ -20,10 +20,10 @@ export function Field({
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: children に入力欄が入る
     <label className="block">
-      <span className="mb-1 block text-sm font-bold text-stone-700">{label}</span>
+      <span className="mb-1 block text-sm font-bold text-ink-soft">{label}</span>
       {children}
-      {hint && !error && <span className="mt-1 block text-xs text-stone-500">{hint}</span>}
-      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-ink-muted">{hint}</span>}
+      {error && <span className="mt-1 block text-xs text-danger">{error}</span>}
     </label>
   )
 }
@@ -43,7 +43,7 @@ export function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="size-5 accent-orange-600"
+        className="size-5 accent-accent"
       />
       <span>{label}</span>
     </label>
@@ -56,15 +56,15 @@ export function Button({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }) {
   const styles = {
-    primary: 'bg-orange-600 text-white disabled:bg-orange-300',
-    secondary: 'border border-stone-300 bg-white text-stone-700',
-    danger: 'border border-red-300 bg-white text-red-600',
+    primary: 'bg-accent text-white disabled:opacity-50',
+    secondary: 'border border-line-strong bg-surface text-ink',
+    danger: 'border border-danger/30 bg-surface text-danger',
   }[variant]
   return (
     <button
       type="button"
       {...props}
-      className={`min-h-11 rounded-lg px-4 font-bold ${styles} ${props.className ?? ''}`}
+      className={`min-h-12 rounded-control px-4 font-bold ${styles} ${props.className ?? ''}`}
     >
       {children}
     </button>
