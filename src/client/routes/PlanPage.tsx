@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { addDays, shortDate, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
+import { favoriteTotal, type RecipeSort } from '../../shared/schemas/recipe'
 import { ApiRequestError } from '../api/client'
 import {
   useConfirmPlan,
@@ -20,6 +21,8 @@ import { LocationBadge } from '../components/LocationBadge'
 import { PageHeader } from '../components/PageHeader'
 import { PlanProgress } from '../components/PlanProgress'
 import { PrepAndPack } from '../components/PrepAndPack'
+import { RecipePhoto } from '../components/RecipePhoto'
+import { RecipeFilterButton, RecipeSortMenu } from '../components/RecipeSortMenu'
 import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
 
@@ -56,15 +59,72 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
 
 type Picked = { recipeId: string; title: string; servings: number }
 
+/** 選んだ料理の食数。− で 1 から減らすと選択を外す（案D D-PlanPick） */
+function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => void }) {
+  const btn = 'flex size-9 items-center justify-center rounded-full bg-surface text-ink'
+  return (
+    <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-sunken p-0.5">
+      <button
+        type="button"
+        onClick={() => onChange(p.servings - 1)}
+        aria-label={`${p.title} を1食減らす`}
+        className={btn}
+      >
+        <Icon name="minus" size={16} strokeWidth={2.2} />
+      </button>
+      <span className="min-w-11 text-center text-sm font-bold tabular-nums">{p.servings}食分</span>
+      <button
+        type="button"
+        onClick={() => onChange(p.servings + 1)}
+        disabled={p.servings >= 20}
+        aria-label={`${p.title} を1食増やす`}
+        className={`${btn} disabled:text-line-strong`}
+      >
+        <Icon name="plus" size={16} strokeWidth={2.2} />
+      </button>
+    </span>
+  )
+}
+
+const PICKED_KEY = 'plan-picked'
+function loadPicked(): Picked[] {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(PICKED_KEY) ?? '[]')
+    return Array.isArray(v) ? v : []
+  } catch {
+    return []
+  }
+}
+function savePicked(v: Picked[]) {
+  try {
+    if (v.length === 0) sessionStorage.removeItem(PICKED_KEY)
+    else sessionStorage.setItem(PICKED_KEY, JSON.stringify(v))
+  } catch {
+    // 覚えられなくても選ぶ操作はできる
+  }
+}
+
 function AnchorPicker() {
   const [q, setQ] = useState('')
+  const [sort, setSort] = useState<RecipeSort | ''>('')
   // レシピを見るページの「食べたい料理に追加」から来たら、その料理を選んだ状態で始める
   const location = useLocation()
+  // 選んだ料理は、「>」でレシピを見に行って戻っても残るように、このタブの間だけ覚えておく
   const [picked, setPicked] = useState<Picked[]>(() => {
+    const saved = loadPicked()
     const pick = (location.state as { pick?: Picked } | null)?.pick
-    return pick ? [pick] : []
+    return pick && !saved.some((p) => p.recipeId === pick.recipeId) ? [...saved, pick] : saved
   })
-  const recipes = useRecipes({ q: q.trim() || undefined })
+  useEffect(() => savePicked(picked), [picked])
+  // 受け取った料理は覚えたので、履歴から消す（戻ってきたときに外した料理がまた入らないように）
+  const navigate = useNavigate()
+  useEffect(() => {
+    if ((location.state as { pick?: Picked } | null)?.pick) navigate('.', { replace: true, state: null })
+  }, [location.state, navigate])
+  const recipes = useRecipes({ q: q.trim() || undefined, sort: sort || undefined })
+  // 選んだ料理の写真は、検索で一覧から消えても出せるよう全件の一覧から引く
+  const all = useRecipes()
+  const imageOf = (id: string) => all.data?.find((r) => r.id === id)?.imageKey ?? null
   const create = useCreatePlan()
   const [error, setError] = useState<string | null>(null)
 
@@ -74,11 +134,16 @@ function AnchorPicker() {
         ? cur.filter((p) => p.recipeId !== id)
         : [...cur, { recipeId: id, title, servings: 1 }],
     )
+  const setServings = (id: string, v: number) =>
+    setPicked((cur) =>
+      v <= 0 ? cur.filter((p) => p.recipeId !== id) : cur.map((p) => (p.recipeId === id ? { ...p, servings: v } : p)),
+    )
 
   async function onSubmit() {
     setError(null)
     try {
       await create.mutateAsync({ anchors: picked.map(({ recipeId, servings }) => ({ recipeId, servings })) })
+      savePicked([])
     } catch (err) {
       setError(errorMessage(err, '献立を作れませんでした'))
     }
@@ -86,94 +151,119 @@ function AnchorPicker() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-ink-soft">
-        食べたい料理を選ぶと、食材を使い切れる組み合わせを提案します（全部で 3 品）。
-      </p>
-
-      <section className="mb-5 flex flex-col gap-2.5">
-        <h2 className="text-sm font-bold text-ink-muted">食べたい料理</h2>
+      <section className="mb-3.5 flex flex-col gap-2">
+        <h2 className="font-display text-[15px] font-bold">食べたい料理</h2>
         {picked.length === 0 ? (
-          <p className="rounded-control border border-dashed border-line-dashed px-4 py-3 text-sm text-ink-muted">
-            下の一覧から選んでください
+          <p className="flex min-h-12 items-center rounded-[24px] border-2 border-dashed border-line-dashed px-4 text-sm text-ink-muted">
+            下の一覧から選んでください（全部で 3 品になるよう提案します）
           </p>
         ) : (
-          <ul className="divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
+          <ul className="flex flex-col gap-2">
             {picked.map((p) => (
-              <li key={p.recipeId} className="flex items-center gap-2 py-2.5">
-                <button
-                  type="button"
-                  onClick={() => toggle(p.recipeId, p.title)}
-                  aria-label={`${p.title}を外す`}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink-muted"
-                >
-                  <Icon name="close" size={14} strokeWidth={2.4} />
-                </button>
-                <span className="min-w-0 flex-1 truncate font-bold">{p.title}</span>
-                <Stepper
-                  label={`${p.title}の食数`}
-                  value={p.servings}
-                  onChange={(v) =>
-                    setPicked((cur) => cur.map((x) => (x.recipeId === p.recipeId ? { ...x, servings: v } : x)))
-                  }
-                />
+              <li key={p.recipeId} className="flex items-center gap-2.5 rounded-[24px] bg-surface p-2 shadow-card">
+                <RecipePhoto imageKey={imageOf(p.recipeId)} className="size-10 rounded-[14px]" />
+                <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{p.title}</span>
+                <ServingsPill p={p} onChange={(v) => setServings(p.recipeId, v)} />
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <label className="mb-3 flex min-h-12 items-center gap-2.5 rounded-control border border-transparent bg-surface px-4 shadow-card focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
-        <Icon name="search" className="text-ink-muted" />
-        <span className="sr-only">料理名で探す</span>
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="料理名で探す"
-          className="min-w-0 flex-1 bg-transparent py-2.5 text-base placeholder:text-ink-muted focus:outline-none"
-        />
-      </label>
-      {recipes.isPending && <p className="text-ink-muted">読み込み中…</p>}
-      {recipes.isError && <p className="text-danger">読み込めませんでした</p>}
-      {recipes.data && recipes.data.length === 0 && <p className="text-ink-muted">見つかりませんでした</p>}
-      {recipes.data && recipes.data.length > 0 && (
-        <ul className="divide-y divide-line-soft overflow-hidden rounded-card bg-surface shadow-card">
-          {recipes.data.map((r) => {
-            const on = picked.some((p) => p.recipeId === r.id)
-            return (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  onClick={() => toggle(r.id, r.title)}
-                  aria-pressed={on}
-                  className={`flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left ${on ? 'bg-accent-wash' : ''}`}
-                >
-                  <span
-                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                      on ? 'border-accent bg-accent text-white' : 'border-line-strong'
-                    }`}
-                  >
-                    {on && <Icon name="check" size={14} strokeWidth={2.8} />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-bold">{r.title}</span>
-                    <span className="block truncate text-xs text-ink-muted">{r.ingredientNames.join('、')}</span>
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      <div className="flex flex-col gap-3.5">
+        <label className="flex min-h-12 items-center gap-2.5 rounded-full border border-transparent bg-surface px-4 shadow-card focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
+          <Icon name="search" className="text-ink-muted" />
+          <span className="sr-only">料理を探す</span>
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="料理名・食材で探す"
+            className="min-w-0 flex-1 bg-transparent py-2.5 text-base placeholder:text-ink-muted focus:outline-none"
+          />
+        </label>
+        <div className="flex gap-2">
+          <RecipeSortMenu value={sort} onChange={setSort} />
+          <RecipeFilterButton />
+        </div>
 
-      {picked.length > 0 && (
-        <StickyAction hint="次に、食材を使い切れる組み合わせを提案します">
-          {error && <p className="text-center text-sm text-danger">{error}</p>}
-          <Button onClick={onSubmit} disabled={create.isPending} className="min-h-13 w-full text-base">
-            {create.isPending ? '作っています…' : `${picked.length}品で提案を見る`}
-          </Button>
-        </StickyAction>
-      )}
+        {recipes.isPending && <p className="text-ink-muted">読み込み中…</p>}
+        {recipes.isError && <p className="text-danger">読み込めませんでした</p>}
+        {recipes.data && recipes.data.length === 0 && <p className="text-ink-muted">見つかりませんでした</p>}
+        {recipes.data && recipes.data.length > 0 && (
+          <ul className="flex flex-col gap-2.5">
+            {recipes.data.map((r) => {
+              const on = picked.some((p) => p.recipeId === r.id)
+              const fav = favoriteTotal(r)
+              return (
+                <li
+                  key={r.id}
+                  className={`flex items-center gap-1 rounded-[24px] border-2 bg-surface py-2.5 pr-1.5 pl-3 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent ${
+                    on ? 'border-accent shadow-[0_6px_18px_rgba(179,58,10,0.12)]' : 'border-transparent shadow-card'
+                  }`}
+                >
+                  {/* 行を押すと選ぶ・外す。右端の「>」はレシピを見るページ（選ぶのとは別） */}
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggle(r.id, r.title)}
+                      aria-label={`${r.title} を食べたい料理にする`}
+                      className="sr-only"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                        on ? 'border-accent bg-accent text-white' : 'border-line-strong bg-surface'
+                      }`}
+                    >
+                      {on && <Icon name="check" size={14} strokeWidth={3} />}
+                    </span>
+                    <RecipePhoto imageKey={r.imageKey} className="size-14 rounded-[18px]" />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="truncate text-[15px] font-bold">{r.title}</span>
+                      <span className="truncate text-xs text-ink-muted">{r.ingredientNames.join('、')}</span>
+                      <span className="flex flex-wrap items-center gap-x-2.5 text-xs whitespace-nowrap text-ink-soft">
+                        {fav !== null && (
+                          <span className="flex items-center gap-0.5">
+                            <Icon name="heart" size={12} strokeWidth={1.6} className="fill-[#e07a5f] text-[#e07a5f]" />
+                            <span className="sr-only">お気に入り</span>
+                            {fav.toLocaleString('ja-JP')}
+                          </span>
+                        )}
+                        {r.cookCount !== null && <span>作った {r.cookCount.toLocaleString('ja-JP')}回</span>}
+                        <span className="font-bold text-ink">{r.servings}人前</span>
+                      </span>
+                    </span>
+                  </label>
+                  <Link
+                    to={`/recipes/${r.id}`}
+                    aria-label={`${r.title} のレシピを見る`}
+                    className="flex h-11 w-10 shrink-0 items-center justify-center text-ink-muted"
+                  >
+                    <Icon name="chevronRight" size={18} strokeWidth={2} />
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+
+      <StickyAction>
+        {error && <p className="text-center text-sm text-danger">{error}</p>}
+        <Button
+          onClick={onSubmit}
+          disabled={picked.length === 0 || create.isPending}
+          className="min-h-14 w-full text-base"
+        >
+          {create.isPending
+            ? '作っています…'
+            : picked.length === 0
+              ? '料理を選んでください'
+              : `提案を見る（${picked.length}品を選択中）`}
+        </Button>
+      </StickyAction>
     </>
   )
 }
