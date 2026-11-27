@@ -166,6 +166,22 @@ describe('下ごしらえ・袋詰め', () => {
     expect((await api.call('POST', `/plans/${plan.id}/kits`, {})).status).toBe(409)
   })
 
+  it('袋の保存が同時に 2 本届いても、袋は料理の数だけで在庫も 1 回分だけ減る', async () => {
+    const plan = await prepping()
+    const [a, b] = await Promise.all([
+      api.call('POST', `/plans/${plan.id}/kits`, {}),
+      api.call('POST', `/plans/${plan.id}/kits`, {}),
+    ])
+    expect([a.status, b.status].sort()).toEqual([201, 409])
+    const fridge = (await api.call<{ items: FridgeEntry[] }>('GET', '/fridge?kind=meal_kit')).body.items
+    expect(fridge).toHaveLength(2)
+    const stock = (await api.call<{ items: InventoryItem[] }>('GET', '/inventory')).body.items
+    expect(stock.map((i) => [i.name, i.quantity]).sort()).toEqual([
+      ['じゃがいも', 1],
+      ['木綿豆腐', 1],
+    ])
+  })
+
   it('在庫が足りない分は下書きで知らせる', async () => {
     const plan = await prepping()
     const onionRow = (await api.call<{ items: InventoryItem[] }>('GET', '/inventory')).body.items.find(
@@ -173,7 +189,14 @@ describe('下ごしらえ・袋詰め', () => {
     )
     await api.call('POST', `/inventory/${onionRow?.id}/use-up`)
     const res = await api.call<PrepView>('GET', `/plans/${plan.id}/prep`)
-    expect(res.body.shortages).toEqual([expect.objectContaining({ name: '玉ねぎ', quantity: 1.5 })])
+    expect(res.body.shortages).toEqual([expect.objectContaining({ name: '玉ねぎ', quantity: 1.5, kind: 'pack' })])
+    // 直前に使う豆腐（確保する分）がないときも知らせる
+    const tofuRow = (await api.call<{ items: InventoryItem[] }>('GET', '/inventory')).body.items.find(
+      (i) => i.name === '木綿豆腐',
+    )
+    await api.call('POST', `/inventory/${tofuRow?.id}/use-up`)
+    const again = await api.call<PrepView>('GET', `/plans/${plan.id}/prep`)
+    expect(again.body.shortages).toContainEqual(expect.objectContaining({ name: '木綿豆腐', kind: 'before_cook' }))
   })
 
   it('下ごしらえ中でなければ 409、献立にない料理は 400', async () => {

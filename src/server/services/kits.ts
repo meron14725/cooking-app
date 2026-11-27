@@ -25,6 +25,13 @@ import {
 import { ApiError } from '../errors'
 import { listInventory } from './inventory'
 
+function isUniqueViolation(err: unknown): boolean {
+  for (let e: unknown = err; e instanceof Error; e = e.cause) {
+    if (/UNIQUE constraint failed/i.test(e.message)) return true
+  }
+  return false
+}
+
 async function findPrepping(db: Db, planId: string) {
   const plan = await db.query.plans.findFirst({ where: eq(plans.id, planId) })
   if (!plan) throw new ApiError(404, 'NOT_FOUND', '献立が見つかりません')
@@ -115,6 +122,15 @@ function packNeeds(kits: KitDraft[]) {
   )
 }
 
+/** 直前に使う分（袋用に確保する量） */
+function beforeCookNeeds(kits: KitDraft[]) {
+  return kits.flatMap((k) =>
+    k.items
+      .filter((i) => i.tracked && i.state === 'before_cook' && i.quantity !== null)
+      .map((i) => ({ ingredientId: i.ingredientId, quantity: i.quantity as number })),
+  )
+}
+
 /** 減らせる在庫（他の袋の直前作業用に確保している分は除く） */
 async function consumable(db: Db, today: string) {
   const items = await listInventory(db, today)
@@ -130,13 +146,14 @@ async function consumable(db: Db, today: string) {
   }
 }
 
-function toShortages(shortages: Map<string, number>, kits: KitDraft[]): Shortage[] {
+function toShortages(shortages: Map<string, number>, kits: KitDraft[], kind: Shortage['kind']): Shortage[] {
   const info = new Map(kits.flatMap((k) => k.items.map((i) => [i.ingredientId, i] as const)))
   return [...shortages].map(([ingredientId, quantity]) => ({
     ingredientId,
     name: info.get(ingredientId)?.name ?? '',
     unit: info.get(ingredientId)?.unit ?? '',
     quantity,
+    kind,
   }))
 }
 
@@ -151,8 +168,19 @@ export async function previewPrep(
   const { prepRecipes, prepIngredients } = await loadInputs(db, planId, plan.startsOn)
   const kits = buildAll(prepRecipes, prepIngredients, today, locations)
   const { rows } = await consumable(db, today)
-  const { shortages } = consumeStock(rows, packNeeds(kits))
-  return { kits, prep: summarizePrep(kits), shortages: toShortages(shortages, kits) }
+  const packed = consumeStock(rows, packNeeds(kits))
+  // 袋に入れた残りで、直前に使う分（確保する分）が足りるか
+  const left = new Map(packed.updates.map((u) => [u.id, u.quantity]))
+  const after = rows.map((r) => ({ ...r, quantity: left.get(r.id) ?? r.quantity }))
+  const beforeCook = consumeStock(after, beforeCookNeeds(kits))
+  return {
+    kits,
+    prep: summarizePrep(kits),
+    shortages: [
+      ...toShortages(packed.shortages, kits, 'pack'),
+      ...toShortages(beforeCook.shortages, kits, 'before_cook'),
+    ],
+  }
 }
 
 /**
@@ -189,20 +217,26 @@ export async function saveKits(db: Db, planId: string, input: KitsInput, today: 
       beforeCookTask: item.beforeCookTask,
     })),
   )
-  await db.batch([
-    db
-      .update(plans)
-      .set({ status: 'stored' })
-      .where(and(eq(plans.id, planId), eq(plans.status, 'prepping'))),
-    db.insert(mealKits).values(kitRows),
-    ...(itemRows.length > 0 ? [db.insert(mealKitItems).values(itemRows)] : []),
-    ...updates.map((u) => {
-      const quantity = u.quantity + (reserved.get(u.id) ?? 0)
-      return db
-        .update(inventoryItems)
-        .set(quantity <= 1e-9 ? { quantity: 0, usedUpAt: now } : { quantity })
-        .where(eq(inventoryItems.id, u.id))
-    }),
-  ])
+  try {
+    await db.batch([
+      db
+        .update(plans)
+        .set({ status: 'stored' })
+        .where(and(eq(plans.id, planId), eq(plans.status, 'prepping'))),
+      db.insert(mealKits).values(kitRows),
+      ...(itemRows.length > 0 ? [db.insert(mealKitItems).values(itemRows)] : []),
+      ...updates.map((u) => {
+        const quantity = u.quantity + (reserved.get(u.id) ?? 0)
+        return db
+          .update(inventoryItems)
+          .set(quantity <= 1e-9 ? { quantity: 0, usedUpAt: now } : { quantity })
+          .where(eq(inventoryItems.id, u.id))
+      }),
+    ])
+  } catch (err) {
+    // 同じ献立の袋がもうある = 二重に届いた 2 本目。batch ごと巻き戻っている
+    if (isUniqueViolation(err)) throw new ApiError(409, 'INVALID_STATE', 'この献立の袋はもう保存されています')
+    throw err
+  }
   return kits
 }

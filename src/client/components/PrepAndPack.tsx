@@ -235,7 +235,10 @@ export function PrepAndPack({ planId }: { planId: string }) {
       <StepTabs step={step} onChange={setStep} />
       {data.shortages.length > 0 && (
         <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          在庫に足りないもの: {data.shortages.map((s) => `${s.name} ${fmt(s.quantity, s.unit)}`).join('、')}
+          在庫に足りないもの:{' '}
+          {data.shortages
+            .map((s) => `${s.name} ${fmt(s.quantity, s.unit)}${s.kind === 'before_cook' ? '（直前に使う分）' : ''}`)
+            .join('、')}
           。買い足すか、冷蔵庫から量を直してください（このままでも保存はできます）
         </p>
       )}

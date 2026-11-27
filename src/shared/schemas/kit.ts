@@ -13,7 +13,13 @@ export const kitsInputSchema = z.object({
 })
 export type KitsInput = z.infer<typeof kitsInputSchema>
 
-/** 袋に入れる分のうち、在庫が足りない量 */
-export type Shortage = { ingredientId: string; name: string; unit: string; quantity: number }
+/** 在庫が足りない量。pack = 袋に入れる分、before_cook = 直前に使う分（袋用に確保する分） */
+export type Shortage = {
+  ingredientId: string
+  name: string
+  unit: string
+  quantity: number
+  kind: 'pack' | 'before_cook'
+}
 
 export type PrepView = { kits: KitDraft[]; prep: PrepSummary; shortages: Shortage[] }

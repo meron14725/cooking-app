@@ -308,7 +308,8 @@ export const mealKits = sqliteTable(
     ...timestamps,
   },
   (t) => [
-    index('meal_kits_plan_idx').on(t.planId),
+    // 献立 1 つにつき 1 料理 1 袋（袋の保存が二重に届いても 2 本目は batch ごと失敗する）
+    uniqueIndex('meal_kits_plan_recipe_unique').on(t.planId, t.recipeId),
     index('meal_kits_status_idx').on(t.status, t.plannedOn),
     check('meal_kits_location_check', inList('location', KIT_LOCATIONS)),
     check('meal_kits_status_check', inList('status', KIT_STATUSES)),
