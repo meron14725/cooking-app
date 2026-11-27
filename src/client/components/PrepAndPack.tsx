@@ -5,6 +5,7 @@ import { diffDays, shortDate } from '../../shared/domain/date'
 import type { KitDraft, KitLocation } from '../../shared/domain/prep'
 import { ApiRequestError } from '../api/client'
 import { usePrepPreview, useSaveKits } from '../api/kits'
+import { DishPhotoButton } from './DishPhoto'
 import { Button } from './form'
 import { Icon } from './Icon'
 import { PlanProgress } from './PlanProgress'
@@ -184,7 +185,10 @@ function KitCard({
             {shortDate(kit.plannedOn)} に食べる ・ {kit.servings}食分
           </span>
         </div>
-        <h3 className="line-clamp-2 text-[19px] font-bold">{kit.title}</h3>
+        <div className="flex items-center gap-3">
+          <DishPhotoButton recipeId={kit.recipeId} title={kit.title} className="size-12 rounded-[14px]" />
+          <h3 className="line-clamp-2 min-w-0 text-[19px] font-bold">{kit.title}</h3>
+        </div>
         <fieldset className="grid grid-cols-2 gap-1 rounded-[18px] bg-sunken p-1">
           <legend className="sr-only">{kit.title}の保存場所</legend>
           {locButton('fridge', '冷蔵')}

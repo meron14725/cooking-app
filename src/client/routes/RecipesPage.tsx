@@ -245,9 +245,9 @@ export function RecipesPage() {
               <li key={r.id}>
                 <Link
                   to={`/recipes/${r.id}`}
-                  className="flex items-center gap-3.5 rounded-item bg-surface py-3.5 pr-4 pl-3.5 shadow-card"
+                  className="flex items-center gap-3.5 rounded-[24px] bg-surface py-3 pr-3.5 pl-3 shadow-card"
                 >
-                  <RecipePhoto imageKey={r.imageKey} className="size-16 rounded-[18px]" />
+                  <RecipePhoto imageKey={r.imageKey} className="size-16 rounded-[20px]" />
                   <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <span className="truncate text-base font-bold">{r.title}</span>
                     <span className="truncate text-xs text-ink-muted">
