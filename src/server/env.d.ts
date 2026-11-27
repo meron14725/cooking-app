@@ -9,8 +9,14 @@ interface Env {
   ACCESS_AUD: string
   /** ローカル開発のときだけ .dev.vars で "local" を入れる。本番では未設定 */
   ENVIRONMENT?: string
-  /** AI プロバイダ: gemini（既定）/ fake（テスト・ローカル用） */
+  /** AI プロバイダ: cursor（既定）/ gemini（予備）/ fake（テスト・ローカル用） */
   AI_PROVIDER?: string
+  /** Cursor SDK を動かす Container（docs/design/08-agent.md） */
+  AGENT?: DurableObjectNamespace<import('./agent/container').AgentContainer>
+  /** Cursor の User API key（wrangler secret put CURSOR_API_KEY）。Container に環境変数で渡す */
+  CURSOR_API_KEY?: string
+  /** 使うモデル。空なら composer-2.5 */
+  CURSOR_MODEL?: string
   /** Google AI Studio の API キー（wrangler secret put GEMINI_API_KEY） */
   GEMINI_API_KEY?: string
   /** 使うモデル。空なら src/server/ai/gemini.ts の既定 */

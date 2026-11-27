@@ -17,7 +17,7 @@ export interface AiProvider {
   estimateCalories(input: EstimateCaloriesInput): Promise<{ caloriesKcal: number }>
 }
 
-export type AiEnv = Pick<Env, 'AI_PROVIDER' | 'GEMINI_API_KEY' | 'GEMINI_MODEL'>
+export type AiEnv = Pick<Env, 'AI_PROVIDER' | 'AGENT' | 'CURSOR_API_KEY' | 'GEMINI_API_KEY' | 'GEMINI_MODEL'>
 
 /** AI 側の失敗（タイムアウト、応答が壊れている、など）は 502 */
 export class AiError extends ApiError {

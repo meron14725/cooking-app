@@ -2,6 +2,8 @@
 # local のときだけ Cloudflare Access の JWT 検証をスキップする
 ENVIRONMENT=local
 
-# AI はローカルでは固定値を返す fake を使う。本物で試すなら gemini にして GEMINI_API_KEY を入れる
+# AI はローカルでは固定値を返す fake を使う（未設定だと cursor になり、Container がないので 503）。
+# 本物で試すなら cursor + CURSOR_API_KEY（wrangler dev と Docker が必要。docs/deploy.md）、または gemini + GEMINI_API_KEY
 AI_PROVIDER=fake
+# CURSOR_API_KEY=
 # GEMINI_API_KEY=

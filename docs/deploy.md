@@ -58,19 +58,25 @@ Cloudflare ダッシュボード → **Workers & Pages → cooking-app → Setti
 }
 ```
 
-## 4. AI の API キーを入れる
+## 4. AI（Cursor）の API キーを入れる
 
-URL 取り込みとカロリー推定で Gemini API を使います。
+URL 取り込み・補完提案・カロリー推定は、Cursor SDK を Cloudflare Containers の中で動かして使います（[設計 08](./design/08-agent.md)）。
 
-1. [Google AI Studio](https://aistudio.google.com/apikey) で API キーを作る
+1. Cursor の [Dashboard → API Keys](https://cursor.com/dashboard/api) で **User API key** を作る（利用は自分のプランの枠から引かれる。Usage 画面に「SDK」タグで出る）
 2. Worker のシークレットに入れる（リポジトリには入れない）
 
 ```sh
-npx wrangler secret put GEMINI_API_KEY
+npx wrangler secret put CURSOR_API_KEY
 ```
 
-- 使うモデルは `src/server/ai/gemini.ts` の既定値です。変えたいときは `wrangler.jsonc` の `vars` に `GEMINI_MODEL` を足します
-- キーが入っていないと、取り込みと推定のボタンは「AI の API キーが設定されていません」と出ます（ほかの機能は使えます）
+- Container のイメージは `wrangler deploy`（GitHub Actions の Deploy）が `container/Dockerfile` から作って上げます。ubuntu の runner には Docker が入っているので追加の設定はいりません
+- 初回のデプロイで Container の権限が足りないと言われたら、上の API トークンに Containers の編集権限を足してください（必要な権限名は未確認です）
+- モデルの既定は `composer-2.5`。変えたいときは `wrangler.jsonc` の `vars` に `CURSOR_MODEL` を足します
+- キーが入っていないと、AI のボタンは「AI の設定がありません」と出ます（ほかの機能は使えます）。使っていない Container は 10 分で止まり、次に使うときは起動を待つので、1 回目は少し遅くなります
+
+### 予備: Gemini に戻す
+
+`wrangler.jsonc` の `vars` に `"AI_PROVIDER": "gemini"` を足し、[Google AI Studio](https://aistudio.google.com/apikey) のキーを `npx wrangler secret put GEMINI_API_KEY` で入れます。
 
 ## 5. 確認
 
@@ -91,6 +97,9 @@ npx wrangler secret put GEMINI_API_KEY
 ## ローカル開発
 
 ```sh
-cp .dev.vars.example .dev.vars   # ENVIRONMENT=local で JWT 検証をスキップ
+cp .dev.vars.example .dev.vars   # ENVIRONMENT=local で JWT 検証をスキップ、AI は fake
 npm run dev
 ```
+
+- `npm run dev`（vite）では Container を動かしません（`wrangler.jsonc` の `dev.enable_containers: false`）。AI は `.dev.vars` の `AI_PROVIDER=fake` で固定の下書きを返します
+- 本物の Cursor で試すときは `.dev.vars` を `AI_PROVIDER=cursor` と `CURSOR_API_KEY=...` にして、Docker を起動した状態で `npm run build && npx wrangler dev`（`dev.enable_containers` を一時的に外す）
