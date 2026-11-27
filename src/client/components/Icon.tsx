@@ -101,6 +101,7 @@ const ICONS = {
   chevronDown: <path d="m6 9 6 6 6-6" strokeLinejoin="round" />,
   sort: <path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4M13.5 7.5 17 4l3.5 3.5" strokeLinejoin="round" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
+  refresh: <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4.5h-4.5" strokeLinejoin="round" />,
   heart: (
     <path
       d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.2 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"

@@ -25,7 +25,9 @@ import { RecipePhoto } from '../components/RecipePhoto'
 import { RecipeFilterButton, RecipeSortMenu } from '../components/RecipeSortMenu'
 import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
+import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
+import { anchorsKey, currentRounds, firstRound, isProposalRounds, nextRound, roundsStorageKey } from './proposalRounds'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -400,12 +402,29 @@ function fmtServings(n: number): string {
 }
 
 function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
-  const recs = useRecommendations(plan.id)
+  const anchors = anchorsKey(plan)
+  // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理が変わったら 1 回目に戻る）
+  const [savedRounds, setRounds] = useSessionState(roundsStorageKey(plan.id), firstRound(anchors), isProposalRounds)
+  const rounds = currentRounds(savedRounds, anchors)
+  const recs = useRecommendations(plan.id, rounds.shown)
   const replace = useReplacePlanRecipes(plan.id)
   // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const proposals = recs.data?.proposals ?? []
+  const hasMore = recs.data?.hasMore ?? false
+
+  function showOthers() {
+    setRounds(
+      nextRound(
+        rounds,
+        proposals.map((p) => p.recipes.map((r) => r.recipeId)),
+      ),
+    )
+    // 選択は新しい 1 番目に戻す
+    setPickedKey(null)
+    setError(null)
+  }
   const found = proposals.findIndex((p) => proposalKey(p) === pickedKey)
   const picked = found === -1 ? 0 : found
   const chosen = proposals[picked]
@@ -424,12 +443,34 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-ink-muted">提案{proposals.length > 0 && `（${proposals.length}案）`}</h2>
-        <p className="text-xs text-ink-muted">在庫と期限から計算</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-ink-muted">
+            提案
+            {proposals.length > 0 &&
+              (rounds.round > 1 ? `（${rounds.round}回目の${proposals.length}案）` : `（${proposals.length}案）`)}
+          </h2>
+          <p className="text-xs text-ink-muted">在庫と期限から計算</p>
+        </div>
+        {recs.isSuccess && !hasMore && proposals.length > 0 && (
+          <p className="shrink-0 text-xs text-ink-muted">これ以上の案はありません</p>
+        )}
+        {recs.isSuccess && hasMore && (
+          <button
+            type="button"
+            onClick={showOthers}
+            className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 text-[13px] font-bold text-accent-strong shadow-card"
+          >
+            <Icon name="refresh" size={15} strokeWidth={2} />
+            別の案を出す
+          </button>
+        )}
       </div>
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
+      {recs.isSuccess && proposals.length === 0 && (
+        <p className="rounded-item bg-sunken px-4 py-3 text-sm text-ink-soft">これ以上の案はありません</p>
+      )}
       {/* ol に radiogroup は付けられない（a11y の lint）ので、外側の div をラジオのまとまりにする */}
       <div role="radiogroup" aria-label="提案">
         <ol className="flex flex-col gap-3">

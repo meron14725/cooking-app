@@ -10,7 +10,7 @@ import { apiFetch } from './client'
 
 const keys = {
   current: ['plans', 'current'] as const,
-  recommendations: (id: string) => ['plans', id, 'recommendations'] as const,
+  recommendations: (id: string, exclude: string[][] = []) => ['plans', id, 'recommendations', exclude] as const,
   evaluation: (id: string) => ['plans', id, 'evaluation'] as const,
 }
 
@@ -22,12 +22,18 @@ export function useCurrentPlan() {
   })
 }
 
-/** 提案は保存しない計算結果。在庫やレシピが変わったら取り直す */
-export function useRecommendations(planId: string | undefined, enabled = true) {
+/**
+ * 提案は保存しない計算結果。在庫やレシピが変わったら取り直す。
+ * exclude はもう出した案（「別の案を出す」）。それを除いた次の案が返る
+ */
+export function useRecommendations(planId: string | undefined, exclude: string[][] = [], enabled = true) {
   return useQuery({
-    queryKey: keys.recommendations(planId ?? ''),
+    queryKey: keys.recommendations(planId ?? '', exclude),
     queryFn: () =>
-      apiFetch<RecommendationsResponse>(`/plans/${planId}/recommendations`, { method: 'POST', body: '{}' }),
+      apiFetch<RecommendationsResponse>(`/plans/${planId}/recommendations`, {
+        method: 'POST',
+        body: JSON.stringify(exclude.length > 0 ? { exclude } : {}),
+      }),
     enabled: Boolean(planId) && enabled,
   })
 }
