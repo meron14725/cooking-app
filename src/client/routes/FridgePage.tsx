@@ -47,7 +47,7 @@ function Chips<T extends string>({
             onClick={() => onChange(o.value)}
             aria-pressed={on}
             className={`min-h-9 rounded-full border px-3.5 text-[13px] ${
-              on ? 'border-ink bg-ink font-bold text-white' : 'border-line-strong bg-surface font-medium text-ink-soft'
+              on ? 'border-ink bg-ink font-bold text-white' : 'border-line bg-surface font-medium text-ink-soft'
             }`}
           >
             {o.label}
@@ -96,7 +96,7 @@ function AddStockForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="space-y-3 rounded-card border border-accent-line bg-accent-wash p-4">
+    <div className="space-y-3 rounded-card bg-surface p-5 shadow-card">
       <IngredientSelect
         value={ingredientId}
         onChange={(id) => {
@@ -222,7 +222,7 @@ function EditStockPanel({ item, onDone }: { item: InventoryItem; onDone: () => v
   }
 
   return (
-    <div className="space-y-2 border-t border-line-soft bg-ground px-4 py-3">
+    <div className="mb-3 space-y-2 rounded-item bg-ground p-4">
       <div className="flex gap-2">
         <label className="min-w-0 flex-1 text-xs text-ink-soft">
           残り（{item.unit}）
@@ -294,7 +294,7 @@ function EntryIcon({ entry }: { entry: FridgeEntry }) {
       ? { icon: 'bag' as const, className: 'bg-accent-soft text-accent' }
       : LOCATION_ICON[entry.location]
   return (
-    <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${className}`}>
+    <span className={`flex size-10 shrink-0 items-center justify-center rounded-[18px] ${className}`}>
       <Icon name={icon} />
     </span>
   )
@@ -330,16 +330,11 @@ function EntryRow({
   return (
     <li>
       {entry.kind === 'ingredient' ? (
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className="block min-h-16 w-full px-4 py-3 text-left"
-        >
+        <button type="button" onClick={onToggle} aria-expanded={open} className="block min-h-16 w-full py-3 text-left">
           {content}
         </button>
       ) : (
-        <Link to={`/kits/${entry.id}/cook`} className="block min-h-16 px-4 py-3">
+        <Link to={`/kits/${entry.id}/cook`} className="block min-h-16 py-3">
           {content}
         </Link>
       )}
@@ -388,7 +383,7 @@ export function FridgePage() {
         </p>
       )}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-line-soft overflow-hidden rounded-card bg-surface shadow-card">
+        <ul className="divide-y divide-line-soft rounded-card bg-surface px-4 shadow-card">
           {data.map((entry) => (
             <EntryRow
               key={`${entry.kind}-${entry.id}`}
