@@ -30,17 +30,20 @@ import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
 import {
   anchorsKey,
+  canStepDown,
+  canStepUp,
   currentRounds,
   firstRound,
   isProposalRounds,
   isProposalServings,
   locksKey,
   locksStorageKey,
-  MAX_SERVINGS,
   nextRound,
   noServings,
   roundsStorageKey,
   servingsStorageKey,
+  stepDown,
+  stepUp,
 } from './proposalRounds'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
@@ -461,9 +464,9 @@ function DishServings({
     <span className={`flex shrink-0 items-center rounded-full bg-sunken p-0.5 ${disabled ? 'opacity-45' : ''}`}>
       <button
         type="button"
-        onClick={(e) => press(e, value - 1)}
-        disabled={disabled || value <= 1}
-        aria-label={`${title} を1食減らす`}
+        onClick={(e) => press(e, stepDown(value))}
+        disabled={disabled || !canStepDown(value)}
+        aria-label={`${title} の食分を減らす`}
         className={btn}
       >
         <Icon name="minus" size={15} strokeWidth={2.2} />
@@ -471,9 +474,9 @@ function DishServings({
       <span className="min-w-10.5 text-center text-[13px] font-bold tabular-nums">{fmtServings(value)}食分</span>
       <button
         type="button"
-        onClick={(e) => press(e, value + 1)}
-        disabled={disabled || value >= MAX_SERVINGS}
-        aria-label={`${title} を1食増やす`}
+        onClick={(e) => press(e, stepUp(value))}
+        disabled={disabled || !canStepUp(value)}
+        aria-label={`${title} の食分を増やす`}
         className={btn}
       >
         <Icon name="plus" size={15} strokeWidth={2.2} />
@@ -523,8 +526,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   }, [savedServings.anchors, anchors, setSavedServings])
   const servings = savedServings.anchors === anchors ? savedServings.servings : {}
   function setDishServings(recipeId: string, value: number) {
-    const v = Math.max(1, Math.min(MAX_SERVINGS, value))
-    setSavedServings({ anchors, servings: { ...servings, [recipeId]: v } })
+    setSavedServings({ anchors, servings: { ...servings, [recipeId]: value } })
   }
   // 鍵: その料理と今の食分を固定する／外す。固定を変えたら選び直すので、選択は新しい 1 番目に戻す
   function toggleLock(recipeId: string, sv: number) {

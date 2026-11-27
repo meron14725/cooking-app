@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_SERVINGS_PER_DISH } from '../domain/constants'
 import type { Proposal } from '../domain/recommend'
 
 export const PLAN_STATUSES = ['draft', 'shopping', 'prepping', 'stored', 'done'] as const
@@ -33,7 +34,12 @@ export const recommendationsInputSchema = z.object({
     .optional(),
   /** 鍵で固定した料理と食数。必ず含め、残りの品数分を選び直す */
   fixed: z
-    .array(z.object({ recipeId: z.string().min(1).max(100), servings: servingsSchema }))
+    .array(
+      z.object({
+        recipeId: z.string().min(1).max(100),
+        servings: servingsSchema.max(MAX_SERVINGS_PER_DISH, `1 品は ${MAX_SERVINGS_PER_DISH} 食分までです`),
+      }),
+    )
     .max(10)
     .refine((list) => new Set(list.map((f) => f.recipeId)).size === list.length, '同じ料理が重なっています')
     .optional(),

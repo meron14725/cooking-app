@@ -184,6 +184,8 @@ describe('献立 API', () => {
       expect(p.recipes).toContainEqual(expect.objectContaining({ recipeId: partner.id, role: 'added', servings: 2 }))
     }
     expect((await api.call('POST', url, { fixed: [{ recipeId: 'nope', servings: 1 }] })).status).toBe(400)
+    // 1 品の食数は MAX_SERVINGS_PER_DISH（4）まで
+    expect((await api.call('POST', url, { fixed: [{ recipeId: partner.id, servings: 5 }] })).status).toBe(400)
     expect(
       (
         await api.call('POST', url, {

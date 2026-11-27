@@ -133,6 +133,9 @@ describe('献立の提案: 食分の ＋－', () => {
           leftovers: [
             { ingredientId: 'i1', name: '玉ねぎ', quantity: 2, unit: '個', perishable: false, packs: 0.67 },
             { ingredientId: 'i2', name: '塩', quantity: 1, unit: 'g', perishable: false, packs: 0.01 },
+            // 冷蔵のみの食材は 3% 以上なら出し、ほかの食材は 1 割未満なら出さない
+            { ingredientId: 'i3', name: '豆腐', quantity: 0.05, unit: '丁', perishable: true, packs: 0.05 },
+            { ingredientId: 'i4', name: 'にんじん', quantity: 0.2, unit: '本', perishable: false, packs: 0.07 },
           ],
         }
       }
@@ -143,15 +146,25 @@ describe('献立の提案: 食分の ＋－', () => {
 
     // 1 回目は余りなし
     expect((await screen.findAllByText('ほぼ使い切れます')).length).toBe(3)
-    fireEvent.click(screen.getByRole('button', { name: '料理c を1食増やす' }))
+    fireEvent.click(screen.getByRole('button', { name: '料理c の食分を増やす' }))
 
     // 案1 のまま、案2（料理c）の食分と合計が変わる
     expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
-    expect((screen.getByRole('button', { name: '料理c を1食減らす' }) as HTMLButtonElement).disabled).toBe(false)
+    // 刻みは SERVINGS_STEP（2）: 1 → 2 → 4。2 より下げられず、4（MAX_SERVINGS_PER_DISH）より上げられない
+    const dec = () => screen.getByRole('button', { name: '料理c の食分を減らす' }) as HTMLButtonElement
+    const inc = () => screen.getByRole('button', { name: '料理c の食分を増やす' }) as HTMLButtonElement
+    expect(dec().disabled).toBe(true)
+    expect(screen.getByText('3食分')).toBeTruthy()
+    fireEvent.click(inc())
+    expect(screen.getByText('5食分')).toBeTruthy()
+    expect(inc().disabled).toBe(true)
+    fireEvent.click(dec())
     expect(screen.getByText('3食分')).toBeTruthy()
     // 評価し直した結果: 多めに余る玉ねぎだけラベルで出す（ごく少しの塩は数えない）
     expect(await screen.findByText('玉ねぎ 2個')).toBeTruthy()
     expect(screen.queryByText(/塩/)).toBeNull()
+    expect(screen.getByText('豆腐 0.05丁')).toBeTruthy()
+    expect(screen.queryByText(/にんじん/)).toBeNull()
     expect(screen.getAllByText('ほぼ使い切れます')).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('radio', { name: '案2を選ぶ' }))
@@ -191,7 +204,7 @@ describe('献立の提案: 鍵で固定', () => {
     })
     renderRoutes({ '/plan': <PlanPage /> }, '/plan')
 
-    const inc = await screen.findByRole('button', { name: '料理c を1食増やす' })
+    const inc = await screen.findByRole('button', { name: '料理c の食分を増やす' })
     expect(screen.getByText('鍵で料理と食分を固定すると、それに合わせて残りの料理を提案し直します')).toBeTruthy()
     fireEvent.click(inc)
     fireEvent.click(screen.getByRole('button', { name: '料理c の料理と食分を固定' }))
@@ -205,7 +218,7 @@ describe('献立の提案: 鍵で固定', () => {
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({ fixed: [{ recipeId: 'c', servings: 2 }] })
     const locks = screen.getAllByRole('button', { name: '料理c の料理と食分を固定' })
     expect(locks.every((b) => b.getAttribute('aria-pressed') === 'true')).toBe(true)
-    for (const b of screen.getAllByRole('button', { name: '料理c を1食増やす' })) {
+    for (const b of screen.getAllByRole('button', { name: '料理c の食分を増やす' })) {
       expect((b as HTMLButtonElement).disabled).toBe(true)
     }
     expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
