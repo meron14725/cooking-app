@@ -1,18 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Recipe, RecipeInput, RecipeSummary } from '../../shared/schemas/recipe'
+import type { Recipe, RecipeInput, RecipeSort, RecipeSummary } from '../../shared/schemas/recipe'
 import type { EstimateCaloriesInput, RecipeDraft, SuggestRecipeInput } from '../../shared/schemas/recipeDraft'
 import { ApiRequestError, apiFetch } from './client'
 
 const keys = {
   all: ['recipes'] as const,
-  list: (params: { q?: string; ingredientId?: string }) => ['recipes', 'list', params] as const,
+  list: (params: RecipeListParams) => ['recipes', 'list', params] as const,
   detail: (id: string) => ['recipes', 'detail', id] as const,
 }
 
-export function useRecipes(params: { q?: string; ingredientId?: string } = {}) {
+type RecipeListParams = { q?: string; ingredientId?: string; sort?: RecipeSort }
+
+export function useRecipes(params: RecipeListParams = {}) {
   const search = new URLSearchParams()
   if (params.q) search.set('q', params.q)
   if (params.ingredientId) search.set('ingredientId', params.ingredientId)
+  if (params.sort) search.set('sort', params.sort)
   const qs = search.toString()
   return useQuery({
     queryKey: keys.list(params),

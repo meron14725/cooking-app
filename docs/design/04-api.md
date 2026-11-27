@@ -27,13 +27,14 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/recipes` | 一覧（`?q=`、`?ingredientId=` でその食材を使うレシピ） |
+| GET | `/api/recipes` | 一覧（`?q=`、`?ingredientId=` でその食材を使うレシピ。`?sort=popular` でお気に入り数、`?sort=cooked` で作られた回数の多い順、省略で料理名順。件数のないレシピは後ろ） |
 | POST | `/api/recipes` | 作成（材料・手順をまとめて送る） |
 | GET | `/api/recipes/:id` | 詳細 |
 | PUT | `/api/recipes/:id` | 更新（材料・手順は丸ごと置き換え） |
 | DELETE | `/api/recipes/:id` | 論理削除 |
-| POST | `/api/recipes/import-url` | URL から下書きを作る（保存しない） |
+| POST | `/api/recipes/import-url` | URL から下書きを作る（保存しない）。COCORO KITCHEN の URL はレシピ 1 件の JSON API を取り、`official`（メニュー番号・写真のキー・件数）も返す |
 | POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない）。`{ leftovers: [{ ingredientId, quantity }] }`（余りの優先順） |
+| GET | `/api/images/<キー>` | レシピ写真を R2 から返す。キーは `img/` の直下のファイル名だけ（ほかは 400、無ければ 404）。`Cache-Control: private, max-age=86400` |
 | POST | `/api/recipes/estimate-calories` | 材料と人数から 1 人前のカロリーを AI で推定（保存しない）。`{ caloriesKcal }` を返す |
 
 - 材料の `ingredientId` は食材マスタにあるもの。ない、または削除済み（このレシピですでに使っているものを除く）なら 400 `UNKNOWN_INGREDIENT`

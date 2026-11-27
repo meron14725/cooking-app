@@ -128,6 +128,16 @@ export const recipes = sqliteTable(
     sourceType: text('source_type', { enum: RECIPE_SOURCE_TYPES }).notNull(),
     sourceUrl: text('source_url'),
     notes: text('notes'),
+    /** 公式メニュー番号（3 桁、例: 063）。番号のないレシピは NULL */
+    officialMenuNo: text('official_menu_no'),
+    /** 完成写真の R2 オブジェクトキー（例: img/R4063.jpg）。URL ではない。画面では /api/images/{key} で出す */
+    imageKey: text('image_key'),
+    /** 取り込み元のお気に入り数（人気順の並べ替えに使う） */
+    favoriteCount: integer('favorite_count'),
+    /** 取り込み元で作られた回数（よく作られている順に使う） */
+    cookCount: integer('cook_count'),
+    /** 取り込み元の score。今のデータは全件同じなので並べ替えには使わない */
+    score: integer('score'),
     archivedAt: text('archived_at'),
     ...timestamps,
   },

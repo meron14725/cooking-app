@@ -1,5 +1,5 @@
 import { exportJWK, generateKeyPair, type JWTVerifyGetKey, SignJWT } from 'jose'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp } from './app'
 
 const TEAM = 'example.cloudflareaccess.com'
@@ -11,6 +11,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
     DB: {} as D1Database,
     ASSETS: assets as unknown as Fetcher,
+    IMAGES: {} as R2Bucket,
     ACCESS_TEAM_DOMAIN: TEAM,
     ACCESS_AUD: AUD,
     ...overrides,
@@ -69,6 +70,13 @@ describe('認証（Cloudflare Access の JWT）', () => {
   it('ヘッダがなければ画面も 401', async () => {
     const res = await request('/', makeEnv())
     expect(res.status).toBe(401)
+  })
+
+  it('ヘッダがなければレシピ写真も 401（R2 まで届かない）', async () => {
+    const get = vi.fn()
+    const res = await request('/api/images/img/R0001.jpg', makeEnv({ IMAGES: { get } as unknown as R2Bucket }))
+    expect(res.status).toBe(401)
+    expect(get).not.toHaveBeenCalled()
   })
 
   it.each([

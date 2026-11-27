@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isImageKey } from '../domain/images'
 
 export const RECIPE_SOURCE_TYPES = ['manual', 'url', 'ai', 'seed'] as const
 export const STEP_PHASES = ['prep', 'cook'] as const
@@ -28,6 +29,14 @@ const optionalText = (max: number) =>
     .max(max)
     .nullish()
     .transform((v) => (v ? v : null))
+
+/** 取り込み元の件数（お気に入り数など）。省略したら更新で今の値を残す */
+const optionalCount = z.number().int().min(0).nullish()
+
+export const RECIPE_SORTS = ['popular', 'cooked'] as const
+/** 一覧の並べ替え: popular = お気に入り数の多い順、cooked = 作られた回数の多い順、省略 = 料理名順 */
+export const recipeSortSchema = z.enum(RECIPE_SORTS)
+export type RecipeSort = z.infer<typeof recipeSortSchema>
 
 export const recipeIngredientInputSchema = z.object({
   ingredientId: z.string().min(1, '食材を選んでください'),
@@ -78,6 +87,18 @@ export const recipeInputSchema = z.object({
     .or(z.literal(''))
     .transform((v) => (v ? v : null)),
   notes: optionalText(2000),
+  /**
+   * 公式レシピの情報（URL 取り込みや利用者の UPDATE で入る）。
+   * 省略（undefined）したら更新で今の値を残し、null なら消す
+   */
+  officialMenuNo: z
+    .string()
+    .regex(/^\d{3}$/, 'メニュー番号は 3 桁の数字です')
+    .nullish(),
+  imageKey: z.string().refine(isImageKey, '画像のキーは img/ の下のファイル名です').nullish(),
+  favoriteCount: optionalCount,
+  cookCount: optionalCount,
+  score: optionalCount,
   ingredients: z.array(recipeIngredientInputSchema).min(1, '材料を 1 つ以上入れてください').max(50),
   steps: z.array(recipeStepInputSchema).max(50).default([]),
 })
@@ -116,6 +137,13 @@ export type Recipe = {
   sourceType: RecipeSourceType
   sourceUrl: string | null
   notes: string | null
+  /** 公式メニュー番号（3 桁）。ないレシピは null */
+  officialMenuNo: string | null
+  /** 完成写真の R2 キー（例: img/R4063.jpg）。画面では imagePath(key) で出す */
+  imageKey: string | null
+  favoriteCount: number | null
+  cookCount: number | null
+  score: number | null
   ingredients: RecipeIngredient[]
   steps: RecipeStep[]
   updatedAt: string
@@ -123,7 +151,17 @@ export type Recipe = {
 
 export type RecipeSummary = Pick<
   Recipe,
-  'id' | 'title' | 'servings' | 'caloriesKcal' | 'caloriesEstimated' | 'hotcookMode' | 'sourceType'
+  | 'id'
+  | 'title'
+  | 'servings'
+  | 'caloriesKcal'
+  | 'caloriesEstimated'
+  | 'hotcookMode'
+  | 'sourceType'
+  | 'officialMenuNo'
+  | 'imageKey'
+  | 'favoriteCount'
+  | 'cookCount'
 > & {
   /** 材料の食材名（並び順どおり、重複なし） */
   ingredientNames: string[]

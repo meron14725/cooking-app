@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { recipeInputSchema } from '../../shared/schemas/recipe'
+import { recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
 import {
   estimateCaloriesInputSchema,
   importUrlInputSchema,
@@ -10,6 +10,7 @@ import { getProvider } from '../ai'
 import type { AppEnv } from '../app'
 import { createDb } from '../db/client'
 import { ApiError } from '../errors'
+import { cocoroOfficial, cocoroSourceText, fetchCocoroRecipe, parseCocoroUrl } from '../services/cocoro'
 import { listIngredients } from '../services/ingredients'
 import { assertPublicUrl, buildSourceText, fetchPage, normalizeDraft } from '../services/recipeImport'
 import { archiveRecipe, createRecipe, getRecipe, listRecipes, updateRecipe } from '../services/recipes'
@@ -18,6 +19,7 @@ import { validate } from '../validation'
 const listQuerySchema = z.object({
   q: z.string().trim().max(100).optional(),
   ingredientId: z.string().min(1).optional(),
+  sort: recipeSortSchema.optional(),
 })
 
 export const recipeRoutes = new Hono<AppEnv>()
@@ -34,14 +36,23 @@ export const recipeRoutes = new Hono<AppEnv>()
     const url = assertPublicUrl(c.req.valid('json').url)
     const ai = getProvider(c.env)
     const db = createDb(c.env.DB)
-    const [html, masters] = await Promise.all([fetchPage(url), listIngredients(db)])
-    const { text } = buildSourceText(html)
+    // COCORO KITCHEN のページは HTML に本文がないので、レシピ 1 件の JSON API を取る（services/cocoro.ts）
+    const cocoro = parseCocoroUrl(url)
+    const [source, masters] = await Promise.all([
+      cocoro
+        ? fetchCocoroRecipe(cocoro).then((recipe) => ({
+            text: cocoroSourceText(recipe),
+            official: cocoroOfficial(recipe, cocoro),
+          }))
+        : fetchPage(url).then((html) => ({ text: buildSourceText(html).text, official: null })),
+      listIngredients(db),
+    ])
     const raw = await ai.extractRecipe({
       url: url.toString(),
-      text,
+      text: source.text,
       ingredients: masters.map((m) => ({ name: m.name, unit: m.unit, gramsPerUnit: m.gramsPerUnit })),
     })
-    return c.json(normalizeDraft(raw, masters, url.toString()))
+    return c.json({ ...normalizeDraft(raw, masters, url.toString()), official: source.official })
   })
   // 余りそうな食材から 1 品の下書きを作る（保存しない。docs/design/06-ai.md「補完レシピ提案の流れ」）
   .post('/suggest', validate('json', suggestRecipeInputSchema), async (c) => {

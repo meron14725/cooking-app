@@ -98,6 +98,13 @@ const ICONS = {
   chevronRight: <path d="m9 18 6-6-6-6" strokeLinejoin="round" />,
   arrowRight: <path d="M5 12h14M13 6l6 6-6 6" strokeLinejoin="round" />,
   arrowUp: <path d="M12 19V5M6 11l6-6 6 6" strokeLinejoin="round" />,
+  image: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="m4 17.5 4.8-4.6a1 1 0 0 1 1.4 0l2.3 2.2 2.6-2.6a1 1 0 0 1 1.4 0l3.5 3.5" strokeLinejoin="round" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof ICONS

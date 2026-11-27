@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { todayJst } from '../shared/domain/date'
 import type { AppEnv } from './app'
 import { agentRoutes } from './routes/agent'
+import { imageRoutes } from './routes/images'
 import { ingredientRoutes } from './routes/ingredients'
 import { fridgeRoutes, inventoryRoutes } from './routes/inventory'
 import { kitRoutes } from './routes/kits'
@@ -21,3 +22,5 @@ api.route('/plans', planRoutes)
 api.route('/shopping-items', shoppingItemRoutes)
 api.route('/kits', kitRoutes)
 api.route('/agent', agentRoutes)
+// レシピ写真（R2）。Access の内側でだけ見える
+api.route('/images', imageRoutes)
