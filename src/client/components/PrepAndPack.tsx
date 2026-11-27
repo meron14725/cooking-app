@@ -53,7 +53,7 @@ function PrepStep({
                     type="button"
                     onClick={() => toggle(c.ingredientId)}
                     aria-pressed={on}
-                    className="flex w-full items-start gap-3 rounded-[16px] border border-line bg-surface px-4 py-3.5 text-left"
+                    className="flex w-full items-start gap-3 rounded-item border border-line bg-surface px-4 py-3.5 text-left"
                   >
                     <span
                       className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border-2 ${
@@ -99,7 +99,7 @@ function PrepStep({
             {keepWhole.map((k) => (
               <li
                 key={`${k.recipeTitle}-${k.ingredientId}`}
-                className="flex flex-col gap-1 rounded-[16px] border border-frozen/20 bg-frozen-soft px-4 py-3.5 text-sm"
+                className="flex flex-col gap-1 rounded-item border border-frozen/20 bg-frozen-soft px-4 py-3.5 text-sm"
               >
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="text-base font-bold">{k.name}</span>
@@ -118,7 +118,7 @@ function PrepStep({
       {asIs.length > 0 && (
         <section className="flex flex-col gap-2.5">
           <h2 className="text-sm font-bold text-ink-muted">切らずにそのまま袋へ</h2>
-          <p className="rounded-[16px] border border-line bg-surface px-4 py-3 text-sm">
+          <p className="rounded-item border border-line bg-surface px-4 py-3 text-sm">
             {asIs.map((a) => `${a.name} ${fmt(a.quantity, a.unit)}（${a.recipeTitle}）`).join('、')}
           </p>
         </section>
@@ -173,7 +173,7 @@ function KitCard({
             <span className="text-xs text-ink-muted">
               {shortDate(kit.plannedOn)} に食べる ・ {kit.servings}食分
             </span>
-            <h3 className="truncate text-lg font-bold">{kit.title}</h3>
+            <h3 className="line-clamp-2 text-lg font-bold">{kit.title}</h3>
           </div>
           <fieldset className="flex shrink-0 gap-0.5 rounded-[10px] bg-sunken p-[3px]">
             <legend className="sr-only">{kit.title}の保存場所</legend>

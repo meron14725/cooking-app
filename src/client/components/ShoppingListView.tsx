@@ -319,7 +319,7 @@ export function ShoppingListView({ planId }: { planId: string }) {
           return (
             <div key={cat.value} className="flex flex-col gap-2">
               <h3 className="text-[13px] font-bold tracking-[0.04em] text-ink-muted">{cat.label}</h3>
-              <ul className="divide-y divide-line-soft overflow-hidden rounded-[16px] border border-line bg-surface">
+              <ul className="divide-y divide-line-soft overflow-hidden rounded-item border border-line bg-surface">
                 {items.map((i) => (
                   <Row key={i.id} planId={planId} item={i} />
                 ))}

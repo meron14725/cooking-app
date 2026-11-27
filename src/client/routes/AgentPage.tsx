@@ -1,17 +1,40 @@
 import { useState } from 'react'
-import type { AgentApplyResult, AgentResult } from '../../shared/schemas/agent'
+import type { AgentApplyResult, AgentOp, AgentResult } from '../../shared/schemas/agent'
 import { useAgentApply, useAgentRequest } from '../api/agent'
 import { aiErrorMessage } from '../api/recipes'
-import { Button, Field, inputClass } from '../components/form'
+import { Button } from '../components/form'
+import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 
 const EXAMPLES = ['玉ねぎを半分使った', '鶏むね肉を 2 枚買って冷凍した', '買い物リストから牛乳を消して']
 
-/** S13 AI に頼む: 頼む → 変更案（変更前 → 変更後）を選ぶ → 反映（docs/design/08-agent.md） */
+const TARGET_LABELS: Record<string, string> = {
+  inventory: '在庫',
+  recipe: 'レシピ',
+  shopping: '買い物リスト',
+  plan: '献立',
+}
+const targetLabel = (op: AgentOp) => TARGET_LABELS[op.split('.')[0] ?? ''] ?? ''
+
+function AiBubble({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <Icon name="sparkle" size={16} />
+      </span>
+      <div className="min-w-0 flex-1 rounded-item rounded-tl-md border border-line bg-surface px-4 py-3 text-[15px] leading-relaxed">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** S13 AI に頼む: 頼む → 変更案を選ぶ → 反映（docs/design/08-agent.md） */
 export function AgentPage() {
   const request = useAgentRequest()
   const apply = useAgentApply()
   const [instruction, setInstruction] = useState('')
+  const [asked, setAsked] = useState<string | null>(null)
   const [result, setResult] = useState<AgentResult | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [applied, setApplied] = useState<{ summary: string; outcome: AgentApplyResult['results'][number] }[] | null>(
@@ -21,14 +44,17 @@ export function AgentPage() {
 
   async function onAsk(e: React.FormEvent) {
     e.preventDefault()
-    if (!instruction.trim()) return setError('頼みたいことを書いてください')
+    const text = instruction.trim()
+    if (!text) return setError('頼みたいことを書いてください')
     setError(null)
     setResult(null)
     setApplied(null)
+    setAsked(text)
     try {
-      const r = await request.mutateAsync(instruction.trim())
+      const r = await request.mutateAsync(text)
       setResult(r)
       setSelected(new Set(r.operations.map((_, i) => i)))
+      setInstruction('')
     } catch (err) {
       setError(aiErrorMessage(err))
     }
@@ -44,7 +70,6 @@ export function AgentPage() {
       setApplied(chosen.map((o, i) => ({ summary: o.summary, outcome: results[i] ?? { ok: false } })))
       // 反映した案は一覧から消す（2 回押しても二重に反映しない）
       setResult(null)
-      setInstruction('')
     } catch (err) {
       setError(aiErrorMessage(err))
     }
@@ -58,87 +83,147 @@ export function AgentPage() {
       return next
     })
 
+  const busy = request.isPending || apply.isPending
+
   return (
     <>
-      <PageHeader title="AI に頼む" />
-      <form onSubmit={onAsk} className="mb-5 space-y-3" noValidate>
-        <Field label="頼みたいこと" hint={`例: ${EXAMPLES.join(' / ')}`}>
+      <PageHeader title="AI に頼む" backTo="/more" />
+
+      {/* 下の入力欄の分だけ空ける */}
+      <div className="flex flex-col gap-4 pb-24">
+        {!asked && (
+          <AiBubble>
+            <p>在庫・レシピ・買い物リスト・献立の変更を頼めます。変更案を出すので、確認してから反映してください。</p>
+            <p className="mt-2 text-[13px] text-ink-muted">例: {EXAMPLES.join(' / ')}</p>
+          </AiBubble>
+        )}
+
+        {asked && (
+          <div className="ml-10 self-end rounded-item rounded-tr-md bg-accent-soft px-4 py-3 text-[15px] leading-relaxed text-ink">
+            {asked}
+          </div>
+        )}
+
+        {request.isPending && (
+          <AiBubble>
+            <p className="text-ink-muted">考えています…（1 分ほど）</p>
+          </AiBubble>
+        )}
+
+        {result && (
+          <>
+            <AiBubble>
+              <p>
+                {result.reply || (result.operations.length === 0 ? '変更案はありません。' : '変更案を作りました。')}
+              </p>
+              {result.warnings.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-1 rounded-[10px] bg-warn-wash px-3 py-2 text-[13px] text-warn">
+                  {result.warnings.map((w) => (
+                    <li key={w} className="flex items-start gap-1.5">
+                      <Icon name="warning" size={16} strokeWidth={2} className="mt-0.5" />
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </AiBubble>
+
+            {result.operations.length > 0 && (
+              <section aria-label="変更案" className="flex flex-col gap-2.5">
+                <div className="flex items-baseline justify-between">
+                  <h2 className="text-sm font-bold text-ink-muted">変更案</h2>
+                  <p className="text-[13px] text-ink-muted">
+                    {selected.size} / {result.operations.length} 件を選択
+                  </p>
+                </div>
+                <ul className="flex flex-col gap-2">
+                  {result.operations.map((o, i) => (
+                    // 同じ案が 2 つ並ぶことがあるので位置をキーにする
+                    // biome-ignore lint/suspicious/noArrayIndexKey: 一覧は反映まで並べ替えない
+                    <li key={i}>
+                      <label
+                        className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-item border bg-surface px-4 py-3.5 ${
+                          selected.has(i) ? 'border-accent-line' : 'border-line'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected.has(i)}
+                          onChange={() => toggle(i)}
+                          className="mt-0.5 size-5 shrink-0 accent-accent"
+                        />
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="text-xs text-ink-muted">{targetLabel(o.op)}</span>
+                          <span className="text-[15px]">{o.summary}</span>
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={onApply}
+                    disabled={busy || selected.size === 0}
+                    className="min-h-13 flex-1 text-base"
+                  >
+                    {apply.isPending ? '反映しています…' : `選んだ ${selected.size} 件を反映`}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setResult(null)} disabled={apply.isPending}>
+                    やめる
+                  </Button>
+                </div>
+                <p className="text-xs text-ink-muted">「反映」を押すまで、在庫やレシピは変わりません</p>
+              </section>
+            )}
+          </>
+        )}
+
+        {applied && (
+          <AiBubble>
+            <p className="mb-1.5 font-bold">反映しました</p>
+            <ul className="flex flex-col gap-1 text-sm">
+              {applied.map((a, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: 結果は並べ替えない
+                <li key={i} className={`flex items-start gap-1.5 ${a.outcome.ok ? 'text-leaf' : 'text-danger'}`}>
+                  <Icon name={a.outcome.ok ? 'check' : 'close'} size={16} strokeWidth={2.4} className="mt-0.5" />
+                  <span>
+                    {a.summary}
+                    {!a.outcome.ok && a.outcome.error && <span className="block text-xs">{a.outcome.error}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </AiBubble>
+        )}
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+      </div>
+
+      <form
+        onSubmit={onAsk}
+        noValidate
+        className="fixed inset-x-0 bottom-[calc(65px+env(safe-area-inset-bottom))] mx-auto flex max-w-md items-end gap-2 border-t border-line bg-surface px-4 pt-3 pb-3.5"
+      >
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">頼みたいこと</span>
           <textarea
             value={instruction}
             onChange={(e) => setInstruction(e.target.value)}
             maxLength={500}
-            rows={3}
-            className={inputClass}
+            rows={2}
+            placeholder="頼みたいことを書く"
+            className="block w-full resize-none rounded-control border border-line-strong bg-ground px-3.5 py-2.5 text-base placeholder:text-ink-muted focus:border-accent focus:ring-2 focus:ring-accent-line focus:outline-none"
           />
-        </Field>
-        <Button type="submit" disabled={request.isPending || apply.isPending} className="w-full">
-          {request.isPending ? 'AI が考えています…（1 分ほど）' : '頼む'}
-        </Button>
-        <p className="text-xs text-stone-500">
-          AI は変更案を出すだけです。下で確認して「反映する」を押すまで、在庫やレシピは変わりません
-        </p>
+        </label>
+        <button
+          type="submit"
+          disabled={busy}
+          aria-label="送る"
+          className="flex size-12 shrink-0 items-center justify-center rounded-control bg-accent text-white disabled:opacity-50"
+        >
+          <Icon name="arrowUp" size={22} strokeWidth={2} />
+        </button>
       </form>
-
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-
-      {result && (
-        <section className="space-y-3">
-          {result.reply && <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-900">{result.reply}</p>}
-          {result.warnings.length > 0 && (
-            <ul className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              {result.warnings.map((w) => (
-                <li key={w}>⚠️ {w}</li>
-              ))}
-            </ul>
-          )}
-          {result.operations.length === 0 ? (
-            <p className="text-sm text-stone-500">変更案はありません</p>
-          ) : (
-            <>
-              <ul className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
-                {result.operations.map((o, i) => (
-                  // 同じ案が 2 つ並ぶことがあるので位置をキーにする
-                  // biome-ignore lint/suspicious/noArrayIndexKey: 一覧は反映まで並べ替えない
-                  <li key={i}>
-                    <label className="flex min-h-11 items-start gap-3 px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(i)}
-                        onChange={() => toggle(i)}
-                        className="mt-0.5 size-5 shrink-0 accent-orange-600"
-                      />
-                      <span className="text-sm">{o.summary}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex gap-2">
-                <Button onClick={onApply} disabled={apply.isPending || selected.size === 0} className="flex-1">
-                  {apply.isPending ? '反映しています…' : `選んだ ${selected.size} 件を反映する`}
-                </Button>
-                <Button variant="secondary" onClick={() => setResult(null)} disabled={apply.isPending}>
-                  やめる
-                </Button>
-              </div>
-            </>
-          )}
-        </section>
-      )}
-
-      {applied && (
-        <section>
-          <h2 className="mb-2 text-sm font-bold text-stone-500">反映の結果</h2>
-          <ul className="space-y-1 text-sm">
-            {applied.map((a, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: 結果は並べ替えない
-              <li key={i} className={a.outcome.ok ? 'text-green-700' : 'text-red-600'}>
-                {a.outcome.ok ? '✓' : '✗'} {a.summary}
-                {!a.outcome.ok && a.outcome.error && <span className="block text-xs">{a.outcome.error}</span>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </>
   )
 }
