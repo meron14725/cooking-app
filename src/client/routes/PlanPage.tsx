@@ -89,7 +89,7 @@ function AnchorPicker() {
             下の一覧から選んでください
           </p>
         ) : (
-          <ul className="divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
+          <ul className="divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
             {picked.map((p) => (
               <li key={p.recipeId} className="flex items-center gap-2 py-2.5">
                 <button
@@ -114,7 +114,7 @@ function AnchorPicker() {
         )}
       </section>
 
-      <label className="mb-3 flex min-h-12 items-center gap-2.5 rounded-control border border-line-strong bg-surface px-3.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
+      <label className="mb-3 flex min-h-12 items-center gap-2.5 rounded-control border border-transparent bg-surface px-4 shadow-card focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
         <Icon name="search" className="text-ink-muted" />
         <span className="sr-only">料理名で探す</span>
         <input
@@ -129,7 +129,7 @@ function AnchorPicker() {
       {recipes.isError && <p className="text-danger">読み込めませんでした</p>}
       {recipes.data && recipes.data.length === 0 && <p className="text-ink-muted">見つかりませんでした</p>}
       {recipes.data && recipes.data.length > 0 && (
-        <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
+        <ul className="divide-y divide-line-soft overflow-hidden rounded-card bg-surface shadow-card">
           {recipes.data.map((r) => {
             const on = picked.some((p) => p.recipeId === r.id)
             return (
@@ -476,7 +476,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
           提案を選び直す
         </button>
       </div>
-      <ol className="divide-y divide-line-soft rounded-card border border-line bg-surface">
+      <ol className="divide-y divide-line-soft rounded-card bg-surface shadow-card">
         {rows.map((r, i) => (
           <li key={r.recipeId} className="px-3 py-3">
             <div className="flex items-center gap-2">
@@ -544,7 +544,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
           ))}
       </select>
 
-      <div className="rounded-card border border-line bg-surface p-4">
+      <div className="rounded-card bg-surface shadow-card p-4">
         {evaluation.isPending && <p className="text-sm text-ink-muted">計算中…</p>}
         {evaluation.isError && <p className="text-sm text-danger">計算できませんでした</p>}
         {ev && <EvaluationDetails p={ev} />}
@@ -626,7 +626,7 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
   return (
     <section>
       {plan.status !== 'prepping' && (
-        <ol className="mb-5 divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
+        <ol className="mb-5 divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
           {rows.map((r) => (
             <li key={r.recipeId} className="py-3">
               <div className="text-xs text-ink-muted">

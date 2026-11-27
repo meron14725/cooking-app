@@ -40,7 +40,7 @@ export function RecipesPage() {
       <PageHeader title="レシピ" meta={data && `${data.length}品`} />
 
       <div className="flex flex-col gap-4">
-        <label className="flex min-h-12 items-center gap-2.5 rounded-control border border-line-strong bg-surface px-3.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
+        <label className="flex min-h-12 items-center gap-2.5 rounded-control border border-transparent bg-surface px-4 shadow-card focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
           <Icon name="search" className="text-ink-muted" />
           <span className="sr-only">料理名で探す</span>
           <input
@@ -73,7 +73,7 @@ export function RecipesPage() {
               <li key={r.id}>
                 <Link
                   to={`/recipes/${r.id}`}
-                  className="flex items-center gap-3 rounded-item border border-line bg-surface py-3 pr-4 pl-3"
+                  className="flex items-center gap-3 rounded-item bg-surface shadow-card py-3 pr-4 pl-3"
                 >
                   <RecipePhoto imageKey={r.imageKey} className="size-16 rounded-[12px]" />
                   <span className="flex min-w-0 flex-1 flex-col gap-1">

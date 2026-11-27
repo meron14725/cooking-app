@@ -22,7 +22,7 @@ function AiBubble({ children }: { children: React.ReactNode }) {
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
         <Icon name="sparkle" size={16} />
       </span>
-      <div className="min-w-0 flex-1 rounded-item rounded-tl-md border border-line bg-surface px-4 py-3 text-[15px] leading-relaxed">
+      <div className="min-w-0 flex-1 rounded-item rounded-tl-md bg-surface shadow-card px-4 py-3 text-[15px] leading-relaxed">
         {children}
       </div>
     </div>
@@ -203,7 +203,7 @@ export function AgentPage() {
       <form
         onSubmit={onAsk}
         noValidate
-        className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] mx-auto flex max-w-md items-end gap-2 border-t border-line bg-surface px-4 pt-3 pb-3.5"
+        className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] mx-auto flex max-w-md items-end gap-2 bg-ground/95 px-4 pt-3 pb-3 backdrop-blur"
       >
         <label className="min-w-0 flex-1">
           <span className="sr-only">頼みたいこと</span>
@@ -213,14 +213,14 @@ export function AgentPage() {
             maxLength={500}
             rows={2}
             placeholder="頼みたいことを書く"
-            className="block w-full resize-none rounded-control border border-line-strong bg-ground px-3.5 py-2.5 text-base placeholder:text-ink-muted focus:border-accent focus:ring-2 focus:ring-accent-line focus:outline-none"
+            className="block w-full resize-none rounded-control border border-transparent bg-surface px-4 py-2.5 text-base shadow-card placeholder:text-ink-muted focus:border-accent focus:ring-2 focus:ring-accent-line focus:outline-none"
           />
         </label>
         <button
           type="submit"
           disabled={busy}
           aria-label="送る"
-          className="flex size-12 shrink-0 items-center justify-center rounded-control bg-accent text-white disabled:opacity-50"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-accent disabled:opacity-50"
         >
           <Icon name="arrowUp" size={22} strokeWidth={2} />
         </button>

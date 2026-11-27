@@ -69,7 +69,7 @@ export function IngredientsPage() {
           return (
             <section key={cat.value} className="mb-6">
               <h2 className="mb-2 px-1 text-[13px] font-bold tracking-wide text-ink-muted">{cat.label}</h2>
-              <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
+              <ul className="divide-y divide-line-soft overflow-hidden rounded-card bg-surface shadow-card">
                 {items.map((i) => (
                   <li key={i.id}>
                     <Link to={`/ingredients/${i.id}`} className="block px-4 py-3">

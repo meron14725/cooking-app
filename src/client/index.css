@@ -6,39 +6,43 @@
  */
 @theme {
   --font-sans: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  /* 見出し（h1〜h3 と大きな数字） */
+  --font-display: "Zen Maru Gothic", "Noto Sans JP", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
 
   /* 地と面 */
-  --color-ground: #f7f4ef;
+  --color-ground: #fbf5ec;
   --color-surface: #ffffff;
   /* 切り替えの溝・進み具合の未完了 */
-  --color-sunken: #ede7de;
-  --color-track: #e2dad0;
+  --color-sunken: #f3e6d8;
+  --color-track: #eadfd2;
 
   /* 文字 */
-  --color-ink: #1f1a17;
-  --color-ink-soft: #3a332e;
-  --color-ink-muted: #6b6159;
+  --color-ink: #2a211b;
+  --color-ink-soft: #5c4a3e;
+  --color-ink-muted: #6e6158;
 
-  /* 線 */
-  --color-line: #e7e0d6;
-  --color-line-soft: #efe9e1;
-  --color-line-strong: #d6cec3;
-  --color-line-dashed: #c9bfb2;
+  /* 線（カードは線を使わず影。区切り線と点線の枠に使う） */
+  --color-line: #eadfd2;
+  --color-line-soft: #f3ece3;
+  --color-line-strong: #e0cdbb;
+  --color-line-dashed: #e0cdbb;
 
   /* 主色（作る・決める） */
-  --color-accent: #c2410c;
-  --color-accent-strong: #9a3412;
-  --color-accent-soft: #fff1e8;
-  --color-accent-wash: #fff8f3;
-  --color-accent-line: #f2c3a6;
+  --color-accent: #b33a0a;
+  --color-accent-strong: #8a2c07;
+  --color-accent-soft: #ffe4d1;
+  --color-accent-wash: #fff1e6;
+  --color-accent-line: #f6cdb0;
 
   /* 済み・冷蔵 */
-  --color-leaf: #3f4a3c;
-  --color-leaf-soft: #eef0ec;
+  --color-leaf: #3d5236;
+  --color-leaf-soft: #e4eadf;
+  /* 進み具合の済み */
+  --color-leaf-line: #b9cdae;
 
   /* 冷凍 */
-  --color-frozen: #1f4e8c;
-  --color-frozen-soft: #e6eefa;
+  --color-frozen: #24508a;
+  --color-frozen-soft: #e2ecfa;
 
   /* 常温 */
   --color-pantry: #6b5a45;
@@ -46,23 +50,33 @@
 
   /* 期限切れ・エラー */
   --color-danger: #a61b1b;
-  --color-danger-soft: #fde8e6;
+  --color-danger-soft: #fde4e0;
   --color-danger-wash: #fdf0ee;
 
   /* 期限が近い・注意 */
   --color-warn: #7a4a00;
-  --color-warn-soft: #fdf1d6;
+  --color-warn-soft: #fcefd2;
   --color-warn-wash: #fdf6e4;
 
-  /* 角丸: カード 20px、リストの1行・小カード 16px、ボタン・入力 14px */
-  --radius-card: 20px;
-  --radius-item: 16px;
-  --radius-control: 14px;
+  /* 浮いたタブバー */
+  --color-tab: #f1d3bd;
+  --color-tab-ink: #6b3a22;
+
+  /* 角丸: カード 28px、リストの1行・小カード 24px、ボタン・入力 24px（高さ 48px でほぼ丸） */
+  --radius-card: 28px;
+  --radius-item: 24px;
+  --radius-control: 24px;
+
+  /* 影: カード、浮いたボタン、主色のボタン、タブバー */
+  --shadow-card: 0 2px 12px rgba(120, 70, 30, 0.06);
+  --shadow-raised: 0 4px 14px rgba(120, 70, 30, 0.1);
+  --shadow-accent: 0 6px 16px rgba(179, 58, 10, 0.25);
+  --shadow-tabbar: 0 10px 28px rgba(140, 74, 42, 0.16);
 }
 
 :root {
-  /* タブバーの高さ（上下余白 6px×2 + 項目 52px + 枠線 1px）。TabBar を変えたらここも直す */
-  --tabbar-h: 65px;
+  /* 浮いたタブバーが下から占める高さ（下の余白 16px + 上下の内側 8px×2 + 項目 52px + 上のすき間 8px）。TabBar を変えたらここも直す */
+  --tabbar-h: 92px;
 }
 
 html,
@@ -75,4 +89,10 @@ body {
   @apply bg-ground text-ink antialiased;
   /* 和文の詰め（デザインと同じ） */
   font-feature-settings: "palt";
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }

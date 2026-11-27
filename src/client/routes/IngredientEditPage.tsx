@@ -243,7 +243,7 @@ export function IngredientEditPage() {
           hint: 'レシピの「100g」をこの単位に直すときに使います',
         })}
 
-      <fieldset className="space-y-3 rounded-card border border-line bg-surface p-4">
+      <fieldset className="space-y-3 rounded-card bg-surface shadow-card p-4">
         <legend className="px-1 text-sm font-bold text-ink-soft">保存と日持ち（目安）</legend>
         <Field label="買ったときの保存場所" error={errors.defaultLocation}>
           <select
@@ -271,7 +271,7 @@ export function IngredientEditPage() {
         </div>
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-card border border-line bg-surface p-4">
+      <fieldset className="space-y-3 rounded-card bg-surface shadow-card p-4">
         <legend className="px-1 text-sm font-bold text-ink-soft">調理のときの注意</legend>
         <Field
           label="入れる直前の作業"
@@ -298,7 +298,7 @@ export function IngredientEditPage() {
         />
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-card border border-line bg-surface p-4">
+      <fieldset className="space-y-3 rounded-card bg-surface shadow-card p-4">
         <legend className="px-1 text-sm font-bold text-ink-soft">販売単位</legend>
         {errors.packageUnits && <p className="text-xs text-danger">{errors.packageUnits}</p>}
         {form.packageUnits.length === 0 && <p className="text-sm text-ink-muted">なし（量り売り扱い）</p>}
