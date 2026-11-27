@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { usePlanStepNav } from '../routes/planSteps'
 import { mockApi, renderRoutes } from '../testing/render'
 import { PrepAndPack } from './PrepAndPack'
 
@@ -24,6 +25,19 @@ function kit(recipeId: string, title: string, location: string) {
     items: [],
     warnings: [],
   }
+}
+
+/** 献立の画面の代わり: 段階を URL（?step=）で持って PrepAndPack に渡す */
+function Harness() {
+  const nav = usePlanStepNav()
+  return (
+    <PrepAndPack
+      planId="p1"
+      step={nav.requested === 'pack' ? 'pack' : 'prep'}
+      onNext={() => nav.goTo('pack')}
+      onBack={() => nav.backTo('prep')}
+    />
+  )
 }
 
 /** レシピを見るページの代わり: 戻るだけ */
@@ -54,7 +68,7 @@ describe('PrepAndPack', () => {
       }
       return { items: [] }
     })
-    const { router } = renderRoutes({ '/plan': <PrepAndPack planId="p1" />, '/recipes/:id': <RecipeStub /> }, '/plan')
+    const { router } = renderRoutes({ '/plan': <Harness />, '/recipes/:id': <RecipeStub /> }, '/plan')
 
     fireEvent.click(await screen.findByRole('button', { name: '下ごしらえ完了' }))
     const freezer = () => screen.getAllByRole('button', { name: '冷凍' })[0] as HTMLElement

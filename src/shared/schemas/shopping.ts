@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_PRICE_YEN } from '../domain/constants'
 import type { ShoppingCost } from '../domain/cost'
 import type { Category } from './ingredient'
 
@@ -31,6 +32,17 @@ export const shoppingPatchSchema = z
   })
 export type ShoppingPatchInput = z.infer<typeof shoppingPatchSchema>
 
+/** 払った金額。null で消す */
+export const shoppingPaidSchema = z.object({
+  paidYen: z
+    .number()
+    .int('金額は整数で入れてください')
+    .min(0, '金額は 0 以上にしてください')
+    .max(MAX_PRICE_YEN)
+    .nullable(),
+})
+export type ShoppingPaidInput = z.infer<typeof shoppingPaidSchema>
+
 export type ShoppingItem = {
   id: string
   ingredientId: string
@@ -52,6 +64,8 @@ export type ShoppingItem = {
   estimatedYen: number | null
   /** 販売単位の選択肢（修正用） */
   packageUnits: { id: string; label: string; quantity: number }[]
+  /** 実際に払った金額（円）。未入力は null */
+  paidYen: number | null
 }
 
 export type ShoppingList = {

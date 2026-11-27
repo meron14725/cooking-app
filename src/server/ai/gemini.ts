@@ -1,10 +1,15 @@
 import { type ZodType, z } from 'zod'
+import { ingredientClassifySchema, recipeClassifySchema } from '../../shared/schemas/attributes'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
 import {
   CALORIE_SYSTEM,
   caloriePrompt,
   EXTRACT_SYSTEM,
   extractPrompt,
+  INGREDIENT_CLASSIFY_SYSTEM,
+  ingredientClassifyPrompt,
+  RECIPE_CLASSIFY_SYSTEM,
+  recipeClassifyPrompt,
   SUGGEST_SYSTEM,
   suggestPrompt,
   TEXT_DRAFT_SYSTEM,
@@ -76,6 +81,14 @@ export class GeminiProvider implements AiProvider {
 
   estimateCalories(input: Parameters<AiProvider['estimateCalories']>[0]) {
     return this.generate(CALORIE_SYSTEM, caloriePrompt(input), calorieEstimateSchema)
+  }
+
+  classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0]) {
+    return this.generate(INGREDIENT_CLASSIFY_SYSTEM, ingredientClassifyPrompt(items), ingredientClassifySchema)
+  }
+
+  classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
+    return this.generate(RECIPE_CLASSIFY_SYSTEM, recipeClassifyPrompt(items), recipeClassifySchema)
   }
 
   /** JSON スキーマ付きで生成し、zod で検証する。検証に失敗したら 1 回だけ再試行する */

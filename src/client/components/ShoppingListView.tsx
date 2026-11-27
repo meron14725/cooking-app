@@ -7,6 +7,7 @@ import {
   useAddShoppingItem,
   useCompleteShopping,
   useDeleteShoppingItem,
+  useSetShoppingItemPaid,
   useShoppingList,
   useToggleShoppingItem,
   useUpdateShoppingItem,
@@ -94,6 +95,49 @@ function AmountInputs({
   )
 }
 
+/** 払った金額（docs/design/10-cost.md「レシートや実際の値段から直す」1） */
+function PaidInput({ planId, item }: { planId: string; item: ShoppingItem }) {
+  const setPaid = useSetShoppingItemPaid(planId)
+  const [value, setValue] = useState(item.paidYen === null ? '' : String(item.paidYen))
+  const [error, setError] = useState<string | null>(null)
+  const parsed = parseNumber(value)
+  const changed = parsed !== item.paidYen
+
+  async function onSave() {
+    setError(null)
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 0))
+      return setError('金額は 0 以上の整数で入れてください')
+    try {
+      await setPaid.mutateAsync({ id: item.id, paidYen: parsed })
+    } catch (err) {
+      setError(errorMessage(err, '保存できませんでした'))
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-2">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="払った金額（円）"
+          aria-label="払った金額（円）"
+          className={`${inputBaseClass} min-w-0 flex-1`}
+        />
+        <Button variant="secondary" onClick={onSave} disabled={!changed || setPaid.isPending}>
+          金額を保存
+        </Button>
+      </div>
+      <p className="text-xs text-ink-muted">入れると、この食材の価格（目安）も直します。0 円は合計にだけ使います</p>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </div>
+  )
+}
+
 function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingItem; onDone: () => void }) {
   const update = useUpdateShoppingItem(planId)
   const remove = useDeleteShoppingItem(planId)
@@ -142,6 +186,7 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
         {item.estimatedYen === null ? '価格未設定' : `今の量で ${yenText(item.estimatedYen)}`}
       </p>
       {item.checkedAt && <p className="text-xs text-ink-muted">在庫に入れた量も合わせて直します</p>}
+      {item.paidYen !== null && <p className="text-xs text-ink-muted">量を変えると、払った金額は消えます</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSave} disabled={update.isPending} className="flex-1">
@@ -152,6 +197,9 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
             買わない
           </Button>
         )}
+      </div>
+      <div className="border-t border-line-soft pt-2">
+        <PaidInput planId={planId} item={item} />
       </div>
     </div>
   )
@@ -185,6 +233,7 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
             </span>
             <span className="truncate text-xs text-ink-muted">
               {note && `${note} ・ `}
+              {item.paidYen !== null && `払った ${item.paidYen.toLocaleString('ja-JP')} 円 ・ `}
               {item.isManual ? '手で追加' : item.usedFor.join('・')}
             </span>
           </span>
@@ -201,6 +250,34 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
       </div>
       {toggle.isError && <p className="px-4 pb-2 text-xs text-danger">通信できませんでした。もう一度押してください</p>}
       {open && <EditPanel planId={planId} item={item} onDone={() => setOpen(false)} />}
+    </li>
+  )
+}
+
+/** 見るだけの行（チェックと直すは出さない） */
+function ReadOnlyRow({ item }: { item: ShoppingItem }) {
+  const checked = item.checkedAt !== null
+  const { main, note } = lineText(item)
+  return (
+    <li className="flex min-h-15 items-center gap-3 py-2 pr-2 pl-3.5">
+      <span
+        aria-hidden="true"
+        className={`flex size-6 shrink-0 items-center justify-center rounded-md border-2 ${
+          checked ? 'border-leaf bg-leaf text-white' : 'border-line-strong bg-surface'
+        }`}
+      >
+        {checked && <Icon name="check" size={16} strokeWidth={2.8} />}
+      </span>
+      <span className={`flex min-w-0 flex-col gap-0.5 ${checked ? 'opacity-55' : ''}`}>
+        <span className={`text-base font-bold ${checked ? 'line-through' : ''}`}>
+          {item.name} <span className="font-medium">{main}</span>
+          <span className="sr-only">{checked ? '（買った）' : '（買っていない）'}</span>
+        </span>
+        <span className="truncate text-xs text-ink-muted">
+          {note && `${note} ・ `}
+          {item.isManual ? '手で追加' : item.usedFor.join('・')}
+        </span>
+      </span>
     </li>
   )
 }
@@ -272,7 +349,19 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
 }
 
 /** S04 買い物リスト。売り場ごとに並べ、チェックすると在庫に入る */
-export function ShoppingListView({ planId, dishes = [] }: { planId: string; dishes?: string[] }) {
+export function ShoppingListView({
+  planId,
+  dishes = [],
+  readOnly = false,
+  onCompleted,
+}: {
+  planId: string
+  dishes?: string[]
+  /** 見るだけ（買い物が済んだ後に戻ってきたとき）。チェック・直す・手で足す・完了は出さない */
+  readOnly?: boolean
+  /** 買い物完了にできたら呼ぶ（次の段階へ進む） */
+  onCompleted?: () => void
+}) {
   const list = useShoppingList(planId)
   const { isPending, isError } = list
   const data = list.data?.items
@@ -285,6 +374,7 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
     setError(null)
     try {
       await complete.mutateAsync()
+      onCompleted?.()
     } catch (err) {
       setError(errorMessage(err, '完了にできませんでした'))
     }
@@ -330,14 +420,14 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
             <div key={cat.value} className="flex flex-col gap-2">
               <h3 className="text-[13px] font-bold tracking-[0.04em] text-ink-muted">{cat.label}</h3>
               <ul className="divide-y divide-line-soft overflow-hidden rounded-item bg-surface shadow-card">
-                {items.map((i) => (
-                  <Row key={i.id} planId={planId} item={i} />
-                ))}
+                {items.map((i) =>
+                  readOnly ? <ReadOnlyRow key={i.id} item={i} /> : <Row key={i.id} planId={planId} item={i} />,
+                )}
               </ul>
             </div>
           )
         })}
-      {adding ? (
+      {readOnly ? null : adding ? (
         <AddForm planId={planId} onDone={() => setAdding(false)} />
       ) : (
         <button
@@ -349,7 +439,7 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
           手で足す
         </button>
       )}
-      {data && (
+      {data && !readOnly && (
         <StickyAction
           hint={
             total === 0

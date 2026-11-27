@@ -83,6 +83,11 @@ class Tally {
     this.raw[kind] += this.yen(ingredientId, quantity)
   }
 
+  /** 金額をそのまま足す（払った金額） */
+  addBuyYen(yen: number) {
+    this.raw.buy += yen
+  }
+
   addLeftover(ingredientId: string, quantity: number) {
     const yen = this.yen(ingredientId, quantity)
     this.raw.leftover += yen
@@ -136,6 +141,8 @@ export type ShoppingCostRow = {
   buyQuantity: number
   isManual: boolean
   checked: boolean
+  /** 払った金額。入っていれば、この行の買う分はこの値にする */
+  paidYen?: number | null
 }
 
 export type ShoppingCost = Cost & {
@@ -160,8 +167,13 @@ export function costOfShopping(input: {
   const remaining = new Tally(input.ingredients)
   const recipeLines = new Map<string, { need: number; buy: number }>()
   for (const row of input.rows) {
-    t.add('buy', row.ingredientId, row.buyQuantity)
-    if (!row.checked) remaining.add('buy', row.ingredientId, row.buyQuantity)
+    const paid = row.paidYen ?? null
+    if (paid === null) t.add('buy', row.ingredientId, row.buyQuantity)
+    else t.addBuyYen(paid)
+    if (!row.checked) {
+      if (paid === null) remaining.add('buy', row.ingredientId, row.buyQuantity)
+      else remaining.addBuyYen(paid)
+    }
     if (row.isManual) continue
     const line = recipeLines.get(row.ingredientId) ?? { need: 0, buy: 0 }
     line.need += row.needQuantity

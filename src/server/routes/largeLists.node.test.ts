@@ -101,6 +101,11 @@ describe(`${RECIPE_COUNT} 件のレシピ`, () => {
     expect(res.body.items.every((r) => r.ingredientNames.length === 2)).toBe(true)
   })
 
+  it('まとめて推定（ルールの段）が通る', async () => {
+    const res = await api.call<{ recipes: { updated: number } }>('POST', '/recipes/attributes/estimate', {})
+    expect(res.status).toBe(200)
+  })
+
   it('絞り込んだときも、その結果のレシピの材料名がつく', async () => {
     const res = await api.call<{ items: RecipeSummary[] }>('GET', `/recipes?ingredientId=${food(0).id}`)
     expect(res.status).toBe(200)

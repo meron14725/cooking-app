@@ -1,3 +1,9 @@
+import type {
+  IngredientClassifyItem,
+  IngredientClassifyResult,
+  RecipeClassifyItem,
+  RecipeClassifyResult,
+} from '../../shared/schemas/attributes'
 import type { EstimateCaloriesInput, RecipeDraftRaw } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
 
@@ -19,6 +25,10 @@ export interface AiProvider {
   draftFromText(input: TextDraftPromptInput): Promise<RecipeDraftRaw>
   suggestRecipe(input: SuggestPromptInput): Promise<RecipeDraftRaw>
   estimateCalories(input: EstimateCaloriesInput): Promise<{ caloriesKcal: number }>
+  /** 食材の分類と 1 つあたりの重さ（まとめて推定） */
+  classifyIngredients(items: IngredientClassifyItem[]): Promise<IngredientClassifyResult>
+  /** レシピの区分と味の系統（まとめて推定） */
+  classifyRecipes(items: RecipeClassifyItem[]): Promise<RecipeClassifyResult>
 }
 
 export type AiEnv = Pick<Env, 'AI_PROVIDER' | 'AGENT' | 'CURSOR_API_KEY' | 'GEMINI_API_KEY' | 'GEMINI_MODEL'>

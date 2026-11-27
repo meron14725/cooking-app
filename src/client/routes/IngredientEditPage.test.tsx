@@ -28,6 +28,7 @@ const onion: Ingredient = {
   beforeCookTask: null,
   frozenCookNote: null,
   isStaple: false,
+  attributesSource: null,
   priceYen: 198,
   priceSource: 'default',
   priceUpdatedAt: '2024-01-10T00:00:00.000Z',
@@ -47,13 +48,25 @@ describe('食材の編集の価格', () => {
 
     // 代表を 1 個に変えると、ラベルも変わる
     fireEvent.click(screen.getAllByRole('radio', { name: '代表' })[0] as HTMLElement)
-    expect(screen.getByLabelText(/^1個 あたり（円）/)).toBeTruthy()
+    // 触っていなければ、単価を保って換算した値を出す（198 円 / 3 個 → 66 円 / 1 個）
+    expect(screen.getByLabelText(/^1個 あたり（円）/)).toHaveProperty('value', '66')
 
     fireEvent.change(screen.getByLabelText(/^1個 あたり（円）/), { target: { value: '70' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(fetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true))
     const put = fetch.mock.calls.find(([, init]) => init?.method === 'PUT')
     expect(JSON.parse(String(put?.[1]?.body)).priceYen).toBe(70)
+  })
+
+  it('価格を触らずに保存すると価格は送らない（サーバーが今の値を残し、代表の変更は換算する）', async () => {
+    const fetch = mockApi((_, body) => (body ? { ...onion, ...body } : onion))
+    renderRoutes({ '/ingredients/:id': <IngredientEditPage />, '/ingredients': <p>一覧</p> }, '/ingredients/onion')
+    await screen.findByLabelText(/^3個入り あたり（円）/)
+    fireEvent.click(screen.getAllByRole('radio', { name: '代表' })[0] as HTMLElement)
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(fetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(true))
+    const put = fetch.mock.calls.find(([, init]) => init?.method === 'PUT')
+    expect(JSON.parse(String(put?.[1]?.body))).not.toHaveProperty('priceYen')
   })
 
   it('空にすると未設定（null）で送る', async () => {

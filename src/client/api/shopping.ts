@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Plan } from '../../shared/schemas/plan'
-import type { ShoppingAddInput, ShoppingItem, ShoppingList, ShoppingPatchInput } from '../../shared/schemas/shopping'
+import type {
+  ShoppingAddInput,
+  ShoppingItem,
+  ShoppingList,
+  ShoppingPaidInput,
+  ShoppingPatchInput,
+} from '../../shared/schemas/shopping'
 import { apiFetch } from './client'
 
 const listKey = (planId: string) => ['shopping', planId] as const
@@ -60,6 +66,17 @@ export function useUpdateShoppingItem(planId: string) {
     mutationFn: ({ id, ...input }: ShoppingPatchInput & { id: string }) =>
       apiFetch<ShoppingItem>(`/shopping-items/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
     onSuccess: invalidate,
+  })
+}
+
+/** 払った金額を入れる / 消す。食材の価格も直るので、食材マスタも取り直す */
+export function useSetShoppingItemPaid(planId: string) {
+  const qc = useQueryClient()
+  const invalidate = useInvalidate(planId)
+  return useMutation({
+    mutationFn: ({ id, ...input }: ShoppingPaidInput & { id: string }) =>
+      apiFetch<ShoppingItem>(`/shopping-items/${id}/paid`, { method: 'PUT', body: JSON.stringify(input) }),
+    onSuccess: () => Promise.all([invalidate(), qc.invalidateQueries({ queryKey: ['ingredients'] })]),
   })
 }
 

@@ -22,7 +22,7 @@ import { Button, inputClass } from '../components/form'
 import { Icon } from '../components/Icon'
 import { LocationBadge } from '../components/LocationBadge'
 import { PageHeader } from '../components/PageHeader'
-import { PlanProgress } from '../components/PlanProgress'
+import { PlanProgress, type PlanStep as ProgressStep } from '../components/PlanProgress'
 import { PrepAndPack } from '../components/PrepAndPack'
 import { RecipePhoto } from '../components/RecipePhoto'
 import { RecipeFilterButton, RecipeSortMenu } from '../components/RecipeSortMenu'
@@ -30,6 +30,7 @@ import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
 import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
+import { type PlanStep, parentOf, stepView, usePlanStepNav } from './planSteps'
 import {
   anchorsKey,
   canStepDown,
@@ -811,6 +812,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
   const evaluation = usePlanEvaluation(plan.id)
   const replace = useReplacePlanRecipes(plan.id)
   const confirm = useConfirmPlan(plan.id)
+  const nav = usePlanStepNav()
   const catalog = useRecipes()
   const [startsOn, setStartsOn] = useState(addDays(todayJst(), 1))
   const [adding, setAdding] = useState('')
@@ -860,6 +862,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
     setError(null)
     try {
       await confirm.mutateAsync(startsOn)
+      nav.goTo('shopping')
     } catch (err) {
       setError(errorMessage(err, '確定できませんでした'))
     }
@@ -971,10 +974,8 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
   )
 }
 
-function DraftPlan({ plan }: { plan: Plan }) {
-  const [step, setStep] = useState<'proposals' | 'order'>(
-    plan.recipes.some((r) => r.role === 'added') ? 'order' : 'proposals',
-  )
+function DraftPlan({ plan, step }: { plan: Plan; step: 'proposals' | 'order' }) {
+  const nav = usePlanStepNav()
   const replace = useReplacePlanRecipes(plan.id)
   // 最後の 1 品を外して献立ごと消すのと、「この献立をやめる」は失敗の出し方を分ける
   const removeLast = useDeletePlan()
@@ -986,7 +987,7 @@ function DraftPlan({ plan }: { plan: Plan }) {
     await replace.mutateAsync({
       recipes: anchors.map((r, i) => ({ recipeId: r.recipeId, role: r.role, servings: r.servings, dayIndex: i + 1 })),
     })
-    setStep('proposals')
+    nav.backTo('proposals')
   }
 
   /** 食べたい料理を 1 つ外して、提案を計算し直す。最後の 1 品を外したら献立ごとやめて、料理を選ぶところに戻る */
@@ -1030,7 +1031,7 @@ function DraftPlan({ plan }: { plan: Plan }) {
               </p>
             )}
           </section>
-          <Proposals plan={plan} onChosen={() => setStep('order')} />
+          <Proposals plan={plan} onChosen={() => nav.goTo('order')} />
         </>
       ) : (
         <OrderAndConfirm plan={plan} onBack={backToProposals} />
@@ -1052,7 +1053,58 @@ function DraftPlan({ plan }: { plan: Plan }) {
   )
 }
 
+/** 確定した献立を見るだけ（買い物リストや下ごしらえから戻ったとき）。先の段階へ進むボタン付き */
+function PlanSummary({ plan }: { plan: Plan }) {
+  const nav = usePlanStepNav()
+  const rows = [...plan.recipes].sort((a, b) => a.dayIndex - b.dayIndex)
+  const next =
+    plan.status === 'shopping'
+      ? { step: 'shopping' as const, label: '買い物リストへ' }
+      : { step: 'prep' as const, label: '下ごしらえへ' }
+  return (
+    <section>
+      <p className="mb-3 text-sm text-ink-muted">確定した献立です（見るだけ）</p>
+      <ol className="mb-5 divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
+        {rows.map((r) => (
+          <li key={r.recipeId} className="flex items-center gap-3 py-3">
+            <DishPhotoButton recipeId={r.recipeId} title={r.title} />
+            <div className="min-w-0">
+              <div className="text-xs text-ink-muted">
+                {r.dayIndex}日目{plan.startsOn && `（${shortDate(addDays(plan.startsOn, r.dayIndex - 1))}）`}
+              </div>
+              <div className="font-bold">
+                {r.title} <span className="text-sm font-normal text-ink-muted">{r.servings}食</span>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <StickyAction>
+        <Button onClick={() => nav.goTo(next.step)} className="min-h-13 w-full text-base">
+          {next.label}
+        </Button>
+      </StickyAction>
+    </section>
+  )
+}
+
+/** 買い物が済んだ後の買い物リストを見るだけ（下ごしらえから戻ったとき） */
+function ShoppingSummary({ plan }: { plan: Plan }) {
+  const nav = usePlanStepNav()
+  return (
+    <>
+      <ShoppingListView planId={plan.id} dishes={plan.recipes.map((r) => r.title)} readOnly />
+      <StickyAction>
+        <Button onClick={() => nav.goTo('prep')} className="min-h-13 w-full text-base">
+          下ごしらえへ
+        </Button>
+      </StickyAction>
+    </>
+  )
+}
+
 function ConfirmedPlan({ plan }: { plan: Plan }) {
+  const nav = usePlanStepNav()
   const discard = useDeletePlan()
   const rows = [...plan.recipes].sort((a, b) => a.dayIndex - b.dayIndex)
   return (
@@ -1075,8 +1127,9 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
           ))}
         </ol>
       )}
-      {plan.status === 'shopping' && <ShoppingListView planId={plan.id} dishes={rows.map((r) => r.title)} />}
-      {plan.status === 'prepping' && <PrepAndPack planId={plan.id} />}
+      {plan.status === 'shopping' && (
+        <ShoppingListView planId={plan.id} dishes={rows.map((r) => r.title)} onCompleted={() => nav.goTo('prep')} />
+      )}
       {plan.status === 'shopping' && (
         <Button
           variant="secondary"
@@ -1096,27 +1149,62 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
   )
 }
 
-const TITLES = { draft: '献立を組む', shopping: '買い物リスト', prepping: '下ごしらえと袋詰め' } as const
+const TITLES: Record<PlanStep, string> = {
+  proposals: '献立を組む',
+  order: '献立を組む',
+  plan: '献立',
+  shopping: '買い物リスト',
+  prep: '下ごしらえと袋詰め',
+  pack: '下ごしらえと袋詰め',
+}
+const PROGRESS: Record<PlanStep, ProgressStep> = {
+  proposals: 'plan',
+  order: 'plan',
+  plan: 'plan',
+  shopping: 'shopping',
+  prep: 'prep',
+  pack: 'pack',
+}
 
 export function PlanPage() {
   const current = useCurrentPlan()
   const plan = current.data
   const status = plan?.status
-  const title = status === 'shopping' || status === 'prepping' ? TITLES[status] : TITLES.draft
+  const nav = usePlanStepNav()
+  // 段階は URL（?step=）に持つ。戻るボタンは履歴の 1 つ前の段階へ、直接開いたときはその段階の自然な親へ
+  const view = plan ? stepView(plan, nav.requested) : null
+  // 段階のない URL（タブやホームから開いた）は、いまの段階を URL に書いておく。
+  // こうしておくと、先へ進んでから戻ったときに、この履歴がどの段階だったか分かる
+  const viewStep = view?.step
+  useEffect(() => {
+    if (viewStep && nav.requested === null) nav.mark(viewStep)
+  }, [viewStep, nav.requested, nav.mark])
+  const title = view ? TITLES[view.step] : TITLES.proposals
+  const backTo = view ? parentOf(view.step) : '/'
+  const inPrep = view && !view.readOnly && (view.step === 'prep' || view.step === 'pack')
   return (
     <>
-      <PageHeader title={title} meta={status && PLAN_STATUS_LABELS[status]} backTo="/" />
+      <PageHeader title={title} meta={status && PLAN_STATUS_LABELS[status]} backTo={backTo} />
       {/* 下ごしらえ中は下ごしらえ → 袋詰めの中で進み具合を出す */}
-      {current.isSuccess && status !== 'prepping' && (
-        <PlanProgress current={status === 'shopping' ? 'shopping' : 'plan'} />
-      )}
+      {current.isSuccess && !inPrep && <PlanProgress current={view ? PROGRESS[view.step] : 'plan'} />}
       {current.isPending && <p className="text-ink-muted">読み込み中…</p>}
       {current.isError && <p className="text-danger">読み込めませんでした</p>}
       {current.isSuccess &&
-        (plan === null || plan === undefined ? (
+        (plan === null || plan === undefined || view === null ? (
           <AnchorPicker />
         ) : plan.status === 'draft' ? (
-          <DraftPlan key={plan.id} plan={plan} />
+          <DraftPlan key={plan.id} plan={plan} step={view.step === 'order' ? 'order' : 'proposals'} />
+        ) : view.readOnly && view.step === 'plan' ? (
+          <PlanSummary plan={plan} />
+        ) : view.readOnly && view.step === 'shopping' ? (
+          <ShoppingSummary plan={plan} />
+        ) : inPrep ? (
+          <PrepAndPack
+            planId={plan.id}
+            step={view.step === 'pack' ? 'pack' : 'prep'}
+            onNext={() => nav.goTo('pack')}
+            onBack={() => nav.backTo('prep')}
+          />
         ) : (
           <ConfirmedPlan plan={plan} />
         ))}

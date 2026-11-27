@@ -211,6 +211,20 @@ describe('買い物リストの金額', () => {
     expect(cost.leftoverYen).toBe(0)
   })
 
+  it('払った金額が入った行は、その値を買う分にする', () => {
+    const cost = costOfShopping({
+      rows: [row('onion', 1, 3, { paidYen: 120, checked: true }), row('pork', 200, 200)],
+      eatQuantities: new Map([
+        ['onion', 1],
+        ['pork', 200],
+      ]),
+      ingredients,
+      totalMeals: 2,
+    })
+    expect(cost.buyYen).toBe(120 + 300)
+    expect(cost.remainingYen).toBe(300)
+  })
+
   it('常備品は価格が NULL でも未設定に数えない', () => {
     const cost = costOfShopping({
       rows: [row('carrot', 1, 3)],
