@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { addDays, todayJst } from '../../shared/domain/date'
+import { addDays, shortDate, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
 import { ApiRequestError } from '../api/client'
 import {
@@ -20,7 +20,6 @@ import { ShoppingListView } from '../components/ShoppingListView'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
-const shortDate = (iso: string) => iso.slice(5).replace('-', '/')
 const fmt = (n: number) => String(Math.round(n * 100) / 100)
 
 function Stepper({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {

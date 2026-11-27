@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { todayJst } from '../../shared/domain/date'
+import { shortDate, todayJst } from '../../shared/domain/date'
 import { locationLabel } from '../../shared/schemas/ingredient'
 import type { MealKit } from '../../shared/schemas/kit'
 import { PLAN_STATUS_LABELS } from '../../shared/schemas/plan'
@@ -24,9 +24,6 @@ function longDate(iso: string) {
   const w = new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1)).getUTCDay()
   return `${m}月${d}日（${WEEKDAYS[w]}）`
 }
-
-/** 2026-11-28 → 11/28 */
-const shortDate = (iso: string) => iso.slice(5).replace('-', '/').replace(/^0/, '')
 
 function SectionHeading({ title, link }: { title: string; link?: { to: string; label: string } }) {
   return (
@@ -163,7 +160,11 @@ function StoredKits() {
                   {i + 1}
                 </span>
                 <span className={`min-w-0 flex-1 truncate text-[15px] ${isToday ? 'font-bold' : ''}`}>{k.title}</span>
-                {isToday ? (
+                {k.plannedOn < today ? (
+                  <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger">
+                    {shortDate(k.plannedOn)} ・ 過ぎています
+                  </span>
+                ) : isToday ? (
                   <span className="text-xs font-bold text-accent-strong">今日</span>
                 ) : k.location === 'freezer' ? (
                   <span className="rounded-full bg-frozen-soft px-2 py-0.5 text-xs text-frozen">

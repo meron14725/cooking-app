@@ -20,3 +20,9 @@ export function diffDays(from: string, to: string): number {
   const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)
   return Math.round(ms / 86_400_000)
 }
+
+/** 2026-11-08 → 11/8（画面の短い日付） */
+export function shortDate(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return `${m}/${d}`
+}

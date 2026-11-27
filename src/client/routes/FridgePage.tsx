@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { todayJst } from '../../shared/domain/date'
+import { shortDate, todayJst } from '../../shared/domain/date'
 import { toBaseQuantity } from '../../shared/domain/units'
 import { LOCATION_OPTIONS, locationLabel, type StorageLocation } from '../../shared/schemas/ingredient'
 import type { FridgeEntry, InventoryItem } from '../../shared/schemas/inventory'
@@ -336,8 +336,6 @@ function EntryIcon({ entry }: { entry: FridgeEntry }) {
     </span>
   )
 }
-
-const shortDate = (iso: string) => iso.slice(5).replace('-', '/')
 
 function EntryRow({
   entry,
