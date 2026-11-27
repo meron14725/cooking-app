@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
-import { costOfShopping } from '../../shared/domain/cost'
+import { costOfShopping, roundYen, unitPrice } from '../../shared/domain/cost'
 import { computeExpiresOn } from '../../shared/domain/expiry'
 import type { ShoppingLine } from '../../shared/domain/recommend'
 import { roundQuantity } from '../../shared/domain/units'
@@ -68,7 +68,7 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
     .innerJoin(ingredients, eq(ingredients.id, shoppingItems.ingredientId))
     .leftJoin(packageUnits, eq(packageUnits.id, shoppingItems.packageUnitId))
     .where(eq(shoppingItems.planId, planId))
-  const [units, uses, parts, ingredientMap] = await Promise.all([
+  const loaded = await Promise.all([
     // 買い物リストの食材は 100 種を超えうるので、ID を並べずにサブクエリで取る（D1 のバインド変数の上限は 100）
     rows.length === 0
       ? []
@@ -108,6 +108,12 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
       .where(eq(planRecipes.planId, planId)),
     loadRecIngredients(db),
   ])
+  const [units, uses, parts, ingredientMap] = loaded
+  const estimate = (ingredientId: string, quantity: number) => {
+    const ing = ingredientMap.get(ingredientId)
+    const price = ing && !ing.isStaple ? unitPrice(ing) : null
+    return price === null ? null : roundYen(quantity * price)
+  }
   const items: ShoppingItem[] = rows
     .sort(
       (a, b) =>
@@ -118,6 +124,7 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
     )
     .map(({ createdAt: _, ...r }) => ({
       ...r,
+      estimatedYen: estimate(r.ingredientId, r.buyQuantity),
       usedFor: [...new Set(uses.filter((u) => u.ingredientId === r.ingredientId).map((u) => u.title))],
       packageUnits: units
         .filter((u) => u.ingredientId === r.ingredientId)

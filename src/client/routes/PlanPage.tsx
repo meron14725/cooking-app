@@ -16,6 +16,7 @@ import {
   useReplacePlanRecipes,
 } from '../api/plans'
 import { aiErrorMessage, useRecipes, useSuggestRecipe } from '../api/recipes'
+import { ProposalCost } from '../components/CostSummary'
 import { DishPhotoButton } from '../components/DishPhoto'
 import { Button, inputClass } from '../components/form'
 import { Icon } from '../components/Icon'
@@ -770,8 +771,11 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                       )
                     })}
                   </ul>
-                  <span className="-mt-1 text-right text-[13px] text-ink-soft">
-                    合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
+                  <span className="-mt-1 flex flex-col items-end gap-0.5 text-right text-[13px] text-ink-soft">
+                    <span>
+                      合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
+                    </span>
+                    <ProposalCost cost={view.cost} />
                   </span>
                   {evaluation?.isError && (
                     <p className="text-[13px] text-danger">

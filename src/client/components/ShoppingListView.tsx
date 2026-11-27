@@ -11,6 +11,7 @@ import {
   useToggleShoppingItem,
   useUpdateShoppingItem,
 } from '../api/shopping'
+import { ShoppingCostSummary, yenText } from './CostSummary'
 import { Button, inputBaseClass, parseNumber } from './form'
 import { Icon } from './Icon'
 import { IngredientSelect } from './ingredientInputs'
@@ -137,6 +138,9 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
         quantity={quantity}
         setQuantity={setQuantity}
       />
+      <p className="text-xs text-ink-muted">
+        {item.estimatedYen === null ? '価格未設定' : `今の量で ${yenText(item.estimatedYen)}`}
+      </p>
       {item.checkedAt && <p className="text-xs text-ink-muted">在庫に入れた量も合わせて直します</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
@@ -269,7 +273,9 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
 
 /** S04 買い物リスト。売り場ごとに並べ、チェックすると在庫に入る */
 export function ShoppingListView({ planId, dishes = [] }: { planId: string; dishes?: string[] }) {
-  const { data, isPending, isError } = useShoppingList(planId)
+  const list = useShoppingList(planId)
+  const { isPending, isError } = list
+  const data = list.data?.items
   const complete = useCompleteShopping(planId)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -312,6 +318,7 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
           </div>
         </div>
       )}
+      {list.data && total > 0 && <ShoppingCostSummary cost={list.data.cost} />}
       {isPending && <p className="text-ink-muted">読み込み中…</p>}
       {isError && <p className="text-danger">読み込めませんでした</p>}
       {data && data.length === 0 && <p className="text-ink-muted">買うものはありません。在庫で足ります</p>}
