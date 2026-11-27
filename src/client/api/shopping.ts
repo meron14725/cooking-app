@@ -9,7 +9,6 @@ export function useShoppingList(planId: string) {
   return useQuery({
     queryKey: listKey(planId),
     queryFn: () => apiFetch<ShoppingList>(`/plans/${planId}/shopping`),
-    select: (d) => d.items,
   })
 }
 

@@ -199,6 +199,18 @@ describe('買い物リストの金額', () => {
     expect(cost.fromFridgeYen).toBe(50)
   })
 
+  it('個数を不足量より減らしても、減らした分を冷蔵庫から使う分に数えない', () => {
+    // 豚こまを 300g 使い、在庫 100g。不足 200g のところ、買う量を 0 に直した
+    const cost = costOfShopping({
+      rows: [row('pork', 200, 0)],
+      eatQuantities: new Map([['pork', 300]]),
+      ingredients,
+      totalMeals: 1,
+    })
+    expect(cost.fromFridgeYen).toBe(150)
+    expect(cost.leftoverYen).toBe(0)
+  })
+
   it('常備品は価格が NULL でも未設定に数えない', () => {
     const cost = costOfShopping({
       rows: [row('carrot', 1, 3)],
