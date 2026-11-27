@@ -57,6 +57,13 @@
       "when": 1795795856225,
       "tag": "0007_ingredient_price",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1795796442967,
+      "tag": "0008_rec_v2_attributes",
+      "breakpoints": true
     }
   ]
 }
