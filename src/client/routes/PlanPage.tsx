@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import { MAX_SERVINGS_PER_DISH } from '../../shared/domain/constants'
 import { addDays, shortDate, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
 import { favoriteTotal, type RecipeSort } from '../../shared/schemas/recipe'
@@ -94,7 +95,7 @@ function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => voi
       <button
         type="button"
         onClick={() => onChange(p.servings + 1)}
-        disabled={p.servings >= 20}
+        disabled={p.servings >= MAX_SERVINGS_PER_DISH}
         aria-label={`${p.title} を1食増やす`}
         className={`${btn} disabled:text-line-strong`}
       >
@@ -148,7 +149,13 @@ function AnchorPicker() {
   async function onSubmit() {
     setError(null)
     try {
-      await create.mutateAsync({ anchors: picked.map(({ recipeId, servings }) => ({ recipeId, servings })) })
+      // 前に覚えた選択が上限を超えていても作れるように丸める
+      await create.mutateAsync({
+        anchors: picked.map(({ recipeId, servings }) => ({
+          recipeId,
+          servings: Math.min(servings, MAX_SERVINGS_PER_DISH),
+        })),
+      })
       savePicked([])
     } catch (err) {
       setError(errorMessage(err, '献立を作れませんでした'))
@@ -532,7 +539,8 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   function toggleLock(recipeId: string, sv: number) {
     const next = { ...locked }
     if (recipeId in next) delete next[recipeId]
-    else next[recipeId] = sv
+    // 上限より多い食数で作った献立（上限を入れる前のもの）でも固定できるように丸める
+    else next[recipeId] = Math.min(sv, MAX_SERVINGS_PER_DISH)
     setSavedLocks({ anchors, servings: next })
     setPickedKey(null)
     setError(null)

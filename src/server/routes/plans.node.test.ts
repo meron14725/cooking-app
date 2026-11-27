@@ -108,6 +108,12 @@ describe('献立 API', () => {
     expect(unknown.body).toMatchObject({ error: { code: 'UNKNOWN_RECIPE' } })
   })
 
+  it('食べたい料理の食数は MAX_SERVINGS_PER_DISH（4）まで', async () => {
+    expect((await createPlan([{ recipeId: anchor.id, servings: 4 }])).status).toBe(201)
+    await api.call('DELETE', `/plans/${(await api.call<{ plan: Plan }>('GET', '/plans/current')).body.plan.id}`)
+    expect((await createPlan([{ recipeId: anchor.id, servings: 5 }])).status).toBe(400)
+  })
+
   it('同じ料理を 2 回選ぶと 400', async () => {
     const res = await createPlan([{ recipeId: anchor.id }, { recipeId: anchor.id }])
     expect(res.status).toBe(400)

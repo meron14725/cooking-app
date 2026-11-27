@@ -114,7 +114,7 @@ COCORO KITCHEN の URL（`https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/{�
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | `/api/plans/current` | 進行中（draft / shopping / prepping）の献立。最大 1 つ。なければ `200 { plan: null }`。stored の献立は袋（`/api/kits`）から見る |
-| POST | `/api/plans` | 献立を作る（`{ anchors: [{ recipeId, servings? }] }`）。status = draft。進行中の献立があれば 409 |
+| POST | `/api/plans` | 献立を作る（`{ anchors: [{ recipeId, servings? }] }`、`servings` は 1〜`MAX_SERVINGS_PER_DISH`）。status = draft。進行中の献立があれば 409 |
 | GET | `/api/plans/:id` | 詳細（レシピ、状態） |
 | POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals?, exclude?, fixed? }`。`exclude` はもう出した案のレシピ ID（案ごとの配列）で、それらの組み合わせを除いた次点を返す（「別の案を出す」）。`fixed: [{ recipeId, servings }]` は鍵で固定した料理と食数（`servings` は 1〜`MAX_SERVINGS_PER_DISH`）で、必ず含めて残りの品数分を選び直す（anchor ならその食数を使う。削除済み・不明なレシピは 400） |
 | GET | `/api/plans/:id/evaluation` | いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。形は提案 1 件と同じ。draft のみ |

@@ -19,7 +19,13 @@ const servingsSchema = z.number().positive('食数は 0 より大きくしてく
 
 export const planCreateSchema = z.object({
   anchors: z
-    .array(z.object({ recipeId: z.string().min(1), servings: servingsSchema.optional() }))
+    .array(
+      z.object({
+        recipeId: z.string().min(1),
+        // 1 品は 1.6L で作れる量まで（鍵で固定する食数と同じ上限）
+        servings: servingsSchema.max(MAX_SERVINGS_PER_DISH, `1 品は ${MAX_SERVINGS_PER_DISH} 食分までです`).optional(),
+      }),
+    )
     .min(1, '食べたい料理を 1 つ以上選んでください')
     .max(10),
 })

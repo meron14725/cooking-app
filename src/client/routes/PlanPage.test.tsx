@@ -228,3 +228,33 @@ describe('献立の提案: 鍵で固定', () => {
     await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
   })
 })
+
+describe('献立の提案: 上限より多い食数の食べたい料理', () => {
+  it('上限（4）を超える食数で作った献立でも、鍵を押すと 4 に丸めて固定できる', async () => {
+    const big = { ...plan, recipes: plan.recipes.map((r) => ({ ...r, servings: 6 })) }
+    const fetch = mockApi((path, body) => {
+      if (path === '/plans/current') return { plan: big }
+      if (path === '/plans/p1/recommendations') {
+        // サーバは献立の食数（6）のまま返す
+        const r = recommendations(body)
+        return {
+          ...r,
+          proposals: r.proposals.map((p) => ({
+            ...p,
+            recipes: p.recipes.map((x) => (x.recipeId === 'a' ? { ...x, servings: 6 } : x)),
+          })),
+        }
+      }
+      if (path === '/plans/p1/evaluation') return proposal('b')
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+    const lock = (await screen.findAllByRole('button', { name: '肉じゃが の料理と食分を固定' }))[0] as HTMLElement
+    fireEvent.click(lock)
+    await waitFor(() => {
+      const call = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations')).at(-1)
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({ fixed: [{ recipeId: 'a', servings: 4 }] })
+    })
+    expect(await screen.findByText('固定中：肉じゃが 4食分')).toBeTruthy()
+  })
+})
