@@ -7,6 +7,7 @@ import {
   useAddShoppingItem,
   useCompleteShopping,
   useDeleteShoppingItem,
+  useSetShoppingItemPaid,
   useShoppingList,
   useToggleShoppingItem,
   useUpdateShoppingItem,
@@ -94,6 +95,49 @@ function AmountInputs({
   )
 }
 
+/** 払った金額（docs/design/10-cost.md「レシートや実際の値段から直す」1） */
+function PaidInput({ planId, item }: { planId: string; item: ShoppingItem }) {
+  const setPaid = useSetShoppingItemPaid(planId)
+  const [value, setValue] = useState(item.paidYen === null ? '' : String(item.paidYen))
+  const [error, setError] = useState<string | null>(null)
+  const parsed = parseNumber(value)
+  const changed = parsed !== item.paidYen
+
+  async function onSave() {
+    setError(null)
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed < 0))
+      return setError('金額は 0 以上の整数で入れてください')
+    try {
+      await setPaid.mutateAsync({ id: item.id, paidYen: parsed })
+    } catch (err) {
+      setError(errorMessage(err, '保存できませんでした'))
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-2">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="払った金額（円）"
+          aria-label="払った金額（円）"
+          className={`${inputBaseClass} min-w-0 flex-1`}
+        />
+        <Button variant="secondary" onClick={onSave} disabled={!changed || setPaid.isPending}>
+          金額を保存
+        </Button>
+      </div>
+      <p className="text-xs text-ink-muted">入れると、この食材の価格（目安）も直します。0 円は合計にだけ使います</p>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </div>
+  )
+}
+
 function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingItem; onDone: () => void }) {
   const update = useUpdateShoppingItem(planId)
   const remove = useDeleteShoppingItem(planId)
@@ -142,6 +186,7 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
         {item.estimatedYen === null ? '価格未設定' : `今の量で ${yenText(item.estimatedYen)}`}
       </p>
       {item.checkedAt && <p className="text-xs text-ink-muted">在庫に入れた量も合わせて直します</p>}
+      {item.paidYen !== null && <p className="text-xs text-ink-muted">量を変えると、払った金額は消えます</p>}
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSave} disabled={update.isPending} className="flex-1">
@@ -152,6 +197,9 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
             買わない
           </Button>
         )}
+      </div>
+      <div className="border-t border-line-soft pt-2">
+        <PaidInput planId={planId} item={item} />
       </div>
     </div>
   )
@@ -185,6 +233,7 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
             </span>
             <span className="truncate text-xs text-ink-muted">
               {note && `${note} ・ `}
+              {item.paidYen !== null && `払った ${item.paidYen.toLocaleString('ja-JP')} 円 ・ `}
               {item.isManual ? '手で追加' : item.usedFor.join('・')}
             </span>
           </span>

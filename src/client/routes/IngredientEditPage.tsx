@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { PRICE_STALE_DAYS } from '../../shared/domain/constants'
-import { representativeLabel } from '../../shared/domain/cost'
+import { representativeLabel, rescalePrice } from '../../shared/domain/cost'
 import { diffDays, todayJst } from '../../shared/domain/date'
+import { representativeQuantity } from '../../shared/domain/recommend'
 import {
   CATEGORY_OPTIONS,
   type Category,
@@ -37,6 +38,8 @@ type FormState = {
   frozenCookNote: string
   isStaple: boolean
   priceYen: string
+  /** 価格の欄を手で触ったか。触っていなければ価格は送らず、代表を変えたときの換算はサーバーに任せる */
+  priceTouched: boolean
   packageUnits: UnitForm[]
 }
 
@@ -60,6 +63,7 @@ const emptyForm: FormState = {
   frozenCookNote: '',
   isStaple: false,
   priceYen: '',
+  priceTouched: false,
   packageUnits: [],
 }
 
@@ -83,6 +87,7 @@ function toForm(i: Ingredient): FormState {
     frozenCookNote: i.frozenCookNote ?? '',
     isStaple: i.isStaple,
     priceYen: str(i.priceYen),
+    priceTouched: false,
     packageUnits: i.packageUnits.map((u) => ({
       key: newUnitKey(),
       id: u.id,
@@ -114,7 +119,8 @@ function toInput(f: FormState): IngredientInput {
     beforeCookTask: f.beforeCookTask,
     frozenCookNote: f.frozenCookNote,
     isStaple: f.isStaple,
-    priceYen: parseNumber(f.priceYen),
+    // 触っていなければ省略（サーバーは今の値を残し、代表を変えたら単価を保って換算する）
+    priceYen: f.priceTouched ? parseNumber(f.priceYen) : undefined,
     packageUnits: f.packageUnits.map((u) => ({
       id: u.id,
       label: u.label,
@@ -124,14 +130,28 @@ function toInput(f: FormState): IngredientInput {
   }
 }
 
-/** 価格の欄のラベル（代表量の名前）。入力中の販売単位から出す */
-function priceBasisLabel(f: FormState): string {
-  return representativeLabel({
+/** 入力中の販売単位（名前と量が入っているものだけ） */
+function formUnits(f: FormState) {
+  return {
     unit: f.unit.trim(),
     packageUnits: f.packageUnits
       .map((u) => ({ label: u.label.trim(), quantity: parseNumber(u.quantity) ?? 0, isDefault: u.isDefault }))
       .filter((u) => u.label && u.quantity > 0),
-  })
+  }
+}
+
+/** 価格の欄のラベル（代表量の名前）。入力中の販売単位から出す */
+function priceBasisLabel(f: FormState): string {
+  return representativeLabel(formUnits(f))
+}
+
+/**
+ * 価格の欄に出す値。触っていなければ、保存済みの価格を入力中の代表量に換算して出す
+ * （保存するとサーバーが同じ換算をする。docs/design/10-cost.md）
+ */
+function priceFieldValue(f: FormState, saved: Ingredient | undefined): string {
+  if (f.priceTouched || !saved || saved.priceYen === null) return f.priceYen
+  return String(rescalePrice(saved.priceYen, representativeQuantity(saved), representativeQuantity(formUnits(f))))
 }
 
 /** 「目安（自動）· 2026-11-27」「手入力 · 2026-11-27（1 年以上前の価格）」 */
@@ -394,7 +414,7 @@ export function IngredientEditPage() {
           hint={
             form.isStaple
               ? '常備品は買い物の合計に入れません'
-              : '空 = 未設定。代表の販売単位を変えると、保存時に同じ単価になるよう直します'
+              : '空 = 未設定。代表の販売単位を変えると、同じ単価になるよう金額も変わります'
           }
           error={errors.priceYen}
         >
@@ -403,8 +423,8 @@ export function IngredientEditPage() {
             inputMode="numeric"
             min={0}
             step={1}
-            value={form.priceYen}
-            onChange={(e) => set('priceYen', e.target.value)}
+            value={priceFieldValue(form, existing.data)}
+            onChange={(e) => setForm((f) => ({ ...f, priceYen: e.target.value, priceTouched: true }))}
             className={inputClass}
           />
         </Field>
