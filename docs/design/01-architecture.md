@@ -79,7 +79,7 @@ Access を経由しない経路から偽のヘッダで API を叩かれない�
 
 - カスタムドメインを使う場合: `wrangler.jsonc` で `workers_dev: false`、`preview_urls: false` にし、Access をかけたドメインだけを入口にする
 - `*.workers.dev` で使う場合: Access のアプリに workers.dev のホスト名とプレビュー URL（`*-<worker>.<account>.workers.dev`）の両方を含める
-- どちらにするかは PR #2（デプロイ）で決める。カスタムドメインがなければ workers.dev で始める
+- MVP は workers.dev で始める（`workers_dev: true`、`preview_urls: false`）。手順は [docs/deploy.md](../deploy.md)
 
 ### ローカル開発
 

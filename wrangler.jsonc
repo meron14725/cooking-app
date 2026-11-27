@@ -4,10 +4,19 @@
   "main": "src/server/index.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
+  // 入口は workers.dev の 1 つだけ。バージョンごとのプレビュー URL は無効にする（docs/deploy.md）
+  "workers_dev": true,
+  "preview_urls": false,
   "assets": {
-    // 画面は SPA。/api/* だけ Worker が先に処理する
+    "binding": "ASSETS",
+    // 画面は SPA。認証を画面にもかけるため、すべてのリクエストを先に Worker に通す
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
+  },
+  "vars": {
+    // Cloudflare Access の設定（docs/deploy.md の手順で値を入れる）。空のままだと全リクエストを拒否する
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
   },
   "d1_databases": [
     {

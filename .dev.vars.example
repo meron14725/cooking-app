@@ -1,0 +1,3 @@
+# ローカル開発用。`cp .dev.vars.example .dev.vars` で使う（.dev.vars は git に入れない）
+# local のときだけ Cloudflare Access の JWT 検証をスキップする
+ENVIRONMENT=local

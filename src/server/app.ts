@@ -1,17 +1,32 @@
 import { Hono } from 'hono'
-import { todayJst } from '../shared/domain/date'
+import type { JWTVerifyGetKey } from 'jose'
+import { api } from './api'
+import { accessAuth } from './auth'
 import { ApiError, handleError } from './errors'
 
-export type AppEnv = { Bindings: Env }
+export type AppEnv = {
+  Bindings: Env
+  Variables: { userEmail: string | null }
+}
 
-export const app = new Hono<AppEnv>().basePath('/api')
+export function createApp(options: { getJwks?: (teamDomain: string) => JWTVerifyGetKey } = {}) {
+  const app = new Hono<AppEnv>()
 
-app.onError(handleError)
+  app.onError(handleError)
 
-app.notFound(() => {
-  throw new ApiError(404, 'NOT_FOUND', 'API が見つかりません')
-})
+  // 画面（静的ファイル）も API も、すべて認証を通してから返す
+  app.use('*', accessAuth(options.getJwks))
 
-app.get('/health', (c) => c.json({ ok: true, today: todayJst() }))
+  app.route('/api', api)
 
-export type AppType = typeof app
+  app.all('/api/*', () => {
+    throw new ApiError(404, 'NOT_FOUND', 'API が見つかりません')
+  })
+
+  // それ以外は画面（SPA）。存在しないパスは index.html を返す（wrangler.jsonc の not_found_handling）
+  app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw))
+
+  return app
+}
+
+export const app = createApp()
