@@ -5,8 +5,8 @@ import { AiError, type AiProvider } from './provider'
 
 const DEFAULT_MODEL = 'gemini-3.8-flash'
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
-/** 画面は 30 秒でタイムアウトするので、再試行を含めてそれより短く */
-const TIMEOUT_MS = 12_000
+/** 画面は 30 秒で打ち切る。ページ取得 10 秒 + AI 9 秒 × 2 回（再試行）= 28 秒に収める */
+const TIMEOUT_MS = 9_000
 
 const CONSTRAINT_KEYS = new Set([
   'minimum',

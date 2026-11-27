@@ -31,6 +31,8 @@ type IngredientRow = {
   /** URL 取り込みでマスタと照合できなかった食材の候補名と単位 */
   suggestedName?: string
   suggestedUnit?: string | null
+  /** 行への注意（マスタに追加して単位が変わったときなど） */
+  notice?: string
 }
 
 type StepRow = { key: string; phase: StepPhase; text: string }
@@ -129,6 +131,33 @@ function fromDraft(d: RecipeDraft, masters: Map<string, UnitMaster>): FormState 
       suggestedUnit: i.ingredientId ? undefined : i.suggestedUnit,
     })),
     steps: d.steps.map((s) => ({ key: newKey(), phase: s.phase, text: s.text })),
+  }
+}
+
+/**
+ * その場でマスタに追加した食材を行に入れる。量は候補の単位のままなので、追加した基準単位と違えば直す。
+ * 直せなければ量を空にして確認を促す（2切れ → 2g のような取り違えを防ぐ）
+ */
+function adoptAddedIngredient(row: IngredientRow, added: UnitMaster & { id: string }): Partial<IngredientRow> {
+  const amount = parseNumber(row.quantity)
+  const from = row.suggestedUnit
+  if (amount === null || !from || normalizeUnit(from) === normalizeUnit(added.unit)) {
+    return { ingredientId: added.id, unit: added.unit, notice: undefined }
+  }
+  const converted = toBaseQuantity({ quantity: amount, unit: from }, added)
+  if (converted.quantity !== null) {
+    return {
+      ingredientId: added.id,
+      unit: added.unit,
+      quantity: String(converted.quantity),
+      notice: `${amount}${from} を ${converted.quantity}${added.unit} に直しました`,
+    }
+  }
+  return {
+    ingredientId: added.id,
+    unit: added.unit,
+    quantity: '',
+    notice: `元の量は ${amount}${from} です。${added.unit}での量を入れてください`,
   }
 }
 
@@ -464,8 +493,7 @@ export function RecipeEditPage() {
                     suggestedUnit={row.suggestedUnit ?? null}
                     onAdded={(added) =>
                       setRow(row.key, {
-                        ingredientId: added.id,
-                        unit: added.unit,
+                        ...adoptAddedIngredient(row, added),
                         suggestedName: undefined,
                         suggestedUnit: undefined,
                       })
@@ -482,7 +510,7 @@ export function RecipeEditPage() {
                   min={0}
                   step="any"
                   value={row.quantity}
-                  onChange={(e) => setRow(row.key, { quantity: e.target.value, displayText: '' })}
+                  onChange={(e) => setRow(row.key, { quantity: e.target.value, displayText: '', notice: undefined })}
                   placeholder="量"
                   aria-label="量"
                   className={`${inputBaseClass} min-w-0 flex-1`}
@@ -503,6 +531,7 @@ export function RecipeEditPage() {
                 </select>
               </div>
               {err('quantity') && <p className="text-xs text-red-600">{err('quantity')}</p>}
+              {row.notice && <p className="text-xs text-amber-800">{row.notice}</p>}
               {master && unit !== master.unit && (
                 <p className="text-xs text-stone-500">保存するときに{master.unit}に直します</p>
               )}

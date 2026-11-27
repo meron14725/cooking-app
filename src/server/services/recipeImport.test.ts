@@ -6,6 +6,7 @@ import {
   buildSourceText,
   decodeHtml,
   extractJsonLdRecipe,
+  fetchPage,
   htmlToText,
   normalizeDraft,
 } from './recipeImport'
@@ -160,5 +161,36 @@ describe('normalizeDraft', () => {
     })
     expect(draft.warnings).toHaveLength(2)
     expect(draft.warnings[1]).toContain('ぶり')
+  })
+})
+
+describe('fetchPage', () => {
+  const html = (body: string) => new Response(body, { headers: { 'Content-Type': 'text/html' } })
+  const redirect = (to: string) => new Response(null, { status: 302, headers: { Location: to } })
+  const fakeFetch = (responses: Response[]) => {
+    const urls: string[] = []
+    const fn = (async (u: string) => {
+      urls.push(u)
+      const r = responses.shift()
+      if (!r) throw new Error('想定外')
+      return r
+    }) as unknown as typeof fetch
+    return { fn, urls }
+  }
+
+  it('リダイレクトをたどる（相対パスも）', async () => {
+    const { fn, urls } = fakeFetch([redirect('/new'), html('<p>ok</p>')])
+    await expect(fetchPage(new URL('https://example.com/old'), fn)).resolves.toBe('<p>ok</p>')
+    expect(urls).toEqual(['https://example.com/old', 'https://example.com/new'])
+  })
+
+  it('ローカルへのリダイレクトは 400', async () => {
+    const { fn } = fakeFetch([redirect('http://127.0.0.1/admin')])
+    await expect(fetchPage(new URL('https://example.com/'), fn)).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('リダイレクトが 4 回以上なら 502', async () => {
+    const { fn } = fakeFetch([1, 2, 3, 4].map((n) => redirect(`/r${n}`)))
+    await expect(fetchPage(new URL('https://example.com/'), fn)).rejects.toMatchObject({ status: 502 })
   })
 })

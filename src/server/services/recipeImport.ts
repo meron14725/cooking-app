@@ -76,16 +76,30 @@ export function decodeHtml(bytes: Uint8Array, contentType: string | null): strin
   }
 }
 
+const MAX_REDIRECTS = 3
+
+/**
+ * ページを取る。リダイレクトは自分でたどり、行き先ごとに assertPublicUrl で確かめる（3 回まで）。
+ * タイムアウトはリダイレクトを含めて全体で 10 秒。
+ */
 export async function fetchPage(url: URL, fetchImpl: typeof fetch = fetch): Promise<string> {
-  let res: Response
-  try {
-    res = await fetchImpl(url.toString(), {
-      headers: { Accept: 'text/html,application/xhtml+xml', 'User-Agent': 'cooking-app (recipe import)' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    })
-  } catch {
-    throw new ApiError(502, 'FETCH_FAILED', 'ページを取得できませんでした（タイムアウトなど）')
+  const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS)
+  let current = url
+  let res: Response | undefined
+  for (let hop = 0; ; hop++) {
+    try {
+      res = await fetchImpl(current.toString(), {
+        headers: { Accept: 'text/html,application/xhtml+xml', 'User-Agent': 'cooking-app (recipe import)' },
+        redirect: 'manual',
+        signal,
+      })
+    } catch {
+      throw new ApiError(502, 'FETCH_FAILED', 'ページを取得できませんでした（タイムアウトなど）')
+    }
+    const location = res.status >= 300 && res.status < 400 ? res.headers.get('Location') : null
+    if (!location) break
+    if (hop >= MAX_REDIRECTS) throw new ApiError(502, 'FETCH_FAILED', 'リダイレクトが多すぎて取得できませんでした')
+    current = assertPublicUrl(new URL(location, current).toString())
   }
   if (!res.ok) throw new ApiError(502, 'FETCH_FAILED', `ページを取得できませんでした（${res.status}）`)
   const type = res.headers.get('Content-Type')
