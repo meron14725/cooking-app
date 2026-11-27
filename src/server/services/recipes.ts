@@ -180,10 +180,6 @@ export async function createRecipe(db: Db, input: RecipeInputParsed): Promise<Re
   return getRecipe(db, id)
 }
 
-/**
- * レシピを丸ごと更新する。材料と手順は全部入れ替える。作成元（sourceType）は変えない。
- * 公式レシピの情報（imageKey・件数など）は入力で省略されたら今の値を残す（drizzle は undefined を set しない）
- */
 /** 自分のお気に入りを付ける・外す。レシピの中身は変えない */
 export async function setRecipeFavorite(db: Db, id: string, favorite: boolean): Promise<Recipe> {
   await getRecipe(db, id)
@@ -191,6 +187,10 @@ export async function setRecipeFavorite(db: Db, id: string, favorite: boolean): 
   return getRecipe(db, id)
 }
 
+/**
+ * レシピを丸ごと更新する。材料と手順は全部入れ替える。作成元（sourceType）は変えない。
+ * 公式レシピの情報（imageKey・件数など）は入力で省略されたら今の値を残す（drizzle は undefined を set しない）
+ */
 export async function updateRecipe(db: Db, id: string, input: RecipeInputParsed): Promise<Recipe> {
   await getRecipe(db, id)
   await assertIngredientsExist(db, input, id)
