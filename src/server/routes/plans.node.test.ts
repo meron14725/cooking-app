@@ -108,6 +108,12 @@ describe('献立 API', () => {
     expect(unknown.body).toMatchObject({ error: { code: 'UNKNOWN_RECIPE' } })
   })
 
+  it('食べたい料理の食数は MAX_SERVINGS_PER_DISH（4）まで', async () => {
+    expect((await createPlan([{ recipeId: anchor.id, servings: 4 }])).status).toBe(201)
+    await api.call('DELETE', `/plans/${(await api.call<{ plan: Plan }>('GET', '/plans/current')).body.plan.id}`)
+    expect((await createPlan([{ recipeId: anchor.id, servings: 5 }])).status).toBe(400)
+  })
+
   it('同じ料理を 2 回選ぶと 400', async () => {
     const res = await createPlan([{ recipeId: anchor.id }, { recipeId: anchor.id }])
     expect(res.status).toBe(400)
@@ -172,6 +178,30 @@ describe('献立 API', () => {
     // 知らないレシピは 400
     const unknown = await api.call('POST', url, { recipes: [{ ...recipes[0], recipeId: 'nope' }] })
     expect(unknown.status).toBe(400)
+  })
+
+  it('鍵で固定: 固定した料理と食数を必ず含めて残りを選ぶ。知らないレシピは 400', async () => {
+    const plan = (await createPlan([{ recipeId: anchor.id }])).body
+    const url = `/plans/${plan.id}/recommendations`
+    const res = await api.call<RecommendationsResponse>('POST', url, { fixed: [{ recipeId: partner.id, servings: 2 }] })
+    expect(res.status).toBe(200)
+    expect(res.body.proposals.length).toBeGreaterThan(0)
+    for (const p of res.body.proposals) {
+      expect(p.recipes).toContainEqual(expect.objectContaining({ recipeId: partner.id, role: 'added', servings: 2 }))
+    }
+    expect((await api.call('POST', url, { fixed: [{ recipeId: 'nope', servings: 1 }] })).status).toBe(400)
+    // 1 品の食数は MAX_SERVINGS_PER_DISH（4）まで
+    expect((await api.call('POST', url, { fixed: [{ recipeId: partner.id, servings: 5 }] })).status).toBe(400)
+    expect(
+      (
+        await api.call('POST', url, {
+          fixed: [
+            { recipeId: partner.id, servings: 1 },
+            { recipeId: partner.id, servings: 2 },
+          ],
+        })
+      ).status,
+    ).toBe(400)
   })
 
   it('提案は在庫を先に使う（確保分を超えた量は使わない）', async () => {
