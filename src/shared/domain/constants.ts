@@ -54,6 +54,12 @@ export const PRICE_STALE_DAYS = 365
 /** 食材の価格（代表量あたり）の上限（円） */
 export const MAX_PRICE_YEN = 100_000
 
+/** 提案の点数で、金額をパックの数にそろえるときの「パック 1 個の値段」（円） */
+export const PACK_YEN = 200
+
+/** 提案の点数で、価格未設定で同じ分類・同じ基準単位の価格もない食材の、代表量あたりの仮の価格（円） */
+export const FALLBACK_PRICE_PER_PACK_YEN = 200
+
 // ---------- 提案 v2（docs/design/09-recommendation-v2.md） ----------
 
 /** 合計◯食の既定（2 人 × 3 日）。前回の献立の値があればそちら */
@@ -137,5 +143,7 @@ export const RECOMMEND_WEIGHTS = {
   wantDeviation: 0.1,
   /** 追加した料理の人気（0〜1）。いちばん人気の料理で −0.5 */
   popularity: 0.5,
+  /** 1 食あたりの買う金額 100 円ごと（docs/design/10-cost.md） */
+  cost: 0.2,
 }
 export type RecommendWeights = typeof RECOMMEND_WEIGHTS

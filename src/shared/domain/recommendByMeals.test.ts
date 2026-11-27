@@ -86,8 +86,9 @@ describe('recommend（合計◯食）', () => {
     expect(shapes).toContain('2,2,2')
   })
 
-  it('点数の内訳を返し、足すと score になる。案は点数の良い順', () => {
-    const r = run({ anchors: [{ recipe: get('nikujaga'), servings: 2 }] })
+  it('点数の内訳を返し、足すと score になる。多様性なし（λ = 0）なら案は点数の良い順', () => {
+    // λ > 0 では似た案を後ろに回すので、点数順になるとは限らない
+    const r = run({ anchors: [{ recipe: get('nikujaga'), servings: 2 }], options: { diversityLambda: 0 } })
     for (const p of r.proposals) {
       const sum = Object.values(p.scoreBreakdown ?? {}).reduce((a, b) => a + b, 0)
       expect(sum).toBeCloseTo(p.score, 2)
@@ -280,7 +281,9 @@ describe('多様性と別の案（食数付きの exclude）', () => {
     const keys = new Set<string>()
     const addedIds = new Set<string>()
     for (let round = 0; round < 6; round++) {
-      const r = run({ anchors, catalog: big, exclude })
+      // 多様性のしくみを見るテストなので、金額の項は外す（架空の料理は材料が多く、金額の項を入れると材料の少ない
+      // 料理ばかりが上に来て、比べる候補そのものが狭まる）
+      const r = run({ anchors, catalog: big, exclude, weights: { cost: 0 } })
       expect(r.proposals.length).toBeGreaterThan(0)
       for (const p of r.proposals) {
         const key = p.recipes

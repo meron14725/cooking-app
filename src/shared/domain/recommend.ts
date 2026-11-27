@@ -12,9 +12,11 @@ import {
   DIVERSITY_LAMBDA,
   DIVERSITY_RECENT_EXCLUDES,
   EXPIRING_SOON_DAYS,
+  FALLBACK_PRICE_PER_PACK_YEN,
   MAX_DISHES,
   MAX_EVALUATIONS,
   MAX_PROPOSALS,
+  PACK_YEN,
   RECOMMEND_WEIGHTS,
   type RecommendWeights,
   SCORE_WEIGHTS,
@@ -178,6 +180,59 @@ export function representativeQuantity(ing: {
   return ing.unit === 'g' ? SCORE_WEIGHTS.gramsRepresentative : 1
 }
 
+/**
+ * 点数で使う「代表量（パック）何個分」。価格があれば金額を PACK_YEN でパックの数にそろえる
+ * （安い食材の余りは軽く、高い食材の余りは重く。docs/design/10-cost.md）。なければ量 ÷ 代表量
+ */
+export function scorePacks(ing: RecIngredient, quantity: number): number {
+  const rep = representativeQuantity(ing)
+  if (ing.priceYen === null || ing.priceYen === undefined || ing.priceYen <= 0) return quantity / rep
+  return (quantity * ing.priceYen) / rep / PACK_YEN
+}
+
+const median = (values: number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 1 ? (sorted[mid] as number) : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2
+}
+
+/**
+ * 点数で使う単価（基準単位あたりの円）。価格があればその単価。未設定なら、同じ分類・同じ基準単位の食材の単価の中央値、
+ * それもなければ FALLBACK_PRICE_PER_PACK_YEN を代表量の価格とみなす（未設定の食材を使う案が安く見えないように）。
+ * 画面に出す金額には使わない
+ */
+export function scoreUnitPrices(ingredients: Map<string, RecIngredient>): Map<string, number> {
+  const groups = new Map<string, number[]>()
+  const groupKey = (ing: RecIngredient) => `${ing.category ?? ''}\u0000${ing.unit}`
+  for (const ing of ingredients.values()) {
+    if (ing.isStaple || ing.priceYen === null || ing.priceYen === undefined || ing.priceYen <= 0) continue
+    const list = groups.get(groupKey(ing)) ?? []
+    list.push(ing.priceYen / representativeQuantity(ing))
+    groups.set(groupKey(ing), list)
+  }
+  const medians = new Map([...groups].map(([k, v]) => [k, median(v)]))
+  const result = new Map<string, number>()
+  for (const ing of ingredients.values()) {
+    if (ing.isStaple) continue
+    const own = ing.priceYen !== null && ing.priceYen !== undefined && ing.priceYen > 0
+    result.set(
+      ing.id,
+      own
+        ? (ing.priceYen as number) / representativeQuantity(ing)
+        : (medians.get(groupKey(ing)) ?? FALLBACK_PRICE_PER_PACK_YEN / representativeQuantity(ing)),
+    )
+  }
+  return result
+}
+
+/** 点数で使う買う金額（scoreUnitPrices の単価で数える） */
+export function scoreBuyYen(
+  shopping: Pick<ShoppingLine, 'ingredientId' | 'buyQuantity'>[],
+  unitPrices: Map<string, number>,
+) {
+  return shopping.reduce((a, s) => a + s.buyQuantity * (unitPrices.get(s.ingredientId) ?? 0), 0)
+}
+
 /** 傷みやすさ: 常温で日持ち 0.1 / 冷凍できる 0.3 / 冷蔵のみ 1.0 */
 export function perishability(ing: RecIngredient): number {
   const w = SCORE_WEIGHTS.perishability
@@ -278,7 +333,9 @@ export function evaluate(items: { recipe: RecRecipe; servings: number }[], ctx: 
         isExpiringSoon,
       })
       score -=
-        (take / rep) * SCORE_WEIGHTS.inventoryBonus * (isExpiringSoon ? SCORE_WEIGHTS.expiringBonusMultiplier : 1)
+        scorePacks(ing, take) *
+        SCORE_WEIGHTS.inventoryBonus *
+        (isExpiringSoon ? SCORE_WEIGHTS.expiringBonusMultiplier : 1)
     }
 
     // 3. 足りない分を販売単位で切り上げる
@@ -322,7 +379,7 @@ export function evaluate(items: { recipe: RecRecipe; servings: number }[], ctx: 
           perishable,
           packs: round(leftover / rep),
         })
-        score += (leftover / rep) * weight
+        score += scorePacks(ing, leftover) * weight
         if (perishable) maxPerishableLeftoverPacks = Math.max(maxPerishableLeftoverPacks, leftover / rep)
       }
     }
@@ -334,7 +391,7 @@ export function evaluate(items: { recipe: RecRecipe; servings: number }[], ctx: 
     const ing = ctx.ingredients.get(stock.ingredientId)
     if (!ing || ing.isStaple) continue
     const unused = stock.quantity - (usedByRow.get(stock.inventoryItemId) ?? 0)
-    if (unused > EPS) score += (unused / representativeQuantity(ing)) * SCORE_WEIGHTS.expiringUnusedPenalty
+    if (unused > EPS) score += scorePacks(ing, unused) * SCORE_WEIGHTS.expiringUnusedPenalty
   }
 
   const shoppingPoints = new Set(shopping.map((s) => s.ingredientId)).size
@@ -560,6 +617,7 @@ export function recommend(input: RecommendInput): RecommendResult {
     all.set(r.id, r)
   }
   const features = recipeFeatures([...all.values()], input.ingredients)
+  const unitPrices = scoreUnitPrices(input.ingredients)
   const featureOf = (r: RecRecipe) => features.get(r.id) as RecipeFeatures
 
   // ---- 前に出した案 ----
@@ -635,7 +693,7 @@ export function recommend(input: RecommendInput): RecommendResult {
     const evaluation = evaluate(items, ctx)
     const { score, breakdown } = scoreProposal(
       items.map((i) => ({ recipeId: i.recipe.id, servings: i.servings, role: i.role, wantedServings: i.wanted })),
-      evaluation.score,
+      { shopping: evaluation.score, buyYen: scoreBuyYen(evaluation.shopping, unitPrices) },
       features,
       weights,
     )

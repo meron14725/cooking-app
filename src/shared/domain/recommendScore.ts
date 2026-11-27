@@ -1,7 +1,7 @@
 /**
  * 提案 v2 の点数（docs/design/09-recommendation-v2.md「点数」）。DB に依存しない純粋関数。
  * 買い物・余り・在庫の点数（evaluate）に、カロリー・野菜・調理時間・ホットクックの回数・食べ続け・
- * 区分の偏り・案の中の重なり・食べたい料理の食数のずれ・人気を足す。小さいほど良い。
+ * 区分の偏り・案の中の重なり・食べたい料理の食数のずれ・人気・1 食あたりの買う金額（docs/design/10-cost.md）を足す。小さいほど良い。
  */
 
 import type { Cuisine, DishType } from '../schemas/recipe'
@@ -94,6 +94,7 @@ export const SCORE_TERMS = [
   'inPlanSimilarity',
   'wantDeviation',
   'popularity',
+  'cost',
 ] as const
 export type ScoreTerm = (typeof SCORE_TERMS)[number]
 /** 項目ごとの点数（重みを掛けた後）。足すと score になる */
@@ -109,10 +110,12 @@ export type ScoredItem = {
 
 const round = (n: number) => Math.round(n * 1000) / 1000
 
-/** 1 案の点数と内訳。shopping は evaluate() の点数 */
+/**
+ * 1 案の点数と内訳。shopping は evaluate() の点数、buyYen は買う金額（価格未設定は仮の単価で数えた値。scoreBuyYen()）
+ */
 export function scoreProposal(
   items: ScoredItem[],
-  shopping: number,
+  { shopping, buyYen }: { shopping: number; buyYen: number },
   features: Map<string, RecipeFeatures>,
   weights: RecommendWeights = RECOMMEND_WEIGHTS,
 ): { score: number; breakdown: ScoreBreakdown } {
@@ -178,6 +181,7 @@ export function scoreProposal(
     inPlanSimilarity: round(weights.inPlanSimilarity * inPlanSimilarity),
     wantDeviation: round(weights.wantDeviation * wantDeviation),
     popularity: round(-weights.popularity * popularity),
+    cost: round(total > 0 ? (weights.cost * buyYen) / total / 100 : 0),
   }
   const score = round(SCORE_TERMS.reduce((a, k) => a + breakdown[k], 0))
   return { score, breakdown }
