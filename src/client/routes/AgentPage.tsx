@@ -22,7 +22,7 @@ function AiBubble({ children }: { children: React.ReactNode }) {
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
         <Icon name="sparkle" size={16} />
       </span>
-      <div className="min-w-0 flex-1 rounded-[16px] rounded-tl-md border border-line bg-surface px-4 py-3 text-[15px] leading-relaxed">
+      <div className="min-w-0 flex-1 rounded-item rounded-tl-md border border-line bg-surface px-4 py-3 text-[15px] leading-relaxed">
         {children}
       </div>
     </div>
@@ -99,7 +99,7 @@ export function AgentPage() {
         )}
 
         {asked && (
-          <div className="ml-10 self-end rounded-[16px] rounded-tr-md bg-accent-soft px-4 py-3 text-[15px] leading-relaxed text-ink">
+          <div className="ml-10 self-end rounded-item rounded-tr-md bg-accent-soft px-4 py-3 text-[15px] leading-relaxed text-ink">
             {asked}
           </div>
         )}
@@ -142,7 +142,7 @@ export function AgentPage() {
                     // biome-ignore lint/suspicious/noArrayIndexKey: 一覧は反映まで並べ替えない
                     <li key={i}>
                       <label
-                        className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-[16px] border bg-surface px-4 py-3.5 ${
+                        className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-item border bg-surface px-4 py-3.5 ${
                           selected.has(i) ? 'border-accent-line' : 'border-line'
                         }`}
                       >
