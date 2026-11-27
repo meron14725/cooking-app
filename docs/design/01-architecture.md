@@ -29,7 +29,7 @@ Cloudflare Worker（1つ）
    ├─ /assets, /*      … React SPA の静的ファイル（Workers Static Assets）
    └─ /api/*           … Hono の API
           ├─ D1（データ）
-          └─ AIプロバイダ（外部API。URL取り込みと補完提案のときだけ）
+          └─ AI（Cursor SDK を動かす Container。URL 取り込み、補完提案、AI に頼む のときだけ。[08](./08-agent.md)）
 ```
 
 画面と API を 1 つの Worker にまとめるので、CORS もデプロイ先も 1 つで済みます。
