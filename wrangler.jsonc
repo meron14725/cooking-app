@@ -22,8 +22,8 @@
     {
       "binding": "DB",
       "database_name": "cooking-app",
-      // 本番 D1 の ID はデプロイの PR（#2）で設定する。ローカル開発では使われない
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // 本番 D1 の ID（ローカル開発では使われない）
+      "database_id": "d7632761-7199-4360-85b7-d7db88fa139a",
       "migrations_dir": "migrations"
     }
   ],
