@@ -2,10 +2,17 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 import { costOfShopping, roundYen, unitPrice } from '../../shared/domain/cost'
 import { computeExpiresOn } from '../../shared/domain/expiry'
 import type { ShoppingLine } from '../../shared/domain/recommend'
+import { representativeQuantity } from '../../shared/domain/recommend'
 import { roundQuantity } from '../../shared/domain/units'
 import { CATEGORY_OPTIONS } from '../../shared/schemas/ingredient'
 import type { PlanStatus } from '../../shared/schemas/plan'
-import type { ShoppingAddInput, ShoppingItem, ShoppingList, ShoppingPatchInput } from '../../shared/schemas/shopping'
+import type {
+  ShoppingAddInput,
+  ShoppingItem,
+  ShoppingList,
+  ShoppingPaidInput,
+  ShoppingPatchInput,
+} from '../../shared/schemas/shopping'
 import type { Db } from '../db/client'
 import {
   ingredients,
@@ -62,6 +69,7 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
       buyQuantity: shoppingItems.buyQuantity,
       checkedAt: shoppingItems.checkedAt,
       isManual: shoppingItems.isManual,
+      paidYen: shoppingItems.paidYen,
       createdAt: shoppingItems.createdAt,
     })
     .from(shoppingItems)
@@ -145,6 +153,7 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
       buyQuantity: i.buyQuantity,
       isManual: i.isManual,
       checked: i.checkedAt !== null,
+      paidYen: i.paidYen,
     })),
     eatQuantities,
     ingredients: ingredientMap,
@@ -262,12 +271,52 @@ export async function updateShoppingItem(db: Db, id: string, input: ShoppingPatc
         packageUnitId: unit?.id ?? null,
         packageCount: unit ? packageCount : buyQuantity > 0 ? 1 : 0,
         buyQuantity,
+        // 買う量が変わったら、前に入れた払った金額は合わなくなるので消す
+        ...(buyQuantity === item.buyQuantity ? {} : { paidYen: null }),
       })
       .where(eq(shoppingItems.id, id)),
     db
       .update(inventoryItems)
       .set({ quantity: buyQuantity })
       .where(and(eq(inventoryItems.shoppingItemId, id), isNull(inventoryItems.usedUpAt))),
+  ])
+  return getShoppingItem(db, id)
+}
+
+/**
+ * 払った金額を入れる（docs/design/10-cost.md「レシートや実際の値段から直す」1）。
+ * 入れたら食材の価格も、払った金額 ÷ 買った量 × 代表量で手入力（manual）として直す。
+ * 0 円（もらい物・ポイント払いなど）は行の合計にだけ使い、食材の価格は直さない。
+ * 消したとき（null）は食材の価格は戻さない（前の値が分からないため）
+ */
+export async function setShoppingItemPaid(db: Db, id: string, input: ShoppingPaidInput): Promise<ShoppingItem> {
+  const item = await findItem(db, id)
+  const setPaid = db.update(shoppingItems).set({ paidYen: input.paidYen }).where(eq(shoppingItems.id, id))
+  const updatesPrice = input.paidYen !== null && input.paidYen > 0 && item.buyQuantity > 0
+  const master = updatesPrice
+    ? await db.query.ingredients.findFirst({ where: eq(ingredients.id, item.ingredientId) })
+    : undefined
+  if (!master || input.paidYen === null || !updatesPrice) {
+    await setPaid
+    return getShoppingItem(db, id)
+  }
+  // 代表量は提案と同じく販売単位の登録順で決める
+  const units = await db
+    .select()
+    .from(packageUnits)
+    .where(eq(packageUnits.ingredientId, master.id))
+    .orderBy(asc(packageUnits.createdAt), asc(packageUnits.id))
+  const rep = representativeQuantity({ unit: master.unit, packageUnits: units })
+  await db.batch([
+    setPaid,
+    db
+      .update(ingredients)
+      .set({
+        priceYen: Math.round((input.paidYen / item.buyQuantity) * rep),
+        priceSource: 'manual',
+        priceUpdatedAt: new Date().toISOString(),
+      })
+      .where(eq(ingredients.id, master.id)),
   ])
   return getShoppingItem(db, id)
 }
