@@ -109,7 +109,7 @@ function toForm(r: Recipe): FormState {
   }
 }
 
-/** URL 取り込みの下書きからフォームを作る。マスタにない食材は候補名を残して、その場で追加できるようにする */
+/** URL 取り込み・AI 補完提案の下書きからフォームを作る。マスタにない食材は候補名を残して、その場で追加できるようにする */
 function fromDraft(d: RecipeDraft, masters: Map<string, UnitMaster>): FormState {
   return {
     ...emptyForm(),
@@ -119,7 +119,7 @@ function fromDraft(d: RecipeDraft, masters: Map<string, UnitMaster>): FormState 
     hotcookMode: d.hotcookMode ?? '',
     maxServings1_6l: str(d.maxServings1_6l),
     sourceUrl: d.sourceUrl ?? '',
-    sourceType: 'url',
+    sourceType: d.sourceType,
     ingredients: d.ingredients.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId ?? '',
@@ -223,8 +223,10 @@ export function RecipeEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  /** URL 取り込み（S11）から来たときの下書き */
-  const draft = id ? undefined : (location.state as { draft?: RecipeDraft } | null)?.draft
+  /** URL 取り込み（S11）や AI 補完提案（S03）から来たときの下書き。returnTo は保存・やめたときの戻り先 */
+  const state = id ? null : (location.state as { draft?: RecipeDraft; returnTo?: string } | null)
+  const draft = state?.draft
+  const back = state?.returnTo ?? '/recipes'
   const existing = useRecipe(id)
   const estimate = useEstimateCalories()
   const [estimateError, setEstimateError] = useState<string | null>(null)
@@ -287,7 +289,7 @@ export function RecipeEditPage() {
     setErrors({})
     try {
       await save.mutateAsync(input)
-      navigate('/recipes')
+      navigate(back)
     } catch (err) {
       setErrors({ form: err instanceof ApiRequestError ? err.message : '保存できませんでした' })
     }
@@ -637,7 +639,7 @@ export function RecipeEditPage() {
         <Button type="submit" disabled={save.isPending} className="flex-1">
           {save.isPending ? '保存中…' : '保存'}
         </Button>
-        <Button variant="secondary" onClick={() => navigate('/recipes')}>
+        <Button variant="secondary" onClick={() => navigate(back)}>
           戻る
         </Button>
       </div>

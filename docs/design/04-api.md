@@ -33,7 +33,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | PUT | `/api/recipes/:id` | 更新（材料・手順は丸ごと置き換え） |
 | DELETE | `/api/recipes/:id` | 論理削除 |
 | POST | `/api/recipes/import-url` | URL から下書きを作る（保存しない） |
-| POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない） |
+| POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない）。`{ leftovers: [{ ingredientId, quantity }] }`（余りの優先順） |
 | POST | `/api/recipes/estimate-calories` | 材料と人数から 1 人前のカロリーを AI で推定（保存しない）。`{ caloriesKcal }` を返す |
 
 - 材料の `ingredientId` は食材マスタにあるもの。ない、または削除済み（このレシピですでに使っているものを除く）なら 400 `UNKNOWN_INGREDIENT`
@@ -50,6 +50,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
   caloriesKcal: number | null
   hotcookMode: string | null
   sourceUrl: string | null
+  sourceType: 'url' | 'ai'     // URL 取り込みか補完提案か
   ingredients: {
     displayText: string          // 「玉ねぎ 1/2個」
     ingredientId: string | null  // マスタと照合できたもの
@@ -166,6 +167,6 @@ check / uncheck を冪等にしておくと、通信が不安定な店内で再�
 | GET | `/api/kits` | 一覧（既定は stored、`?status=`、`?plannedOnOrBefore=今日` で今日の袋。予定日を過ぎた袋も含む）。食べる日順 |
 | GET | `/api/kits/:id` | 詳細 |
 | GET | `/api/kits/:id/cook` | 調理画面用（直前作業、入れる順（袋から / 直前に作業したもの / いま入れる、量は袋の食数に合わせる）、ホットクック設定と調理手順、冷凍時の注意、作った後に残る見込みの在庫） |
-| POST | `/api/kits/:id/cooked` | 作った。直前作業用に確保した在庫を減らす（期限の近い行から）。`{ leftovers?: [{ inventoryItemId, quantity }] }` で余りを修正。全袋が終われば plan を done に（同じ batch）。stored 以外は 409 |
+| POST | `/api/kits/:id/cooked` | 作った。直前作業用に確保した在庫を減らす（期限の近い行から）。`{ leftovers?: [{ inventoryItemId, quantity }] }` で余りを修正（直前作業の食材の在庫行だけ。ほかの ID は無視）。全袋が終われば plan を done に（同じ batch）。stored 以外は 409 |
 | POST | `/api/kits/:id/discard` | 捨てた。在庫は減らさない（確保は自動で外れる）。全袋が終われば plan を done に |
 | PATCH | `/api/kits/:id` | 保存場所・期限の修正。`{ location?, useBy? }`。期限を指定せずに場所を変えると袋詰めの日から計算し直す |

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { addDays, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
 import { ApiRequestError } from '../api/client'
@@ -11,7 +12,7 @@ import {
   useRecommendations,
   useReplacePlanRecipes,
 } from '../api/plans'
-import { useRecipes } from '../api/recipes'
+import { aiErrorMessage, useRecipes, useSuggestRecipe } from '../api/recipes'
 import { Button, inputBaseClass, inputClass } from '../components/form'
 import { PageHeader } from '../components/PageHeader'
 import { PrepAndPack } from '../components/PrepAndPack'
@@ -213,6 +214,46 @@ const kitLabel = (p: ProposalView, recipeId: string) =>
 
 // ---------- 2. 提案から選ぶ ----------
 
+/** 余りが大きいとき: 最良案の余り（冷蔵のみを先に）で AI に 1 品の下書きを作らせ、編集画面で確認して保存する */
+function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
+  const suggest = useSuggestRecipe()
+  const navigate = useNavigate()
+  const [error, setError] = useState<string | null>(null)
+  const leftovers = [...(proposal?.leftovers ?? [])].sort((a, b) => Number(b.perishable) - Number(a.perishable))
+
+  async function onSuggest() {
+    setError(null)
+    try {
+      const draft = await suggest.mutateAsync({
+        leftovers: leftovers.map((l) => ({ ingredientId: l.ingredientId, quantity: l.quantity })),
+      })
+      navigate('/recipes/new', { state: { draft, returnTo: '/plan' } })
+    } catch (err) {
+      setError(aiErrorMessage(err))
+    }
+  }
+
+  return (
+    <div className="mb-3 rounded-lg bg-sky-50 px-3 py-3 text-sm text-sky-800">
+      {leftovers.length === 0 ? (
+        <p>登録レシピが少ないため、組み合わせの提案が出せませんでした。レシピを増やすと案が出ます。</p>
+      ) : (
+        <>
+          <p className="mb-2">
+            登録レシピだけでは余りが出やすい組み合わせです。余る食材（
+            {leftovers.map((l) => l.name).join('、')}）で AI に 1 品提案してもらえます。
+          </p>
+          <Button variant="secondary" onClick={onSuggest} disabled={suggest.isPending} className="w-full">
+            {suggest.isPending ? 'AI が考えています…（30 秒ほど）' : '余る食材で AI に 1 品提案してもらう'}
+          </Button>
+          <p className="mt-1 text-xs text-sky-700">下書きを確認して保存すると、提案を計算し直します</p>
+        </>
+      )}
+      {error && <p className="mt-2 text-red-600">{error}</p>}
+    </div>
+  )
+}
+
 function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   const recs = useRecommendations(plan.id)
   const replace = useReplacePlanRecipes(plan.id)
@@ -235,12 +276,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
       <h2 className="mb-2 text-sm font-bold text-stone-500">提案</h2>
       {recs.isPending && <p className="text-stone-500">計算中…</p>}
       {recs.isError && <p className="text-red-600">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
-      {recs.data?.aiSuggestionRecommended && (
-        <p className="mb-3 rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-800">
-          登録レシピだけでは余りが出やすい組み合わせです。余る食材で AI に 1
-          品提案してもらう機能は、この先の更新で入ります。
-        </p>
-      )}
+      {recs.data?.aiSuggestionRecommended && <AiSuggest proposal={recs.data.proposals[0]} />}
       {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
       <ol className="space-y-3">
         {recs.data?.proposals.map((p, i) => (

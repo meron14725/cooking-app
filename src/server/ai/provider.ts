@@ -4,8 +4,16 @@ import { ApiError } from '../errors'
 /** 食材マスタの名前と基準単位（AI に渡すのはこれだけ。docs/design/06-ai.md「プライバシー」） */
 export type MasterRef = { name: string; unit: string; gramsPerUnit: number | null }
 
+/** 補完提案で AI に渡すもの（余りそうな食材の名前と量、既存レシピのタイトル、マスタ一覧だけ） */
+export type SuggestPromptInput = {
+  leftovers: { name: string; quantity: number; unit: string }[]
+  avoidTitles: string[]
+  ingredients: MasterRef[]
+}
+
 export interface AiProvider {
   extractRecipe(input: { url: string; text: string; ingredients: MasterRef[] }): Promise<RecipeDraftRaw>
+  suggestRecipe(input: SuggestPromptInput): Promise<RecipeDraftRaw>
   estimateCalories(input: EstimateCaloriesInput): Promise<{ caloriesKcal: number }>
 }
 

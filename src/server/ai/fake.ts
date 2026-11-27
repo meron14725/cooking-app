@@ -51,6 +51,32 @@ export class FakeProvider implements AiProvider {
     }
   }
 
+  /** 余りをそのまま材料にした下書きを返す。タイトルは「<先頭の余り>の煮物」 */
+  async suggestRecipe(input: Parameters<AiProvider['suggestRecipe']>[0]): Promise<RecipeDraftRaw> {
+    return {
+      title: `${input.leftovers[0]?.name ?? '余り'}の煮物`,
+      servings: 1,
+      caloriesKcal: 600,
+      hotcookMode: '手動 > 煮物を作る > まぜない > 15分',
+      maxServings1_6l: 4,
+      ingredients: [
+        ...input.leftovers.map((l) => ({
+          displayText: `${l.name} ${l.quantity}${l.unit}`,
+          name: l.name,
+          quantity: l.quantity,
+          unit: l.unit,
+          cutStyle: 'ひと口大',
+        })),
+        { displayText: 'しょうゆ 大さじ1', name: 'しょうゆ', quantity: 15, unit: 'ml', cutStyle: null },
+      ],
+      steps: [
+        { phase: 'prep', text: '材料をひと口大に切る' },
+        { phase: 'cook', text: '内鍋に入れて加熱する' },
+      ],
+      warnings: ['これはテスト用の下書きです'],
+    }
+  }
+
   async estimateCalories(input: Parameters<AiProvider['estimateCalories']>[0]) {
     return { caloriesKcal: Math.round((input.ingredients.length * 150) / input.servings) }
   }

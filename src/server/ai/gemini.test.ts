@@ -38,6 +38,31 @@ describe('GeminiProvider', () => {
     expect(JSON.stringify(config.responseJsonSchema)).not.toContain('maximum')
   })
 
+  it('補完提案: 余りと避けるタイトルをプロンプトに入れる。購入日などは渡さない', async () => {
+    const draft = {
+      title: '玉ねぎの煮物',
+      servings: 1,
+      caloriesKcal: 600,
+      hotcookMode: null,
+      maxServings1_6l: null,
+      ingredients: [{ displayText: '玉ねぎ 1個', name: '玉ねぎ', quantity: 1, unit: '個', cutStyle: null }],
+      steps: [],
+      warnings: [],
+    }
+    const { fn, calls } = fakeFetch([reply(JSON.stringify(draft))])
+    const ai = new GeminiProvider({ apiKey: 'k', fetch: fn })
+    await expect(
+      ai.suggestRecipe({
+        leftovers: [{ name: '玉ねぎ', quantity: 1.5, unit: '個' }],
+        avoidTitles: ['肉じゃが'],
+        ingredients: [{ name: '玉ねぎ', unit: '個', gramsPerUnit: 200 }],
+      }),
+    ).resolves.toEqual(draft)
+    const prompt = JSON.stringify(calls[0]?.body.contents)
+    expect(prompt).toContain('玉ねぎ 1.5個')
+    expect(prompt).toContain('肉じゃが')
+  })
+
   it('検証に失敗したら 1 回だけ再試行する', async () => {
     const { fn, calls } = fakeFetch([reply('{"caloriesKcal": "たくさん"}'), reply('{"caloriesKcal": 300}')])
     const ai = new GeminiProvider({ apiKey: 'k', fetch: fn })
