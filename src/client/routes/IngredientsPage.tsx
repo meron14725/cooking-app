@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { CATEGORY_OPTIONS, type Category, type Ingredient, locationLabel } from '../../shared/schemas/ingredient'
 import { useIngredients } from '../api/ingredients'
 import { inputBaseClass } from '../components/form'
+import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 
 function shelfLife(i: Ingredient): string {
@@ -19,12 +20,19 @@ export function IngredientsPage() {
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <PageHeader title="食材マスタ" />
-        <Link to="/ingredients/new" className="min-h-11 rounded-lg bg-orange-600 px-4 py-2.5 font-bold text-white">
-          ＋ 追加
-        </Link>
-      </div>
+      <PageHeader
+        title="食材マスタ"
+        backTo="/more"
+        action={
+          <Link
+            to="/ingredients/new"
+            className="flex min-h-11 items-center gap-1 rounded-control bg-accent px-3.5 font-bold text-white"
+          >
+            <Icon name="plus" size={18} strokeWidth={2} />
+            追加
+          </Link>
+        }
+      />
 
       <div className="mb-4 flex gap-2">
         <input
@@ -50,9 +58,9 @@ export function IngredientsPage() {
         </select>
       </div>
 
-      {isPending && <p className="text-stone-500">読み込み中…</p>}
-      {isError && <p className="text-red-600">読み込めませんでした</p>}
-      {data && data.length === 0 && <p className="text-stone-500">見つかりませんでした</p>}
+      {isPending && <p className="text-ink-muted">読み込み中…</p>}
+      {isError && <p className="text-danger">読み込めませんでした</p>}
+      {data && data.length === 0 && <p className="text-ink-muted">見つかりませんでした</p>}
 
       {data &&
         CATEGORY_OPTIONS.map((cat) => {
@@ -60,24 +68,22 @@ export function IngredientsPage() {
           if (items.length === 0) return null
           return (
             <section key={cat.value} className="mb-6">
-              <h2 className="mb-2 text-sm font-bold text-stone-500">{cat.label}</h2>
-              <ul className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
+              <h2 className="mb-2 px-1 text-[13px] font-bold tracking-wide text-ink-muted">{cat.label}</h2>
+              <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
                 {items.map((i) => (
                   <li key={i.id}>
                     <Link to={`/ingredients/${i.id}`} className="block px-4 py-3">
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="font-bold">{i.name}</span>
-                        <span className="shrink-0 text-xs text-stone-500">
+                        <span className="shrink-0 text-xs text-ink-muted">
                           {locationLabel(i.defaultLocation)}・{i.canFreeze ? '冷凍可' : '冷凍不可'}
                         </span>
                       </div>
-                      <div className="mt-0.5 text-xs text-stone-500">
+                      <div className="mt-0.5 text-xs text-ink-muted">
                         {i.isStaple ? '常備品' : shelfLife(i)}
                         {i.packageUnits.length > 0 && ` ・ ${i.packageUnits.map((u) => u.label).join('、')}`}
                       </div>
-                      {i.beforeCookTask && (
-                        <div className="mt-0.5 text-xs text-amber-700">直前: {i.beforeCookTask}</div>
-                      )}
+                      {i.beforeCookTask && <div className="mt-0.5 text-xs text-warn">直前: {i.beforeCookTask}</div>}
                     </Link>
                   </li>
                 ))}

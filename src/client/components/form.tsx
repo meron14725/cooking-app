@@ -54,11 +54,13 @@ export function Button({
   children,
   variant = 'primary',
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'add' }) {
   const styles = {
     primary: 'bg-accent text-white disabled:opacity-50',
     secondary: 'border border-line-strong bg-surface text-ink',
     danger: 'border border-danger/30 bg-surface text-danger',
+    /** 行を足すボタン（点線の枠） */
+    add: 'flex w-full items-center justify-center gap-1.5 border border-dashed border-line-dashed text-ink-soft',
   }[variant]
   return (
     <button

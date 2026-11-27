@@ -16,6 +16,7 @@ import { ApiRequestError } from '../api/client'
 import { useIngredients } from '../api/ingredients'
 import { aiErrorMessage, useDeleteRecipe, useEstimateCalories, useRecipe, useSaveRecipe } from '../api/recipes'
 import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
+import { Icon } from '../components/Icon'
 import { IngredientSelect, unitChoices } from '../components/ingredientInputs'
 import { PageHeader } from '../components/PageHeader'
 import { QuickAddIngredient } from '../components/QuickAddIngredient'
@@ -323,22 +324,22 @@ export function RecipeEditPage() {
     }
   }
 
-  if (id && existing.isPending) return <p className="text-stone-500">読み込み中…</p>
-  if (id && existing.isError) return <p className="text-red-600">レシピが見つかりませんでした</p>
+  if (id && existing.isPending) return <p className="text-ink-muted">読み込み中…</p>
+  if (id && existing.isError) return <p className="text-danger">レシピが見つかりませんでした</p>
 
   const activeMasters = masterList.data ?? []
 
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
-      <PageHeader title={id ? 'レシピを編集' : 'レシピを追加'} />
+      <PageHeader title={id ? 'レシピを編集' : 'レシピを追加'} backTo="/recipes" />
       {existing.data && (
-        <p className="-mt-3 text-xs text-stone-500">作成元: {SOURCE_TYPE_LABELS[existing.data.sourceType]}</p>
+        <p className="-mt-3 text-xs text-ink-muted">作成元: {SOURCE_TYPE_LABELS[existing.data.sourceType]}</p>
       )}
       {draft && (
-        <div className="-mt-1 space-y-1 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
-          <p className="font-bold text-amber-800">AI が作った下書きです。確認してから保存してください</p>
+        <div className="-mt-1 space-y-1 rounded-card border border-warn/30 bg-warn-wash p-3 text-sm">
+          <p className="font-bold text-warn">AI が作った下書きです。確認してから保存してください</p>
           {draft.warnings.length > 0 && (
-            <ul className="list-disc space-y-0.5 pl-5 text-amber-900">
+            <ul className="list-disc space-y-0.5 pl-5 text-warn">
               {draft.warnings.map((w) => (
                 <li key={w}>{w}</li>
               ))}
@@ -407,16 +408,16 @@ export function RecipeEditPage() {
         onChange={(v) => set('packSeasonings', v)}
       />
 
-      <fieldset className="min-w-0 space-y-3 rounded-xl border border-stone-200 bg-white p-4">
-        <legend className="px-1 text-sm font-bold text-stone-700">材料（{form.servings || '?'}人前）</legend>
-        <p className="text-xs text-stone-500">
+      <fieldset className="min-w-0 space-y-3 rounded-card border border-line bg-surface p-4">
+        <legend className="px-1 text-sm font-bold text-ink-soft">材料（{form.servings || '?'}人前）</legend>
+        <p className="text-xs text-ink-muted">
           量は空にすると「少々・適量」の扱いです。量を変えると表示の文字列は作り直されます。マスタにない食材は先に
-          <Link to="/ingredients/new" className="mx-1 text-orange-700 underline">
+          <Link to="/ingredients/new" className="mx-1 text-accent underline">
             食材マスタ
           </Link>
           に追加してください。
         </p>
-        {errors.ingredients && <p className="text-xs text-red-600">{errors.ingredients}</p>}
+        {errors.ingredients && <p className="text-xs text-danger">{errors.ingredients}</p>}
         {form.ingredients.map((row, index) => {
           const master = masters.get(row.ingredientId)
           const choices = unitChoices(master)
@@ -428,7 +429,7 @@ export function RecipeEditPage() {
               : null
           const err = (field: string) => errors[`ingredients.${index}.${field}`]
           return (
-            <div key={row.key} className="space-y-2 rounded-lg border border-stone-200 p-3">
+            <div key={row.key} className="space-y-2 rounded-item border border-line p-3">
               <div className="flex gap-2">
                 <IngredientSelect
                   value={row.ingredientId}
@@ -446,7 +447,7 @@ export function RecipeEditPage() {
                   onClick={() => set('ingredients', move(form.ingredients, index, -1))}
                   disabled={index === 0}
                 >
-                  ↑
+                  <Icon name="arrowUp" size={18} />
                 </Button>
                 <Button
                   variant="danger"
@@ -458,12 +459,12 @@ export function RecipeEditPage() {
                     )
                   }
                 >
-                  ×
+                  <Icon name="close" size={18} />
                 </Button>
               </div>
               {!row.ingredientId && row.suggestedName && (
                 <div className="space-y-2">
-                  <p className="text-xs text-amber-800">
+                  <p className="text-xs text-warn">
                     「{row.suggestedName}」は食材マスタにありません。上で選ぶか、マスタに追加してください。
                   </p>
                   <QuickAddIngredient
@@ -479,7 +480,7 @@ export function RecipeEditPage() {
                   />
                 </div>
               )}
-              {err('ingredientId') && <p className="text-xs text-red-600">{err('ingredientId')}</p>}
+              {err('ingredientId') && <p className="text-xs text-danger">{err('ingredientId')}</p>}
 
               <div className="flex gap-2">
                 <input
@@ -508,12 +509,12 @@ export function RecipeEditPage() {
                   ))}
                 </select>
               </div>
-              {err('quantity') && <p className="text-xs text-red-600">{err('quantity')}</p>}
-              {row.notice && <p className="text-xs text-amber-800">{row.notice}</p>}
+              {err('quantity') && <p className="text-xs text-danger">{err('quantity')}</p>}
+              {row.notice && <p className="text-xs text-warn">{row.notice}</p>}
               {master && unit !== master.unit && (
-                <p className="text-xs text-stone-500">保存するときに{master.unit}に直します</p>
+                <p className="text-xs text-ink-muted">保存するときに{master.unit}に直します</p>
               )}
-              {grams !== null && <p className="text-xs text-stone-500">約 {grams}g</p>}
+              {grams !== null && <p className="text-xs text-ink-muted">約 {grams}g</p>}
 
               <input
                 value={row.displayText}
@@ -545,20 +546,21 @@ export function RecipeEditPage() {
             </div>
           )
         })}
-        <Button variant="secondary" onClick={() => set('ingredients', [...form.ingredients, newIngredientRow()])}>
-          ＋ 材料を追加
+        <Button variant="add" onClick={() => set('ingredients', [...form.ingredients, newIngredientRow()])}>
+          <Icon name="plus" size={18} strokeWidth={2} />
+          材料を追加
         </Button>
       </fieldset>
 
-      <fieldset className="min-w-0 space-y-3 rounded-xl border border-stone-200 bg-white p-4">
-        <legend className="px-1 text-sm font-bold text-stone-700">手順</legend>
-        <p className="text-xs text-stone-500">下ごしらえ（切る・下味）と調理（ホットクックに入れてから）に分けます。</p>
+      <fieldset className="min-w-0 space-y-3 rounded-card border border-line bg-surface p-4">
+        <legend className="px-1 text-sm font-bold text-ink-soft">手順</legend>
+        <p className="text-xs text-ink-muted">下ごしらえ（切る・下味）と調理（ホットクックに入れてから）に分けます。</p>
         {form.steps.map((step, index) => {
           const err = errors[`steps.${index}.text`]
           return (
-            <div key={step.key} className="space-y-2 rounded-lg border border-stone-200 p-3">
+            <div key={step.key} className="space-y-2 rounded-item border border-line p-3">
               <div className="flex gap-2">
-                <span className="self-center text-sm font-bold text-stone-500">{index + 1}</span>
+                <span className="self-center text-sm font-bold text-ink-muted">{index + 1}</span>
                 <select
                   value={step.phase}
                   onChange={(e) => setStep(step.key, { phase: e.target.value as StepPhase })}
@@ -577,7 +579,7 @@ export function RecipeEditPage() {
                   onClick={() => set('steps', move(form.steps, index, -1))}
                   disabled={index === 0}
                 >
-                  ↑
+                  <Icon name="arrowUp" size={18} />
                 </Button>
                 <Button
                   variant="danger"
@@ -589,7 +591,7 @@ export function RecipeEditPage() {
                     )
                   }
                 >
-                  ×
+                  <Icon name="close" size={18} />
                 </Button>
               </div>
               <textarea
@@ -599,12 +601,12 @@ export function RecipeEditPage() {
                 aria-label={`手順 ${index + 1}`}
                 className={inputClass}
               />
-              {err && <p className="text-xs text-red-600">{err}</p>}
+              {err && <p className="text-xs text-danger">{err}</p>}
             </div>
           )
         })}
         <Button
-          variant="secondary"
+          variant="add"
           onClick={() =>
             set('steps', [
               ...form.steps,
@@ -612,7 +614,8 @@ export function RecipeEditPage() {
             ])
           }
         >
-          ＋ 手順を追加
+          <Icon name="plus" size={18} strokeWidth={2} />
+          手順を追加
         </Button>
       </fieldset>
 
@@ -630,9 +633,9 @@ export function RecipeEditPage() {
         <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={3} className={inputClass} />
       </Field>
 
-      {errors.form && <p className="text-sm text-red-600">{errors.form}</p>}
+      {errors.form && <p className="text-sm text-danger">{errors.form}</p>}
       {Object.keys(errors).length > 0 && !errors.form && (
-        <p className="text-sm text-red-600">入力内容を確認してください</p>
+        <p className="text-sm text-danger">入力内容を確認してください</p>
       )}
 
       <div className="flex gap-3">
@@ -645,7 +648,7 @@ export function RecipeEditPage() {
       </div>
 
       {id && (
-        <div className="border-t border-stone-200 pt-5">
+        <div className="border-t border-line pt-5">
           {confirmDelete ? (
             <div className="flex items-center gap-3">
               <span className="flex-1 text-sm">一覧から消します。よいですか？</span>
@@ -661,7 +664,7 @@ export function RecipeEditPage() {
               このレシピを削除
             </Button>
           )}
-          {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
+          {deleteError && <p className="mt-2 text-sm text-danger">{deleteError}</p>}
         </div>
       )}
     </form>

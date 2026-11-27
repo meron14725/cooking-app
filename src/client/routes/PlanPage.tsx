@@ -36,7 +36,7 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
         aria-label={`${label}を減らす`}
         className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-surface text-lg disabled:text-line-strong"
       >
-        −
+        <Icon name="minus" size={16} strokeWidth={2} />
       </button>
       <span className="w-12 text-center text-sm font-bold tabular-nums">{value}食</span>
       <button
@@ -45,7 +45,7 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
         aria-label={`${label}を増やす`}
         className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-surface text-lg"
       >
-        ＋
+        <Icon name="plus" size={16} strokeWidth={2} />
       </button>
     </fieldset>
   )

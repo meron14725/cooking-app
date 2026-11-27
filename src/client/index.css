@@ -60,6 +60,11 @@
   --radius-control: 14px;
 }
 
+:root {
+  /* タブバーの高さ（上下余白 6px×2 + 項目 52px + 枠線 1px）。TabBar を変えたらここも直す */
+  --tabbar-h: 65px;
+}
+
 html,
 body,
 #root {

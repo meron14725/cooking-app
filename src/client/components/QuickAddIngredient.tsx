@@ -65,8 +65,8 @@ export function QuickAddIngredient({
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-orange-50 p-3">
-      <p className="text-xs text-stone-600">
+    <div className="space-y-2 rounded-item bg-accent-wash p-3">
+      <p className="text-xs text-ink-soft">
         日持ちは目安で入れます。冷凍の日持ちなどはあとで食材マスタの画面で直してください。
       </p>
       <input value={name} onChange={(e) => setName(e.target.value)} aria-label="名前" className={inputClass} />
@@ -118,7 +118,7 @@ export function QuickAddIngredient({
         />
       </div>
       <Checkbox label="冷凍できる" checked={canFreeze} onChange={setCanFreeze} />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onAdd} disabled={save.isPending} className="flex-1">
           {save.isPending ? '追加中…' : '追加する'}
