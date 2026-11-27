@@ -237,6 +237,7 @@ function EvaluationDetails({ p }: { p: ProposalView }) {
           ))}
         </ul>
       )}
+      {p.shopping.length === 0 && <p className="text-[13px] text-ink-muted">買うものはありません（在庫で足ります）</p>}
       {p.shopping.length > 0 && (
         <details className="text-[13px]">
           <summary className="min-h-8 cursor-pointer text-ink-muted">買うものを見る（{p.shopping.length} 点）</summary>
@@ -305,12 +306,17 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
   )
 }
 
+const proposalKey = (p: ProposalView) => p.recipes.map((r) => r.recipeId).join()
+
 function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   const recs = useRecommendations(plan.id)
   const replace = useReplacePlanRecipes(plan.id)
-  const [picked, setPicked] = useState(0)
+  // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
+  const [pickedKey, setPickedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const proposals = recs.data?.proposals ?? []
+  const found = proposals.findIndex((p) => proposalKey(p) === pickedKey)
+  const picked = found === -1 ? 0 : found
   const chosen = proposals[picked]
 
   async function choose(p: ProposalView) {
@@ -338,7 +344,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
           const on = i === picked
           return (
             <li
-              key={p.recipes.map((r) => r.recipeId).join()}
+              key={proposalKey(p)}
               className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 ${
                 on ? 'border-2 border-accent shadow-[0_6px_20px_rgba(194,65,12,0.10)]' : 'border border-line'
               }`}
@@ -376,7 +382,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
               {!on && (
                 <button
                   type="button"
-                  onClick={() => setPicked(i)}
+                  onClick={() => setPickedKey(proposalKey(p))}
                   className="min-h-11 rounded-xl border border-line-strong bg-surface text-sm font-bold"
                 >
                   この案を選ぶ
