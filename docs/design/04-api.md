@@ -32,6 +32,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | DELETE | `/api/recipes/:id` | 論理削除 |
 | POST | `/api/recipes/import-url` | URL から下書きを作る（保存しない） |
 | POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない） |
+| POST | `/api/recipes/estimate-calories` | 材料と人数から 1 人前のカロリーを AI で推定（保存しない）。`{ caloriesKcal }` を返す |
 
 `import-url` / `suggest` は `RecipeDraft` を返します。本人が画面で確認・修正し、`POST /api/recipes` で保存します。
 
@@ -47,20 +48,28 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
     displayText: string          // 「玉ねぎ 1/2個」
     ingredientId: string | null  // マスタと照合できたもの
     suggestedName: string        // 照合できないときの新規マスタ候補
-    quantity: number | null      // 基準単位
-    unit: string | null
+    quantity: number | null      // マスタの基準単位に換算済み。換算できなければ null
     cutStyle: string | null
   }[]
   steps: { phase: 'prep' | 'cook', text: string }[]
-  warnings: string[]             // 「1.6Lを超える可能性」など
+  maxServings1_6l: number | null // AI の推定
+  warnings: string[]             // 「1.6Lを超える可能性」「にんじん 100g の単位を確認してください」など
 }
 ```
+
+**単位の扱い**: AI の生の出力（`RecipeDraftRaw`）は `quantity` と `unit` を持ちます。サーバ側で `shared/domain/units.ts` を使って次のように正規化してから RecipeDraft にします。
+
+- `unit` がマスタの基準単位と同じ → そのまま
+- 基準単位が個・本・枚などで `unit = g` → `grams_per_unit` があれば `g / grams_per_unit` に換算
+- それ以外 → `quantity = null` にし、`warnings` に「単位を確認してください」を追加
+
+保存（`POST /api/recipes`、`PUT /api/recipes/:id`）は `unit` を受け取らず、`quantity` は常にマスタの基準単位として扱います。
 
 ## 在庫・冷蔵庫ビュー
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/inventory` | 現在の在庫（使い切っていないもの） |
+| GET | `/api/inventory` | 現在の在庫（使い切っていないもの）。各行に袋用の確保量 `reservedQuantity` を付ける |
 | POST | `/api/inventory` | 手で追加（期限は省略時に自動計算） |
 | PATCH | `/api/inventory/:id` | 量・場所・期限の修正 |
 | POST | `/api/inventory/:id/use-up` | 使い切り |
@@ -77,6 +86,8 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
   expiresOn: string
   daysLeft: number
   isExpiringSoon: boolean
+  reservedFor: string | null  // 食材のうち袋用に確保している分があれば「麻婆豆腐の袋用」
+  plannedOn: string | null    // ミールキットの食べる予定日
 }
 ```
 
@@ -84,25 +95,27 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/plans/current` | 進行中（done 以外）の献立。なければ 404 |
-| POST | `/api/plans` | 献立を作る（`{ anchorRecipeIds }`）。status = draft |
+| GET | `/api/plans/current` | 進行中（draft / shopping / prepping）の献立。最大 1 つ。なければ `200 { plan: null }`。stored の献立は袋（`/api/kits`）から見る |
+| POST | `/api/plans` | 献立を作る（`{ anchors: [{ recipeId, servings? }] }`）。status = draft。進行中の献立があれば 409 |
 | GET | `/api/plans/:id` | 詳細（レシピ、状態） |
-| POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ recipeIds?, maxProposals? }` |
-| PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える |
-| POST | `/api/plans/:id/confirm` | 確定。買い物リストを生成。draft → shopping |
-| POST | `/api/plans/:id/advance` | 次の状態へ（shopping → prepping、prepping → stored） |
+| POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals? }` |
+| PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える。`{ recipes: [{ recipeId, role, servings, dayIndex }] }` |
+| POST | `/api/plans/:id/confirm` | 確定。`{ startsOn }`。買い物リストを生成。draft → shopping |
+| POST | `/api/plans/:id/shopping/complete` | 買い物完了。shopping → prepping |
 | DELETE | `/api/plans/:id` | draft のときだけ破棄できる |
 
 ```ts
 // POST /api/plans/:id/recommendations のレスポンス
 {
   proposals: {
-    recipeIds: string[]           // anchor + 追加
+    recipes: { recipeId: string, servings: number, dayIndex: number }[]  // anchor + 追加。dayIndex は初期値
+    kitLocations: { recipeId: string, location: 'fridge' | 'freezer' }[]   // 食べる順から決まる袋の保存場所
     score: number
     shopping: { ingredientId, name, needQuantity, packageUnitId, packageLabel, packageCount, buyQuantity }[]
     leftovers: { ingredientId, name, quantity, unit, perishable: boolean }[]
     usesInventory: { inventoryItemId, name, quantity, expiresOn, isExpiringSoon }[]
-    totalCaloriesKcal: number | null
+    totalCaloriesKcal: number | null  // Σ 1人前カロリー × 食数。不明なレシピがあれば null
+    warnings: string[]                // 「1.6L に収まるか未確認」など
   }[]
   aiSuggestionRecommended: boolean   // 余りが大きく、登録レシピで埋まらない
 }
@@ -116,7 +129,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | POST | `/api/plans/:id/shopping` | 手で行を追加 |
 | POST | `/api/shopping-items/:id/check` | チェック → 在庫を作る（冪等） |
 | POST | `/api/shopping-items/:id/uncheck` | チェックを外す → 作った在庫を消す |
-| PATCH | `/api/shopping-items/:id` | 個数の変更（実際に違うパックを買ったとき） |
+| PATCH | `/api/shopping-items/:id` | 個数・販売単位の変更（実際に違うパックを買ったとき）。チェック済みなら、まだ減っていない在庫行の量も同じ batch で更新 |
 
 check / uncheck を冪等にしておくと、通信が不安定な店内で再送しても在庫が二重にならない。
 
@@ -126,22 +139,15 @@ check / uncheck を冪等にしておくと、通信が不安定な店内で再�
 |---|---|---|
 | GET | `/api/plans/:id/prep` | 食材ごとに集約した下ごしらえ（今切るもの / 切らずに残すもの） |
 | GET | `/api/plans/:id/kits/preview` | 袋詰めの下書き（中身、冷蔵/冷凍の初期値、使用期限、直前作業） |
-| POST | `/api/plans/:id/kits` | 袋を保存。在庫を減らす。prepping → stored。`{ kits: [{ recipeId, location }] }` |
+| POST | `/api/plans/:id/kits` | 袋を保存。packed の在庫を減らし、before_cook を確保として記録し、prepping → stored にする（すべて 1 つの batch）。`{ kits: [{ recipeId, location }] }` |
 
 ## ミールキット・調理
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/kits` | 一覧（`?status=stored`） |
+| GET | `/api/kits` | 一覧（`?status=stored`、`?plannedOn=` で今日の袋） |
 | GET | `/api/kits/:id` | 詳細 |
 | GET | `/api/kits/:id/cook` | 調理画面用（直前作業、入れる順、ホットクック設定、冷凍時の注意） |
 | POST | `/api/kits/:id/cooked` | 作った。直前作業用に確保した在庫を減らす。`{ leftovers?: [{ inventoryItemId, quantity }] }` で余りを修正。全袋が終われば plan を done に |
 | POST | `/api/kits/:id/discard` | 捨てた |
 | PATCH | `/api/kits/:id` | 保存場所・期限の修正 |
-
-## 設定
-
-| メソッド | パス | 説明 |
-|---|---|---|
-| GET | `/api/settings` | |
-| PATCH | `/api/settings` | |

@@ -65,8 +65,27 @@ Cloudflare Access（Zero Trust の無料枠）で Worker の前に認証をか�
 
 - ポリシー: 自分のメールアドレス 1 件だけ許可。ログインはメールのワンタイムコード
 - アプリ側はログイン画面やユーザー管理を持たない
-- 念のため Worker 側でも `Cf-Access-Jwt-Assertion` ヘッダを検証し、Access を経由しないアクセスを拒否する
-- ローカル開発ではこの検証をスキップ
+
+### Worker 側での JWT 検証
+
+Access を経由しない経路から偽のヘッダで API を叩かれないよう、Worker のミドルウェアで `Cf-Access-Jwt-Assertion` を検証します。ヘッダの有無だけでは判定しません。
+
+- 署名を `https://<team>.cloudflareaccess.com/cdn-cgi/access/certs` の公開鍵で検証する（`jose` の `createRemoteJWKSet` + `jwtVerify`）
+- `aud`（Access アプリの AUD タグ）、`iss`（`https://<team>.cloudflareaccess.com`）、有効期限を確認する
+- `<team>` と AUD は Worker の環境変数で渡す
+- 検証に失敗したら 401。画面（静的アセット）も含めて全リクエストに適用する
+
+### 入口を 1 つにする
+
+- カスタムドメインを使う場合: `wrangler.jsonc` で `workers_dev: false`、`preview_urls: false` にし、Access をかけたドメインだけを入口にする
+- `*.workers.dev` で使う場合: Access のアプリに workers.dev のホスト名とプレビュー URL（`*-<worker>.<account>.workers.dev`）の両方を含める
+- どちらにするかは PR #2（デプロイ）で決める。カスタムドメインがなければ workers.dev で始める
+
+### ローカル開発
+
+検証のスキップはホスト名ではなく、明示的な変数 `ENVIRONMENT=local`（`.dev.vars` にだけ書く）で判定します。本番の設定に `ENVIRONMENT` を書かないので、本番で誤って無効になりません。
+
+### 将来
 
 複数人対応（将来）になったら、各テーブルに `user_id` を足して Access の JWT の email で引く形に拡張します。
 
@@ -74,7 +93,8 @@ Cloudflare Access（Zero Trust の無料枠）で Worker の前に認証をか�
 
 | 手段 | 内容 |
 |---|---|
-| D1 Time Travel | 過去 30 日の任意の時点に戻せる（標準機能、設定不要） |
+| D1 Time Travel | 過去 30 日の任意の時点に戻せる（標準機能、設定不要）。ただし DB 自体を消すと使えない |
+| デプロイ前のエクスポート | デプロイのたびに `wrangler d1 export --remote` で SQL を書き出し、GitHub Actions の artifact に残す |
 | 定期エクスポート | 週 1 回 Cron Trigger で全テーブルを JSON にして R2 に保存（あるとよい、MVP後） |
 | 論理削除 | レシピと食材マスタは `archived_at` で論理削除し、誤削除を防ぐ |
 
@@ -85,7 +105,18 @@ Cloudflare Access（Zero Trust の無料枠）で Worker の前に認証をか�
 | local | `wrangler dev` のローカル D1 | 開発 |
 | production | D1 本番 | 本人が使う |
 
-自分専用なので staging は置きません。マイグレーションはデプロイ前に `wrangler d1 migrations apply` で適用します。
+自分専用なので staging は置きません。
+
+## デプロイとマイグレーション
+
+main へのマージで GitHub Actions が次の順に実行します。
+
+1. lint / typecheck / test
+2. `wrangler d1 export <DB> --remote` で本番 DB を書き出し、artifact に保存
+3. `wrangler d1 migrations apply <DB> --remote`
+4. `wrangler deploy`
+
+マイグレーションは**列やテーブルの追加だけ**にします。削除・名前の変更は、古いコードが使わなくなったことを確認した後の PR で行います。こうすると 3 と 4 の間の数秒、古いコードが新しいスキーマで動いても壊れません。
 
 ## シークレット
 
