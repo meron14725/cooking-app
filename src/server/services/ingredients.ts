@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm'
 import type { Ingredient, IngredientInputParsed, PackageUnit } from '../../shared/schemas/ingredient'
 import { ulid } from '../../shared/ulid'
 import type { Db } from '../db/client'
+import { escapeLike } from '../db/like'
 import { ingredients, packageUnits } from '../db/schema'
 import { ApiError } from '../errors'
 
@@ -62,11 +63,6 @@ async function assertNameAvailable(db: Db, name: string, exceptId?: string) {
       existing.archivedAt ? `「${name}」は削除済みの食材にあります` : `「${name}」はすでに登録されています`,
     )
   }
-}
-
-/** LIKE の % と _ をそのままの文字として扱う（ESCAPE '\\' と組で使う） */
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, (c) => `\\${c}`)
 }
 
 export async function listIngredients(db: Db, opts: { q?: string; category?: string } = {}): Promise<Ingredient[]> {

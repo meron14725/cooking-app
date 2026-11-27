@@ -7,6 +7,7 @@ import { IngredientsPage } from './routes/IngredientsPage'
 import { MorePage } from './routes/MorePage'
 import { NotFoundPage } from './routes/NotFoundPage'
 import { PlanPage } from './routes/PlanPage'
+import { RecipeEditPage } from './routes/RecipeEditPage'
 import { RecipesPage } from './routes/RecipesPage'
 
 export const router = createBrowserRouter([
@@ -17,6 +18,8 @@ export const router = createBrowserRouter([
       { path: 'fridge', element: <FridgePage /> },
       { path: 'plan', element: <PlanPage /> },
       { path: 'recipes', element: <RecipesPage /> },
+      { path: 'recipes/new', element: <RecipeEditPage /> },
+      { path: 'recipes/:id', element: <RecipeEditPage /> },
       { path: 'more', element: <MorePage /> },
       { path: 'ingredients', element: <IngredientsPage /> },
       { path: 'ingredients/new', element: <IngredientEditPage /> },

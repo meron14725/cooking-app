@@ -8,7 +8,10 @@
  */
 import { sql } from 'drizzle-orm'
 import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { RECIPE_SOURCE_TYPES, STEP_PHASES } from '../../shared/schemas/recipe'
 import { ulid } from '../../shared/ulid'
+
+export { RECIPE_SOURCE_TYPES, STEP_PHASES }
 
 // ---------- 共通 ----------
 
@@ -33,8 +36,6 @@ const bool = (name: string) => integer(name, { mode: 'boolean' })
 export const CATEGORIES = ['vegetable', 'meat', 'fish', 'tofu_egg_dairy', 'seasoning', 'dry', 'other'] as const
 export const STORAGE_LOCATIONS = ['fridge', 'freezer', 'pantry'] as const
 export const KIT_LOCATIONS = ['fridge', 'freezer'] as const
-export const RECIPE_SOURCE_TYPES = ['manual', 'url', 'ai', 'seed'] as const
-export const STEP_PHASES = ['prep', 'cook'] as const
 export const INVENTORY_SOURCES = ['shopping', 'leftover', 'manual'] as const
 export const PLAN_STATUSES = ['draft', 'shopping', 'prepping', 'stored', 'done'] as const
 export const PLAN_RECIPE_ROLES = ['anchor', 'added'] as const
