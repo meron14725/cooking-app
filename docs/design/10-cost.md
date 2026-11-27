@@ -58,7 +58,7 @@
 | `leftoverPerishableYen` | 上のうち、冷蔵のみの食材（`perishable`） | うち傷みやすい ◯ 円 |
 | `eatYen` | 料理で使う量 × 単価の合計 = `buyYen − leftoverYen + fromFridgeYen` | — |
 | `perMealYen` | `eatYen ÷ 合計食数 + STAPLE_COST_PER_MEAL_YEN` | 1 食あたり |
-| `unpricedCount` | 買う・使う食材のうち、価格が NULL の食材の数 | （◯ 品未設定） |
+| `unpricedCount` | 常備品（`is_staple`）を除く、買う・使う食材のうち価格が NULL の食材の数 | （◯ 品未設定） |
 | `hasUnpriced` | `unpricedCount > 0` | 未設定の注記を出すか |
 
 - **1 食あたりは「食べる分」で割る**: 買った余りは次の献立に回るので入れず、冷蔵庫から使う分は入れる。こうすると、同じ料理ならいつ作っても 1 食の値段がほぼ同じになる。「今回の支払い ÷ 食数」は、在庫が多い回ほど安く見えてしまうので使わない（確認したいこと 1）
@@ -160,7 +160,7 @@ shopping =
 ## 価格が古くなったとき
 
 - 自動で値上げ・値下げはしない（物価の補正は持たない）
-- `price_updated_at` が `PRICE_STALE_DAYS = 365` 日より前なら、食材の編集に「1 年以上前の価格」と出し、食材一覧の「価格が古い」の絞り込みに出す。買い物リスト・提案の金額は、古くてもそのまま使う（「約」は付けない）
+- `price_updated_at` が `PRICE_STALE_DAYS = 365` 日より前なら、食材の編集に「1 年以上前の価格」と出し、食材一覧の「価格が古い」の絞り込みに出す。買い物リスト・提案の金額は、古くてもそのまま使う（ここでも「約」は常に付ける）
 - `default` の価格は、まとめて推定の画面に「古い目安を見直す」を置き、押したときだけ 365 日より前の `default` を NULL に戻して推定し直す（`manual` は触らない）
 
 ## レシートや実際の値段から直す
@@ -176,13 +176,13 @@ shopping =
 |---|---|
 | `GET/PUT /api/ingredients/:id`、`GET /api/ingredients` | `priceYen`・`priceSource`・`priceUpdatedAt` を足す。PUT で `priceYen` が変わったら `manual` と今の日時。省略したら値を残す |
 | `GET /api/ingredients` | `?price=missing` / `?price=stale` の絞り込み |
-| `GET /api/plans/:id/shopping` | `cost`（上の表の値 ＋ `remainingYen`（あと ◯ 円）＋ `unpriced: { ingredientId, name }[]`）を足す |
+| `GET /api/plans/:id/shopping` | `cost`（上の表の値 ＋ `remainingYen`（あと ◯ 円）＋ `unpriced: { ingredientId, name }[]`。`unpricedCount` と同じく常備品を除く）を足す |
 | `POST /api/plans/:id/recommendations` | 各案に `cost` を足す |
 | `POST /api/recipes/attributes/estimate` | 価格の段を足し、返り値に `prices: { updated, remaining }`。`{ refreshStalePrices?: boolean }` |
 
 ## テストの方針
 
-- **`cost.ts`**（純粋関数）: 単価の比例計算、余りの金額（傷みやすい分を分ける）、冷蔵庫から使う分を買う分に入れない、1 食あたりが食べる分 ÷ 食数 ＋ 常備品の固定費、価格未設定を 0 円にして `unpricedCount` と `hasUnpriced` を返す、常備品を合計に入れない、10 円単位の丸め
+- **`cost.ts`**（純粋関数）: 単価の比例計算、余りの金額（傷みやすい分を分ける）、冷蔵庫から使う分を買う分に入れない、1 食あたりが食べる分 ÷ 食数 ＋ 常備品の固定費、価格未設定を 0 円にして `unpricedCount` と `hasUnpriced` を返す、常備品は価格が NULL でも `unpricedCount` に数えない、常備品を合計に入れない、10 円単位の丸め
 - **代表の販売単位を変えたとき**: 価格が単価を保って換算される
 - **買い物リスト**: 個数を直すと `buyYen` が変わる、手で足した行は余りに入らない、チェックしていない行だけの「あと ◯ 円」、100 食材を超える献立でもテスト用 D1（変数 100 で失敗する）で通る
 - **まとめて推定**: 辞書で決まる食材・決まらない食材、基準単位が違うときの換算、`manual` を上書きしない（推定中に手で直した場合も）、AI が範囲外の値を返したら捨てる、`refreshStalePrices` で古い `default` だけ戻す
