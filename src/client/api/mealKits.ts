@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { CookView, KitCookedInput, KitPatchInput, MealKit } from '../../shared/schemas/kit'
+import type { CookView, KitCookedInput, KitPatchInput, KitStatus, MealKit } from '../../shared/schemas/kit'
 import { apiFetch } from './client'
 
-/** 保存中の袋。plannedOnOrBefore で「今日の袋」（今日までに食べる予定のもの） */
-export function useKits(opts: { plannedOnOrBefore?: string } = {}) {
-  const qs = opts.plannedOnOrBefore ? `?plannedOnOrBefore=${opts.plannedOnOrBefore}` : ''
+/** 袋の一覧（既定は保存中）。plannedOnOrBefore で「今日の袋」（今日までに食べる予定のもの）、status で作った袋など */
+export function useKits(opts: { plannedOnOrBefore?: string; status?: KitStatus } = {}) {
+  const search = new URLSearchParams()
+  if (opts.plannedOnOrBefore) search.set('plannedOnOrBefore', opts.plannedOnOrBefore)
+  if (opts.status) search.set('status', opts.status)
+  const qs = search.size > 0 ? `?${search}` : ''
   return useQuery({
     queryKey: ['kits', opts],
     queryFn: () => apiFetch<{ items: MealKit[] }>(`/kits${qs}`),
