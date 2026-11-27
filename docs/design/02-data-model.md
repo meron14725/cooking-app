@@ -22,7 +22,7 @@ ingredients（食材マスタ）──< package_units（販売単位）
 - 日時は `TEXT`（ISO 8601、UTC）。日付だけのもの（購入日、期限、食べる予定日）は `TEXT`（`YYYY-MM-DD`、Asia/Tokyo 基準）
 - Workers は UTC で動くので、「今日」は `shared/domain/date.ts` の `todayJst()` だけで作る。レコメンドや期限計算などの純粋関数は `today` を引数で受け取り、自分では時計を読まない（テストで日付を固定できる）
 - 真偽値は `INTEGER`（0/1）
-- `created_at`, `updated_at` を全テーブルに持つ（下の表では省略）
+- `created_at`, `updated_at` を全テーブルに持つ（下の表では省略）。DB 側の既定値も現在時刻にして、SQL で直接入れても埋まるようにする
 - 設定値（1回の品数 3、期限間近 2日 など）は MVP ではテーブルにせず `shared/domain/constants.ts` の定数にする。画面から変えたくなったら settings テーブルを足す
 
 ## 単位の扱い
@@ -88,7 +88,7 @@ ingredients（食材マスタ）──< package_units（販売単位）
 | title | TEXT | |
 | servings | REAL | 材料の量が何人前か（元のレシピのまま。取り込んだ「2人分」は 2） |
 | calories_kcal | INTEGER NULL | 1 人前あたり |
-| calories_estimated | INTEGER | 1 = AI 推定値（画面で「目安（AI推定）」と表示） |
+| calories_estimated | INTEGER | 1 = AI 推定値（画面で「目安（AI推定）」と表示）。既定値 0 |
 | hotcook_mode | TEXT NULL | 例: 「手動 → 煮物を作る → まぜる → 30分」 |
 | max_servings_1_6l | REAL NULL | 1.6L 機で一度に作れる最大の人数分。NULL = 不明（チェックせず、画面で注意を出す） |
 | pack_seasonings | INTEGER | 1 = 調味料も袋に入れる（下味冷凍）。調理時に入れるものが減る |
@@ -258,6 +258,7 @@ before_cook の食材の期限は在庫側の期限で見る（丸ごとなの�
 | チェック済みの行の個数を変える | まだ減っていない在庫行の量を同じ batch で更新 |
 | 袋詰め | `packed` の量を在庫から減らす（期限の近い行から）。`before_cook` は減らさず、確保として残す |
 | 調理完了 | 袋を `cooked` に。`before_cook` の量を在庫から減らす（期限の近い行から） |
+| 袋を捨てる | 袋を `discarded` に。確保は `stored` の袋だけを数えるので、`before_cook` の確保分は自動で解放される（在庫は減らさない） |
 | 手で修正 | 冷蔵庫ビューから量・期限・場所を直す、使い切りにする |
 
 使い残りは在庫に残り、次のレコメンドで優先されます。複数の行をまたぐ更新は D1 の `batch` でまとめて行い、途中で失敗して在庫がずれないようにします。
