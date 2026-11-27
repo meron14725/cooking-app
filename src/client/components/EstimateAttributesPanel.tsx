@@ -5,7 +5,9 @@ import { apiFetch } from '../api/client'
 import { aiErrorMessage } from '../api/recipes'
 import { Button } from './form'
 
-type Totals = { ingredients: number; recipes: number }
+type Totals = { ingredients: number; prices: number; recipes: number }
+
+const ZERO: Totals = { ingredients: 0, prices: 0, recipes: 0 }
 type Status =
   | { kind: 'idle' }
   | { kind: 'running'; updated: Totals; remaining: Totals | null }
@@ -17,8 +19,9 @@ type Status =
 const CALL_TIMEOUT_MS = 90_000
 
 /**
- * 食材の分類・重さとレシピの区分・系統を「まとめて推定」する（docs/design/09-recommendation-v2.md）。
- * 残りが 0 になるまで API を呼び続ける。止めたり画面を離れたりしたら、そこで止まる（保存済みの分は残る）
+ * 食材の分類・重さ・価格の目安とレシピの区分・系統を「まとめて推定」する（docs/design/09-recommendation-v2.md・10-cost.md）。
+ * 残りが 0 になるまで API を呼び続ける。止めたり画面を離れたりしたら、そこで止まる（保存済みの分は残る）。
+ * 「古い目安を見直す」は、最初の 1 回だけ refreshStalePrices を付けて、1 年より前の目安の価格を入れ直す
  */
 export function EstimateAttributesPanel() {
   const qc = useQueryClient()
@@ -27,23 +30,31 @@ export function EstimateAttributesPanel() {
 
   useEffect(() => () => stopRef.current?.abort(), [])
 
-  async function run() {
+  async function run(refreshStalePrices: boolean) {
     const controller = new AbortController()
     stopRef.current = controller
-    const updated: Totals = { ingredients: 0, recipes: 0 }
+    const updated: Totals = { ...ZERO }
     let remaining: Totals | null = null
     setStatus({ kind: 'running', updated: { ...updated }, remaining })
     try {
+      let first = true
       while (!controller.signal.aborted) {
+        const body = first && refreshStalePrices ? { refreshStalePrices: true } : {}
+        first = false
         const res = await apiFetch<EstimateAttributesResponse>('/recipes/attributes/estimate', {
           method: 'POST',
-          body: JSON.stringify({}),
+          body: JSON.stringify(body),
           signal: AbortSignal.any([controller.signal, AbortSignal.timeout(CALL_TIMEOUT_MS)]),
         })
         updated.ingredients += res.ingredients.updated
+        updated.prices += res.prices.updated
         updated.recipes += res.recipes.updated
-        remaining = { ingredients: res.ingredients.remaining, recipes: res.recipes.remaining }
-        if (remaining.ingredients === 0 && remaining.recipes === 0) {
+        remaining = {
+          ingredients: res.ingredients.remaining,
+          prices: res.prices.remaining,
+          recipes: res.recipes.remaining,
+        }
+        if (remaining.ingredients === 0 && remaining.prices === 0 && remaining.recipes === 0) {
           setStatus({ kind: 'done', updated: { ...updated } })
           return
         }
@@ -71,10 +82,11 @@ export function EstimateAttributesPanel() {
   return (
     <section className="space-y-3 rounded-card bg-surface p-4 shadow-card">
       <div>
-        <h2 className="font-bold">分類をまとめて推定</h2>
+        <h2 className="font-bold">分類と価格をまとめて推定</h2>
         <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-          食材の分類と 1 つあたりの重さ、レシピの区分（主菜・副菜など）と味の系統を、名前と材料から決めます。
-          決まらないものだけ AI に聞きます。手で直したものは変えません。献立の提案に使います。
+          食材の分類と 1
+          つあたりの重さ、価格の目安、レシピの区分（主菜・副菜など）と味の系統を、名前と材料から決めます。
+          決まらないものだけ AI に聞きます。手で直したものは変えません。献立の提案と金額に使います。
         </p>
       </div>
       {status.kind !== 'idle' && <p className="text-sm">{statusText(status)}</p>}
@@ -84,15 +96,26 @@ export function EstimateAttributesPanel() {
           止める
         </Button>
       ) : (
-        <Button onClick={run}>{status.kind === 'idle' ? '推定を始める' : 'もう一度推定する'}</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => run(false)}>{status.kind === 'idle' ? '推定を始める' : 'もう一度推定する'}</Button>
+          <Button variant="secondary" onClick={() => run(true)}>
+            古い目安を見直す
+          </Button>
+        </div>
+      )}
+      {!running && (
+        <p className="text-xs leading-relaxed text-ink-muted">
+          「古い目安を見直す」は、1 年より前に自動で入れた価格を消して入れ直します。手で入れた価格は残ります。
+        </p>
       )}
     </section>
   )
 }
 
 function statusText(status: Exclude<Status, { kind: 'idle' }>): string {
-  const done = `食材 ${status.updated.ingredients} 件、レシピ ${status.updated.recipes} 件を直しました`
-  const rest = (r: Totals | null) => (r ? `。残りは食材 ${r.ingredients} 件、レシピ ${r.recipes} 件です` : '')
+  const counts = (t: Totals) => `食材 ${t.ingredients} 件、価格 ${t.prices} 件、レシピ ${t.recipes} 件`
+  const done = `${counts(status.updated)}を直しました`
+  const rest = (r: Totals | null) => (r ? `。残りは${counts(r)}です` : '')
   switch (status.kind) {
     case 'running':
       return `推定しています…${status.remaining ? ` ${done}${rest(status.remaining)}` : ''}`
