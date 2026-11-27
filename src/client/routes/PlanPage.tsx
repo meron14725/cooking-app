@@ -25,7 +25,9 @@ import { RecipePhoto } from '../components/RecipePhoto'
 import { RecipeFilterButton, RecipeSortMenu } from '../components/RecipeSortMenu'
 import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
+import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
+import { anchorsKey, currentRounds, firstRound, isProposalRounds, nextRound, roundsStorageKey } from './proposalRounds'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -400,12 +402,40 @@ function fmtServings(n: number): string {
 }
 
 function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
-  const recs = useRecommendations(plan.id)
+  const anchors = anchorsKey(plan)
+  // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理が変わったら 1 回目に戻る）
+  const [savedRounds, setRounds] = useSessionState(roundsStorageKey(plan.id), firstRound(anchors), isProposalRounds)
+  const rounds = currentRounds(savedRounds, anchors)
+  // 食べたい料理が変わったら保存値も 1 回目で上書きする（元に戻したときに古い回が復活しないように）
+  useEffect(() => {
+    if (savedRounds.anchors !== anchors) setRounds(firstRound(anchors))
+  }, [savedRounds.anchors, anchors, setRounds])
+  const recs = useRecommendations(plan.id, rounds.shown)
   const replace = useReplacePlanRecipes(plan.id)
   // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const proposals = recs.data?.proposals ?? []
+  const hasMore = recs.data?.hasMore ?? false
+
+  function showOthers() {
+    setRounds(
+      nextRound(
+        rounds,
+        proposals.map((p) => p.recipes.map((r) => r.recipeId)),
+      ),
+    )
+    // 選択は新しい 1 番目に戻す
+    setPickedKey(null)
+    setError(null)
+  }
+  function backToFirst() {
+    setRounds(firstRound(anchors))
+    setPickedKey(null)
+    setError(null)
+  }
+  // 案の番号は回をまたいで続ける（2 回目の 1 番目は「案4」）
+  const offset = rounds.shown.length
   const found = proposals.findIndex((p) => proposalKey(p) === pickedKey)
   const picked = found === -1 ? 0 : found
   const chosen = proposals[picked]
@@ -424,12 +454,45 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-ink-muted">提案{proposals.length > 0 && `（${proposals.length}案）`}</h2>
-        <p className="text-xs text-ink-muted">在庫と期限から計算</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold text-ink-muted">
+            提案
+            {proposals.length > 0 &&
+              (rounds.round > 1 ? `（${rounds.round}回目の${proposals.length}案）` : `（${proposals.length}案）`)}
+          </h2>
+          <p className="text-xs text-ink-muted">在庫と期限から計算</p>
+        </div>
+        {recs.isSuccess && hasMore && (
+          <button
+            type="button"
+            onClick={showOthers}
+            className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-surface px-3.5 text-[13px] font-bold text-accent-strong shadow-card"
+          >
+            <Icon name="refresh" size={15} strokeWidth={2} />
+            別の案を出す
+          </button>
+        )}
       </div>
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
+      {((recs.isSuccess && !hasMore && (rounds.round > 1 || proposals.length === 0)) ||
+        (recs.isError && rounds.round > 1)) && (
+        <div className="flex items-center justify-between gap-3 rounded-item bg-sunken px-4 py-3">
+          <p className="text-sm text-ink-soft">
+            {recs.isError ? '最初の案から選び直せます' : 'これ以上の案はありません'}
+          </p>
+          {rounds.round > 1 && (
+            <button
+              type="button"
+              onClick={backToFirst}
+              className="flex min-h-10 shrink-0 items-center rounded-full bg-surface px-3.5 text-[13px] font-bold text-accent-strong shadow-card"
+            >
+              最初の案に戻る
+            </button>
+          )}
+        </div>
+      )}
       {/* ol に radiogroup は付けられない（a11y の lint）ので、外側の div をラジオのまとまりにする */}
       <div role="radiogroup" aria-label="提案">
         <ol className="flex flex-col gap-3">
@@ -453,12 +516,12 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                     name="proposal"
                     checked={on}
                     onChange={() => setPickedKey(proposalKey(p))}
-                    aria-label={`案${i + 1}を選ぶ`}
+                    aria-label={`案${offset + i + 1}を選ぶ`}
                     className="sr-only"
                   />
                   <span className="flex items-center gap-2">
-                    <span className="text-[15px] font-bold">案{i + 1}</span>
-                    {i === 0 && (
+                    <span className="text-[15px] font-bold">案{offset + i + 1}</span>
+                    {rounds.round === 1 && i === 0 && (
                       <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
                         おすすめ
                       </span>
@@ -506,7 +569,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
         <StickyAction hint="次に、食べる順と食数を決めます">
           {error && <p className="text-center text-sm text-danger">{error}</p>}
           <Button onClick={() => choose(chosen)} disabled={replace.isPending} className="min-h-13 w-full text-base">
-            案{picked + 1}にする
+            案{offset + picked + 1}にする
           </Button>
         </StickyAction>
       )}
