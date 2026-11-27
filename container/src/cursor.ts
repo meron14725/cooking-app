@@ -32,7 +32,7 @@ export function cursorRunner(opts: { apiKey: string; model: string; stateDir: st
       try {
         const result = await run.wait()
         if (result.status === 'error') throw new Error(result.error?.message ?? 'エージェントが失敗しました')
-        return { usage: result.usage }
+        return { usage: result.usage, text: result.result }
       } finally {
         signal.removeEventListener('abort', cancel)
       }

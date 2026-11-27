@@ -78,6 +78,17 @@ describe('CursorProvider', () => {
   })
 })
 
+it('Worker 側の待ち時間が切れたら起動中ではなく時間切れ（502）', async () => {
+  const timeout = new DOMException('timed out', 'TimeoutError')
+  await expect(
+    new CursorProvider({
+      fetch: async () => {
+        throw timeout
+      },
+    }).estimateCalories({ servings: 1, ingredients: [{ displayText: 'x' }] }),
+  ).rejects.toMatchObject({ status: 502 })
+})
+
 describe('getProvider', () => {
   it('既定は cursor。binding かキーがなければ黙って fake にせず 503', () => {
     const get = (env: Parameters<typeof getProvider>[0]) => {

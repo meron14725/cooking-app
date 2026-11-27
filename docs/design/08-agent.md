@@ -98,7 +98,6 @@ AI を Cursor SDK（`@cursor/sdk`）に移し、Cloudflare Containers の中で�
 | `list_recipes` / `get_recipe` | レシピの一覧 / 材料と手順 |
 | `list_shopping` | 買い物リスト（献立が shopping のとき） |
 | `get_current_plan` | 進行中の献立（状態、料理、食数、食べる順） |
-| `today` | 今日の日付（JST） |
 
 変更案の道具は、呼ばれた内容を `operations` に記録するだけです。DB は変わりません。
 
@@ -139,6 +138,16 @@ type AgentResult = { reply: string; operations: AgentOperation[] }
   - 献立: 上の表のとおり `replacePlanRecipes` で `plans.updated_at` も変える
   - 比べてから反映するまでの間に変わる競合は防がない（自分専用で、同時に 2 か所から操作することはほぼないため）
 - 1 回の頼みで op は 20 件まで
+
+### 実装（#14）
+
+- 今日の日付は道具ではなくプロンプトに入れる（`## 今日`）
+- Container の `POST /agent` は汎用にする: `{ prompt, readTools: [{ name, description, result | itemsById }], opTools: [{ name, description, inputSchema }] }` → `{ reply, calls: [{ tool, args }] }`。道具の中身（スナップショットとスキーマ）は Worker が毎回作るので、Container は道具の種類を知らない
+  - `itemsById` の道具（`get_recipe`）は `{ id }` で引く。変更案の道具は 20 件まで記録する
+- 変更案の道具名は `propose_inventory_add` のように `op` の `.` を `_` にして頭に `propose_` を付ける。`inputSchema` は `{ targetId?, input? }` で、`input` は既存の zod スキーマの入力側（`z.toJSONSchema(schema, { io: 'input' })`）
+- Worker（`services/agent.ts`）は呼ばれた道具ごとに、知らない道具・対象がスナップショットにない・`input` が zod を通らない、の 3 つを捨てて `warnings` に書く。通ったものに `summary`（変更前は D1 の値）と `baseUpdatedAt` を付ける
+- `recipe.create` は `sourceType = ai` で作る
+- テストは `AI_PROVIDER=fake` の `FakeAgentRunner`（「使った」を含む頼みなら在庫の先頭を半分にする案）と、決まった道具を呼ぶだけのランナーで行う
 
 ### API
 

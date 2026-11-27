@@ -1,4 +1,5 @@
 import { ApiError } from '../errors'
+import { AGENT_INSTANCE } from './agent'
 import { CursorProvider } from './cursor'
 import { FakeProvider } from './fake'
 import { GeminiProvider } from './gemini'
@@ -24,7 +25,7 @@ export function getProvider(env: AiEnv): AiProvider {
       }
       // インスタンスは 1 つだけ（名前で固定）。@cloudflare/containers の getContainer と同じ。
       // ここで @cloudflare/containers を import すると Node のテストで cloudflare:workers が読めないので使わない
-      return new CursorProvider({ fetch: (req) => agent.get(agent.idFromName('cooking-app-agent')).fetch(req) })
+      return new CursorProvider({ fetch: (req) => agent.get(agent.idFromName(AGENT_INSTANCE)).fetch(req) })
     }
     case 'gemini':
       if (!env.GEMINI_API_KEY) {

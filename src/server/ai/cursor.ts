@@ -63,6 +63,10 @@ export class CursorProvider implements AiProvider {
         }),
       )
     } catch (err) {
+      // Worker 側の待ち時間切れ（Container が固まった）は起動中ではなく時間切れとして返す
+      if (err instanceof Error && err.name === 'TimeoutError') {
+        throw new AiError('AI が時間内に終わりませんでした。もう一度試してください')
+      }
       throw new ApiError(503, 'AI_STARTING', 'AI を起動しています。少し待ってもう一度試してください', String(err))
     }
     const reply = (await res.json().catch(() => ({}))) as StructuredReply

@@ -1,7 +1,14 @@
 import { Link } from 'react-router'
 import { PageHeader } from '../components/PageHeader'
 
-const items = [{ to: '/ingredients', label: '食材マスタ', description: '販売単位、冷凍できるか、日持ち、直前作業' }]
+const items = [
+  {
+    to: '/agent',
+    label: 'AI に頼む',
+    description: '「玉ねぎを半分使った」などと書くと、在庫・レシピ・献立の変更案を出します',
+  },
+  { to: '/ingredients', label: '食材マスタ', description: '販売単位、冷凍できるか、日持ち、直前作業' },
+]
 
 export function MorePage() {
   return (
