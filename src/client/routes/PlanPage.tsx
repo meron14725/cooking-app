@@ -25,6 +25,7 @@ import { RecipePhoto } from '../components/RecipePhoto'
 import { RecipeFilterButton, RecipeSortMenu } from '../components/RecipeSortMenu'
 import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
+import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -57,8 +58,6 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
 
 // ---------- 1. 食べたい料理を選ぶ ----------
 
-type Picked = { recipeId: string; title: string; servings: number }
-
 /** 選んだ料理の食数。− で 1 から減らすと選択を外す（案D D-PlanPick） */
 function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => void }) {
   const btn = 'flex size-9 items-center justify-center rounded-full bg-surface text-ink'
@@ -86,24 +85,6 @@ function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => voi
   )
 }
 
-const PICKED_KEY = 'plan-picked'
-function loadPicked(): Picked[] {
-  try {
-    const v = JSON.parse(sessionStorage.getItem(PICKED_KEY) ?? '[]')
-    return Array.isArray(v) ? v : []
-  } catch {
-    return []
-  }
-}
-function savePicked(v: Picked[]) {
-  try {
-    if (v.length === 0) sessionStorage.removeItem(PICKED_KEY)
-    else sessionStorage.setItem(PICKED_KEY, JSON.stringify(v))
-  } catch {
-    // 覚えられなくても選ぶ操作はできる
-  }
-}
-
 function AnchorPicker() {
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<RecipeSort | ''>('')
@@ -125,6 +106,12 @@ function AnchorPicker() {
   // 選んだ料理の写真は、検索で一覧から消えても出せるよう全件の一覧から引く
   const all = useRecipes()
   const imageOf = (id: string) => all.data?.find((r) => r.id === id)?.imageKey ?? null
+  // 覚えていた料理のうち、削除されて今の一覧に無いものは外す（そのまま送ると献立を作れない）
+  useEffect(() => {
+    if (!all.data) return
+    const ids = new Set(all.data.map((r) => r.id))
+    setPicked((cur) => dropMissing(cur, ids))
+  }, [all.data])
   const create = useCreatePlan()
   const [error, setError] = useState<string | null>(null)
 
