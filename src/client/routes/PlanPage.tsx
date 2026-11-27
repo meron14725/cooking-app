@@ -10,6 +10,7 @@ import {
   useCurrentPlan,
   useDeletePlan,
   usePlanEvaluation,
+  useProposalEvaluations,
   useRecommendations,
   useReplacePlanRecipes,
 } from '../api/plans'
@@ -27,7 +28,18 @@ import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
 import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
-import { anchorsKey, currentRounds, firstRound, isProposalRounds, nextRound, roundsStorageKey } from './proposalRounds'
+import {
+  anchorsKey,
+  currentRounds,
+  firstRound,
+  isProposalRounds,
+  isProposalServings,
+  MAX_SERVINGS,
+  nextRound,
+  noServings,
+  roundsStorageKey,
+  servingsStorageKey,
+} from './proposalRounds'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -271,6 +283,39 @@ function Stat({ label, value, unit }: { label: string; value: string; unit: stri
   )
 }
 
+/** これより少ない余り（代表量の 1 割未満）は数えない */
+const NEGLIGIBLE_PACKS = 0.1
+/** 代表量の半分以上余るものは目立たせる */
+const BIG_LEFTOVER_PACKS = 0.5
+
+/** 余る食材をラベルで並べる。多いものを先に、多めに余るものは目立たせる。なければ「ほぼ使い切れます」 */
+function Leftovers({ p }: { p: ProposalView }) {
+  const list = p.leftovers.filter((l) => l.packs >= NEGLIGIBLE_PACKS).sort((a, b) => b.packs - a.packs)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-ink-muted">余る食材</span>
+      {list.length === 0 ? (
+        <span className="font-bold text-leaf">ほぼ使い切れます</span>
+      ) : (
+        <ul className="flex flex-wrap gap-1.5">
+          {list.map((l) => (
+            <li
+              key={l.ingredientId}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                l.packs >= BIG_LEFTOVER_PACKS ? 'bg-warn-soft font-bold text-warn' : 'bg-pantry-soft text-ink-soft'
+              }`}
+            >
+              {l.name} {fmt(l.quantity)}
+              {l.unit}
+              {l.perishable && l.packs >= BIG_LEFTOVER_PACKS && '・早めに使う'}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 /** 提案・評価の中身: 数字 3 つ、使える在庫と余る食材、注意、買うものの内訳 */
 function EvaluationDetails({ p }: { p: ProposalView }) {
   const expiring = p.usesInventory.filter((u) => u.isExpiringSoon)
@@ -300,19 +345,7 @@ function EvaluationDetails({ p }: { p: ProposalView }) {
             </span>
           ))}
         </p>
-        <p>
-          <span className="text-ink-muted">余る食材：</span>
-          {p.leftovers.length === 0
-            ? 'なし'
-            : p.leftovers.map((l, i) => (
-                <span key={l.ingredientId} className={l.perishable ? 'font-bold text-danger' : ''}>
-                  {i > 0 && '、'}
-                  {l.name} {fmt(l.quantity)}
-                  {l.unit}
-                  {l.perishable && '（早めに使う）'}
-                </span>
-              ))}
-        </p>
+        <Leftovers p={p} />
       </div>
       {p.warnings.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-[10px] bg-warn-wash px-3 py-2.5 text-[13px] text-warn">
@@ -396,6 +429,43 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
 
 const proposalKey = (p: ProposalView) => p.recipes.map((r) => r.recipeId).join()
 
+/**
+ * 提案カードの料理ごとの「− ○食分 ＋」（案D D-PlanNew）。
+ * カード全体が案を選ぶラベルなので、押しても案は切り替えない（ボタンはラベルを働かせないが、念のため止める）
+ */
+function DishServings({ title, value, onChange }: { title: string; value: number; onChange: (v: number) => void }) {
+  const btn =
+    'flex size-8 items-center justify-center rounded-full bg-surface text-ink disabled:text-line-strong disabled:cursor-default'
+  const press = (e: React.MouseEvent, v: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onChange(v)
+  }
+  return (
+    <span className="flex shrink-0 items-center rounded-full bg-sunken p-0.5">
+      <button
+        type="button"
+        onClick={(e) => press(e, value - 1)}
+        disabled={value <= 1}
+        aria-label={`${title} を1食減らす`}
+        className={btn}
+      >
+        <Icon name="minus" size={15} strokeWidth={2.2} />
+      </button>
+      <span className="min-w-10.5 text-center text-[13px] font-bold tabular-nums">{fmtServings(value)}食分</span>
+      <button
+        type="button"
+        onClick={(e) => press(e, value + 1)}
+        disabled={value >= MAX_SERVINGS}
+        aria-label={`${title} を1食増やす`}
+        className={btn}
+      >
+        <Icon name="plus" size={15} strokeWidth={2.2} />
+      </button>
+    </span>
+  )
+}
+
 /** 食数。0.5 刻みなどの端数もそのまま出す */
 function fmtServings(n: number): string {
   return String(Math.round(n * 10) / 10)
@@ -417,6 +487,35 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const proposals = recs.data?.proposals ?? []
   const hasMore = recs.data?.hasMore ?? false
+
+  // カードで変えた食分（料理ごと）。食べたい料理が変わったら捨てる
+  const [savedServings, setSavedServings] = useSessionState(
+    servingsStorageKey(plan.id),
+    noServings(anchors),
+    isProposalServings,
+  )
+  useEffect(() => {
+    if (savedServings.anchors !== anchors) setSavedServings(noServings(anchors))
+  }, [savedServings.anchors, anchors, setSavedServings])
+  const servings = savedServings.anchors === anchors ? savedServings.servings : {}
+  function setDishServings(recipeId: string, value: number) {
+    const v = Math.max(1, Math.min(MAX_SERVINGS, value))
+    setSavedServings({ anchors, servings: { ...servings, [recipeId]: v } })
+  }
+  // 食分を変えた案だけ、その食分で評価し直す（案の顔ぶれは変えない）
+  const adjusted = proposals.map((p) =>
+    p.recipes.map(({ recipeId, role, servings: sv, dayIndex }) => ({
+      recipeId,
+      role,
+      servings: servings[recipeId] ?? sv,
+      dayIndex,
+    })),
+  )
+  const changed = adjusted.map((list, i) => list.some((r, j) => r.servings !== proposals[i]?.recipes[j]?.servings))
+  const evaluations = useProposalEvaluations(
+    plan.id,
+    adjusted.map((list, i) => (changed[i] ? list : null)),
+  )
 
   function showOthers() {
     setRounds(
@@ -440,12 +539,12 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   const picked = found === -1 ? 0 : found
   const chosen = proposals[picked]
 
-  async function choose(p: ProposalView) {
+  async function choose(index: number) {
+    const recipes = adjusted[index]
+    if (!recipes) return
     setError(null)
     try {
-      await replace.mutateAsync({
-        recipes: p.recipes.map(({ recipeId, role, servings, dayIndex }) => ({ recipeId, role, servings, dayIndex })),
-      })
+      await replace.mutateAsync({ recipes })
       onChosen()
     } catch (err) {
       setError(errorMessage(err, '選べませんでした'))
@@ -498,7 +597,12 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
         <ol className="flex flex-col gap-3">
           {proposals.map((p, i) => {
             const on = i === picked
-            const total = p.recipes.reduce((sum, r) => sum + r.servings, 0)
+            const list = adjusted[i] ?? []
+            const evaluation = evaluations[i]
+            // 食分を変えた案は評価し直した結果で出す。計算中は前の数字を薄く出す
+            const view = changed[i] ? (evaluation?.data ?? p) : p
+            const stale = changed[i] && (!evaluation?.data || evaluation.isPlaceholderData || evaluation.isFetching)
+            const total = list.reduce((sum, r) => sum + r.servings, 0)
             // 日数は食べる日（dayIndex）の重なりを除いた数。1 日に 2 品入る提案でもずれない
             const days = new Set(p.recipes.map((r) => r.dayIndex)).size
             return (
@@ -538,26 +642,35 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                     )}
                   </span>
                   <ul className="flex flex-col gap-2.5">
-                    {p.recipes.map((r) => (
-                      <li key={r.recipeId} className="flex items-center gap-3">
+                    {p.recipes.map((r, j) => (
+                      <li key={r.recipeId} className="flex items-center gap-2">
                         <DishPhotoButton recipeId={r.recipeId} title={r.title} />
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate text-[15px] font-bold">{r.title}</span>
                           <span className="text-xs text-ink-muted">
                             {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
-                            {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                            {kitLocation(view, r.recipeId) === 'freezer' && ' ・ 冷凍'}
                           </span>
                         </span>
-                        <span className="shrink-0 rounded-full bg-sunken px-3 py-1 text-sm font-bold text-ink-soft">
-                          {fmtServings(r.servings)}食分
-                        </span>
+                        <DishServings
+                          title={r.title}
+                          value={list[j]?.servings ?? r.servings}
+                          onChange={(v) => setDishServings(r.recipeId, v)}
+                        />
                       </li>
                     ))}
                   </ul>
                   <span className="-mt-1 text-right text-[13px] text-ink-soft">
                     合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
                   </span>
-                  <EvaluationDetails p={p} />
+                  {evaluation?.isError && (
+                    <p className="text-[13px] text-danger">
+                      {errorMessage(evaluation.error, '食分を変えた計算ができませんでした')}
+                    </p>
+                  )}
+                  <div aria-busy={stale} className={stale ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
+                    <EvaluationDetails p={view} />
+                  </div>
                 </label>
               </li>
             )
@@ -568,7 +681,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
       {chosen && (
         <StickyAction hint="次に、食べる順と食数を決めます">
           {error && <p className="text-center text-sm text-danger">{error}</p>}
-          <Button onClick={() => choose(chosen)} disabled={replace.isPending} className="min-h-13 w-full text-base">
+          <Button onClick={() => choose(picked)} disabled={replace.isPending} className="min-h-13 w-full text-base">
             案{offset + picked + 1}にする
           </Button>
         </StickyAction>

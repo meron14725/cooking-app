@@ -41,3 +41,28 @@ export function nextRound(rounds: ProposalRounds, current: string[][]): Proposal
 }
 
 export const roundsStorageKey = (planId: string) => `plan-proposals:${planId}`
+
+/**
+ * 提案カードで変えた食分（料理ごと。同じ料理が入っている案には同じ食分を出す）。
+ * 献立には保存せず、案を選んだときにこの食分で保存する。食べたい料理が変わったら捨てる
+ */
+export type ProposalServings = { anchors: string; servings: Record<string, number> }
+
+export const noServings = (anchors: string): ProposalServings => ({ anchors, servings: {} })
+
+export const isProposalServings = (v: unknown): v is ProposalServings => {
+  if (typeof v !== 'object' || v === null) return false
+  const r = v as Record<string, unknown>
+  return (
+    typeof r.anchors === 'string' &&
+    typeof r.servings === 'object' &&
+    r.servings !== null &&
+    !Array.isArray(r.servings) &&
+    Object.values(r.servings).every((n) => typeof n === 'number' && n > 0 && n <= MAX_SERVINGS)
+  )
+}
+
+export const servingsStorageKey = (planId: string) => `plan-servings:${planId}`
+
+/** 食数の上限（API の食数の制約と同じ） */
+export const MAX_SERVINGS = 20

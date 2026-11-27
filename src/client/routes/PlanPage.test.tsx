@@ -107,3 +107,60 @@ describe('献立の提案: 別の案を出す', () => {
     })
   })
 })
+
+describe('献立の提案: 食分の ＋－', () => {
+  it('押すとその料理の食分が変わり、案は切り替えず、評価し直した数字と余る食材を出す。選ぶとその食分で保存する', async () => {
+    const fetch = mockApi((path, body) => {
+      if (path === '/plans/current') return { plan }
+      if (path === '/plans/p1/recommendations') return recommendations(body)
+      if (path === '/plans/p1/evaluation') {
+        const recipes = (body as { recipes: { recipeId: string; servings: number }[] }).recipes
+        const sv = recipes.find((r) => r.recipeId === 'c')?.servings ?? 1
+        return {
+          ...proposal('c'),
+          recipes: proposal('c').recipes.map((r) => ({ ...r, servings: r.recipeId === 'c' ? sv : r.servings })),
+          shopping: [
+            {
+              ingredientId: 'i1',
+              name: '玉ねぎ',
+              needQuantity: 1,
+              packageUnitId: null,
+              packageLabel: null,
+              packageCount: 1,
+              buyQuantity: 1,
+            },
+          ],
+          leftovers: [
+            { ingredientId: 'i1', name: '玉ねぎ', quantity: 2, unit: '個', perishable: false, packs: 0.67 },
+            { ingredientId: 'i2', name: '塩', quantity: 1, unit: 'g', perishable: false, packs: 0.01 },
+          ],
+        }
+      }
+      if (path === '/plans/p1/recipes') return plan
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+
+    // 1 回目は余りなし
+    expect((await screen.findAllByText('ほぼ使い切れます')).length).toBe(3)
+    fireEvent.click(screen.getByRole('button', { name: '料理c を1食増やす' }))
+
+    // 案1 のまま、案2（料理c）の食分と合計が変わる
+    expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('button', { name: '料理c を1食減らす' }) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByText('3食分')).toBeTruthy()
+    // 評価し直した結果: 多めに余る玉ねぎだけラベルで出す（ごく少しの塩は数えない）
+    expect(await screen.findByText('玉ねぎ 2個')).toBeTruthy()
+    expect(screen.queryByText(/塩/)).toBeNull()
+    expect(screen.getAllByText('ほぼ使い切れます')).toHaveLength(2)
+
+    fireEvent.click(screen.getByRole('radio', { name: '案2を選ぶ' }))
+    fireEvent.click(screen.getByRole('button', { name: '案2にする' }))
+    await waitFor(() => expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/plans/p1/recipes'))).toBe(true))
+    const put = fetch.mock.calls.find(([url]) => String(url).endsWith('/plans/p1/recipes'))
+    expect(JSON.parse(String(put?.[1]?.body)).recipes).toEqual([
+      { recipeId: 'a', role: 'anchor', servings: 1, dayIndex: 1 },
+      { recipeId: 'c', role: 'added', servings: 2, dayIndex: 2 },
+    ])
+  })
+})
