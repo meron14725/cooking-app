@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseCookMinutes } from '../../shared/domain/recipeAttributes'
 import type { RecipeDraftOfficial, RecipeDraftRaw } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
 import { decodeEntities, readLimited } from './recipeImport'
@@ -97,6 +98,8 @@ export function cocoroOfficial(recipe: CocoroRecipe, ref: CocoroRef): RecipeDraf
     favoriteCount: recipe.favoriteCount ?? null,
     cookCount: recipe.cookCount ?? null,
     score: recipe.score ?? null,
+    cookMinutes: parseCookMinutes(recipe.cookingTime),
+    usesMixingUnit: recipe.isMixed ?? null,
   }
 }
 

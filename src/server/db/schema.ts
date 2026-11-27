@@ -9,7 +9,7 @@
 import { sql } from 'drizzle-orm'
 import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { PLAN_RECIPE_ROLES, PLAN_STATUSES } from '../../shared/schemas/plan'
-import { RECIPE_SOURCE_TYPES, STEP_PHASES } from '../../shared/schemas/recipe'
+import { ATTRIBUTE_SOURCES, CUISINES, DISH_TYPES, RECIPE_SOURCE_TYPES, STEP_PHASES } from '../../shared/schemas/recipe'
 import { ulid } from '../../shared/ulid'
 
 export { PLAN_RECIPE_ROLES, PLAN_STATUSES, RECIPE_SOURCE_TYPES, STEP_PHASES }
@@ -72,6 +72,11 @@ export const ingredients = sqliteTable(
     frozenCookNote: text('frozen_cook_note'),
     /** 常備品（調味料など）。使い切り計算の対象外 */
     isStaple: bool('is_staple').notNull().default(false),
+    /**
+     * category と grams_per_unit をどう決めたか（rule / ai / manual）。NULL = 取り込みのまま（未確認）。
+     * manual は「まとめて推定」で上書きしない
+     */
+    attributesSource: text('attributes_source', { enum: ATTRIBUTE_SOURCES }),
     archivedAt: text('archived_at'),
     ...timestamps,
   },
@@ -140,6 +145,16 @@ export const recipes = sqliteTable(
     score: integer('score'),
     /** 自分のお気に入り。画面のお気に入り数は取り込み元の数にこれ（1）を足して出す */
     isFavorite: bool('is_favorite').notNull().default(false),
+    /** 区分（主菜・副菜・汁物・その他）。NULL = 未判定 */
+    dishType: text('dish_type', { enum: DISH_TYPES }),
+    /** 味の系統（和・洋・中・エスニック）。NULL = 未判定 */
+    cuisine: text('cuisine', { enum: CUISINES }),
+    /** まぜ技ユニットを使うか。NULL = 不明 */
+    usesMixingUnit: bool('uses_mixing_unit'),
+    /** 調理時間の目安（分、下ごしらえ込み）。NULL = 不明 */
+    cookMinutes: integer('cook_minutes'),
+    /** 上の 4 つをどう決めたか（rule / ai / manual）。manual は推定で上書きしない */
+    attributesSource: text('attributes_source', { enum: ATTRIBUTE_SOURCES }),
     archivedAt: text('archived_at'),
     ...timestamps,
   },
@@ -235,6 +250,8 @@ export const plans = sqliteTable(
     startsOn: text('starts_on'),
     confirmedAt: text('confirmed_at'),
     completedAt: text('completed_at'),
+    /** 合計◯食の目標。古い献立は NULL */
+    targetMeals: integer('target_meals'),
     ...timestamps,
   },
   () => [

@@ -184,6 +184,8 @@ describe('POST /api/recipes/draft（COCORO KITCHEN の URL）', () => {
       favoriteCount: 1234,
       cookCount: 56789,
       score: 5,
+      cookMinutes: 30,
+      usesMixingUnit: true,
     })
     expect(res.body.ingredients.map((i) => [i.suggestedName, i.ingredientId !== null, i.quantity, i.cutStyle])).toEqual(
       [

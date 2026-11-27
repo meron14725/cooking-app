@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { deriveAttributes, type RecipeAttributes } from '../../shared/domain/recipeAttributes'
 import type {
+  AttributeSource,
   Recipe,
   RecipeIngredient,
   RecipeInputParsed,
@@ -16,15 +18,104 @@ import { ApiError } from '../errors'
 type RecipeRow = typeof recipes.$inferSelect
 
 function recipeValues(input: RecipeInputParsed) {
-  const { ingredients: _i, steps: _s, ...rest } = input
+  const {
+    ingredients: _i,
+    steps: _s,
+    dishType: _d,
+    cuisine: _c,
+    usesMixingUnit: _m,
+    cookMinutes: _t,
+    attributesManual: _a,
+    ...rest
+  } = input
   return rest
 }
 
-/** 材料の食材がマスタにあるか確かめる（削除済みの食材は、すでにこのレシピで使っているものだけ許す） */
-async function assertIngredientsExist(db: Db, input: RecipeInputParsed, recipeId?: string) {
+type IngredientRow = Pick<
+  typeof ingredients.$inferSelect,
+  'id' | 'archivedAt' | 'name' | 'category' | 'unit' | 'gramsPerUnit' | 'isStaple'
+>
+
+const ATTRIBUTE_KEYS = ['dishType', 'cuisine', 'usesMixingUnit', 'cookMinutes'] as const
+
+/**
+ * 区分・系統・まぜ技・調理時間を決める（docs/design/09-recommendation-v2.md）。
+ * - attributesManual: 入力のまま保存（manual）
+ * - 手で直したレシピ: 入力で省略した欄は今の値を残す（manual のまま）
+ * - それ以外: 入力の値 → ルール → AI で決めた今の値、の順。AI の値が残れば ai、なければ rule
+ */
+export function resolveAttributes(
+  input: RecipeInputParsed,
+  ingredientRows: Map<string, IngredientRow>,
+  existing?: RecipeRow,
+): RecipeAttributes & { attributesSource: AttributeSource } {
+  if (input.attributesManual) {
+    return {
+      dishType: input.dishType ?? null,
+      cuisine: input.cuisine ?? null,
+      usesMixingUnit: input.usesMixingUnit ?? null,
+      cookMinutes: input.cookMinutes ?? null,
+      attributesSource: 'manual',
+    }
+  }
+  if (existing?.attributesSource === 'manual') {
+    return {
+      dishType: input.dishType === undefined ? existing.dishType : input.dishType,
+      cuisine: input.cuisine === undefined ? existing.cuisine : input.cuisine,
+      usesMixingUnit: input.usesMixingUnit === undefined ? existing.usesMixingUnit : input.usesMixingUnit,
+      cookMinutes: input.cookMinutes === undefined ? existing.cookMinutes : input.cookMinutes,
+      attributesSource: 'manual',
+    }
+  }
+  const derived = deriveAttributes(
+    {
+      title: input.title,
+      servings: input.servings,
+      hotcookMode: input.hotcookMode,
+      ingredients: input.ingredients.flatMap((i) => {
+        const row = ingredientRows.get(i.ingredientId)
+        return row ? [{ ...row, quantity: i.quantity }] : []
+      }),
+    },
+    {
+      dishType: input.dishType,
+      cuisine: input.cuisine,
+      usesMixingUnit: input.usesMixingUnit,
+      cookMinutes: input.cookMinutes,
+    },
+  )
+  let usedAi = false
+  if (existing?.attributesSource === 'ai') {
+    for (const key of ATTRIBUTE_KEYS) {
+      if (derived[key] === null && existing[key] !== null) {
+        ;(derived as Record<string, unknown>)[key] = existing[key]
+        usedAi = true
+      }
+    }
+  }
+  return { ...derived, attributesSource: usedAi ? 'ai' : 'rule' }
+}
+
+/**
+ * 材料の食材がマスタにあるか確かめる（削除済みの食材は、すでにこのレシピで使っているものだけ許す）。
+ * 区分などの判定に使うので、食材の行を返す
+ */
+async function assertIngredientsExist(
+  db: Db,
+  input: RecipeInputParsed,
+  recipeId?: string,
+): Promise<Map<string, IngredientRow>> {
   const ids = [...new Set(input.ingredients.map((i) => i.ingredientId))]
   const rows = await db
-    .select({ id: ingredients.id, archivedAt: ingredients.archivedAt })
+    .select({
+      id: ingredients.id,
+      archivedAt: ingredients.archivedAt,
+      name: ingredients.name,
+      category: ingredients.category,
+      unit: ingredients.unit,
+      gramsPerUnit: ingredients.gramsPerUnit,
+      isStaple: ingredients.isStaple,
+    })
     .from(ingredients)
     .where(inArray(ingredients.id, ids))
   const used = recipeId
@@ -42,6 +133,7 @@ async function assertIngredientsExist(db: Db, input: RecipeInputParsed, recipeId
   if (missing.length > 0) {
     throw new ApiError(400, 'UNKNOWN_INGREDIENT', '食材マスタにない食材が含まれています', { ingredientIds: missing })
   }
+  return new Map(rows.map((r) => [r.id, r]))
 }
 
 function childInserts(db: Db, recipeId: string, input: RecipeInputParsed) {
@@ -116,6 +208,8 @@ export async function listRecipes(
     favoriteCount: r.favoriteCount,
     isFavorite: r.isFavorite,
     cookCount: r.cookCount,
+    dishType: r.dishType,
+    cuisine: r.cuisine,
     ingredientNames: [...new Set(names.filter((n) => n.recipeId === r.id).map((n) => n.name))],
   }))
 }
@@ -139,6 +233,11 @@ function toRecipe(row: RecipeRow, items: RecipeIngredient[], steps: RecipeStep[]
     isFavorite: row.isFavorite,
     cookCount: row.cookCount,
     score: row.score,
+    dishType: row.dishType,
+    cuisine: row.cuisine,
+    usesMixingUnit: row.usesMixingUnit,
+    cookMinutes: row.cookMinutes,
+    attributesSource: row.attributesSource,
     ingredients: items,
     steps,
     updatedAt: row.updatedAt,
@@ -174,9 +273,12 @@ export async function getRecipe(db: Db, id: string): Promise<Recipe> {
 }
 
 export async function createRecipe(db: Db, input: RecipeInputParsed): Promise<Recipe> {
-  await assertIngredientsExist(db, input)
+  const rows = await assertIngredientsExist(db, input)
   const id = ulid()
-  await db.batch([db.insert(recipes).values({ id, ...recipeValues(input) }), ...childInserts(db, id, input)])
+  await db.batch([
+    db.insert(recipes).values({ id, ...recipeValues(input), ...resolveAttributes(input, rows) }),
+    ...childInserts(db, id, input),
+  ])
   return getRecipe(db, id)
 }
 
@@ -193,10 +295,14 @@ export async function setRecipeFavorite(db: Db, id: string, favorite: boolean): 
  */
 export async function updateRecipe(db: Db, id: string, input: RecipeInputParsed): Promise<Recipe> {
   await getRecipe(db, id)
-  await assertIngredientsExist(db, input, id)
+  const existing = await db.query.recipes.findFirst({ where: eq(recipes.id, id) })
+  const rows = await assertIngredientsExist(db, input, id)
   const { sourceType: _, ...values } = recipeValues(input)
   await db.batch([
-    db.update(recipes).set(values).where(eq(recipes.id, id)),
+    db
+      .update(recipes)
+      .set({ ...values, ...resolveAttributes(input, rows, existing) })
+      .where(eq(recipes.id, id)),
     db.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, id)),
     db.delete(recipeSteps).where(eq(recipeSteps.recipeId, id)),
     ...childInserts(db, id, input),
