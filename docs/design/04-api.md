@@ -163,9 +163,9 @@ check / uncheck を冪等にしておくと、通信が不安定な店内で再�
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/kits` | 一覧（`?status=stored`、`?plannedOn=` で今日の袋） |
+| GET | `/api/kits` | 一覧（既定は stored、`?status=`、`?plannedOnOrBefore=今日` で今日の袋。予定日を過ぎた袋も含む）。食べる日順 |
 | GET | `/api/kits/:id` | 詳細 |
-| GET | `/api/kits/:id/cook` | 調理画面用（直前作業、入れる順、ホットクック設定、冷凍時の注意） |
-| POST | `/api/kits/:id/cooked` | 作った。直前作業用に確保した在庫を減らす。`{ leftovers?: [{ inventoryItemId, quantity }] }` で余りを修正。全袋が終われば plan を done に |
-| POST | `/api/kits/:id/discard` | 捨てた |
-| PATCH | `/api/kits/:id` | 保存場所・期限の修正 |
+| GET | `/api/kits/:id/cook` | 調理画面用（直前作業、入れる順（袋から / 直前に作業したもの / いま入れる、量は袋の食数に合わせる）、ホットクック設定と調理手順、冷凍時の注意、作った後に残る見込みの在庫） |
+| POST | `/api/kits/:id/cooked` | 作った。直前作業用に確保した在庫を減らす（期限の近い行から）。`{ leftovers?: [{ inventoryItemId, quantity }] }` で余りを修正。全袋が終われば plan を done に（同じ batch）。stored 以外は 409 |
+| POST | `/api/kits/:id/discard` | 捨てた。在庫は減らさない（確保は自動で外れる）。全袋が終われば plan を done に |
+| PATCH | `/api/kits/:id` | 保存場所・期限の修正。`{ location?, useBy? }`。期限を指定せずに場所を変えると袋詰めの日から計算し直す |

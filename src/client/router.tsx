@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 import { Layout } from './components/Layout'
+import { CookPage } from './routes/CookPage'
 import { FridgePage } from './routes/FridgePage'
 import { HomePage } from './routes/HomePage'
 import { IngredientEditPage } from './routes/IngredientEditPage'
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'fridge', element: <FridgePage /> },
       { path: 'plan', element: <PlanPage /> },
+      { path: 'kits/:id/cook', element: <CookPage /> },
       { path: 'recipes', element: <RecipesPage /> },
       { path: 'recipes/new', element: <RecipeEditPage /> },
       { path: 'recipes/import', element: <RecipeImportPage /> },

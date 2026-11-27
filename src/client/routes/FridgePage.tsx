@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { todayJst } from '../../shared/domain/date'
 import { toBaseQuantity } from '../../shared/domain/units'
 import { LOCATION_OPTIONS, locationLabel, type StorageLocation } from '../../shared/schemas/ingredient'
@@ -318,7 +319,9 @@ function EntryRow({
           {content}
         </button>
       ) : (
-        <div className="px-4 py-3">{content}</div>
+        <Link to={`/kits/${entry.id}/cook`} className="block px-4 py-3">
+          {content}
+        </Link>
       )}
       {open && item && <EditStockPanel item={item} onDone={onToggle} />}
     </li>

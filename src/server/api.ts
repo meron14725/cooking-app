@@ -3,6 +3,7 @@ import { todayJst } from '../shared/domain/date'
 import type { AppEnv } from './app'
 import { ingredientRoutes } from './routes/ingredients'
 import { fridgeRoutes, inventoryRoutes } from './routes/inventory'
+import { kitRoutes } from './routes/kits'
 import { planRoutes } from './routes/plans'
 import { recipeRoutes } from './routes/recipes'
 import { shoppingItemRoutes } from './routes/shopping'
@@ -17,3 +18,4 @@ api.route('/inventory', inventoryRoutes)
 api.route('/fridge', fridgeRoutes)
 api.route('/plans', planRoutes)
 api.route('/shopping-items', shoppingItemRoutes)
+api.route('/kits', kitRoutes)

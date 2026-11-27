@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import type { KitDraft, KitLocation } from '../../shared/domain/prep'
@@ -212,6 +213,7 @@ export function PrepAndPack({ planId }: { planId: string }) {
   const preview = usePrepPreview(planId, locations)
   const save = useSaveKits(planId)
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
   async function onSave() {
@@ -222,6 +224,12 @@ export function PrepAndPack({ planId }: { planId: string }) {
       await save.mutateAsync({ ...all, ...locations })
       navigate('/fridge')
     } catch (err) {
+      // 二重送信の 2 本目: もう保存されているので冷蔵庫へ
+      if (err instanceof ApiRequestError && err.status === 409) {
+        await qc.invalidateQueries({ queryKey: ['plans', 'current'] })
+        navigate('/fridge')
+        return
+      }
       setError(errorMessage(err, '保存できませんでした'))
     }
   }
