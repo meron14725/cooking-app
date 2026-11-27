@@ -6,22 +6,24 @@ import { ApiRequestError } from '../api/client'
 import { useCookKit, useCookView, useDiscardKit, useUpdateKit } from '../api/mealKits'
 import { ExpiryBadge } from '../components/ExpiryBadge'
 import { Button, inputBaseClass, parseNumber } from '../components/form'
+import { Icon } from '../components/Icon'
+import { LocationBadge } from '../components/LocationBadge'
 import { PageHeader } from '../components/PageHeader'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 const fmt = (n: number | null, unit: string) => (n === null ? '' : `${Math.round(n * 100) / 100}${unit}`)
 
 const FROM_LABEL: Record<CookView['addOrder'][number]['from'], { label: string; className: string }> = {
-  kit: { label: '袋から', className: 'bg-orange-100 text-orange-800' },
-  before_cook: { label: '直前に作業したもの', className: 'bg-sky-100 text-sky-800' },
-  now: { label: 'いま入れる', className: 'bg-stone-100 text-stone-700' },
+  kit: { label: '袋から', className: 'bg-accent-soft text-accent-strong' },
+  before_cook: { label: '直前に作業したもの', className: 'bg-frozen-soft text-frozen' },
+  now: { label: 'いま入れる', className: 'bg-sunken text-ink-soft' },
 }
 
 function Section({ no, title, children }: { no: number; title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-5">
-      <h2 className="mb-2 flex items-center gap-2 font-bold">
-        <span className="flex size-6 items-center justify-center rounded-full bg-orange-600 text-sm text-white">
+    <section className="mb-6 flex flex-col gap-2.5">
+      <h2 className="flex items-center gap-2 text-base font-bold">
+        <span className="flex size-6 items-center justify-center rounded-full bg-accent text-[13px] text-white">
           {no}
         </span>
         {title}
@@ -56,12 +58,12 @@ function LeftoversForm({ view, onCancel }: { view: CookView; onCancel: () => voi
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-orange-200 bg-orange-50 p-4">
+    <div className="space-y-3 rounded-card border border-accent-line bg-accent-wash p-4">
       {view.expectedLeftovers.length === 0 ? (
-        <p className="text-sm text-stone-600">在庫から使う食材はありません。</p>
+        <p className="text-sm text-ink-soft">在庫から使う食材はありません。</p>
       ) : (
         <>
-          <p className="text-sm text-stone-600">直前に使った食材の残りを確認してください（違っていたら直す）。</p>
+          <p className="text-sm text-ink-soft">直前に使った食材の残りを確認してください（違っていたら直す）。</p>
           {view.expectedLeftovers.map((l) => (
             <label key={l.inventoryItemId} className="flex items-center justify-between gap-2 text-sm">
               <span className="min-w-0 font-bold">{l.name} の残り</span>
@@ -81,7 +83,7 @@ function LeftoversForm({ view, onCancel }: { view: CookView; onCancel: () => voi
           ))}
         </>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSubmit} disabled={cook.isPending} className="flex-1">
           {cook.isPending ? '記録しています…' : 'これで記録する'}
@@ -113,7 +115,7 @@ function KitActions({ view }: { view: CookView }) {
   }
 
   return (
-    <div className="mt-8 space-y-2 border-t border-stone-200 pt-4">
+    <div className="mt-8 space-y-2 border-t border-line pt-4">
       <Button
         variant="secondary"
         onClick={() => run(() => update.mutateAsync({ location: other }))}
@@ -146,7 +148,7 @@ function KitActions({ view }: { view: CookView }) {
           この袋を捨てた
         </Button>
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   )
 }
@@ -158,16 +160,16 @@ export function CookPage() {
   const [done, setDone] = useState<Set<string>>(new Set())
   const [finishing, setFinishing] = useState(false)
 
-  if (isPending) return <p className="text-stone-500">読み込み中…</p>
-  if (isError || !view) return <p className="text-red-600">{errorMessage(error, '読み込めませんでした')}</p>
+  if (isPending) return <p className="text-ink-muted">読み込み中…</p>
+  if (isError || !view) return <p className="text-danger">{errorMessage(error, '読み込めませんでした')}</p>
 
   const { kit } = view
   if (kit.status !== 'stored') {
     return (
       <>
-        <PageHeader title={kit.title} />
-        <p className="mb-4 text-stone-600">この袋はもう{kit.status === 'cooked' ? '作りました' : '捨てました'}。</p>
-        <Link to="/" className="text-orange-700">
+        <PageHeader title={kit.title} backTo="/" />
+        <p className="mb-4 text-ink-soft">この袋はもう{kit.status === 'cooked' ? '作りました' : '捨てました'}。</p>
+        <Link to="/" className="text-accent">
           ホームへ
         </Link>
       </>
@@ -177,18 +179,29 @@ export function CookPage() {
   let no = 0
   return (
     <>
-      <PageHeader title={kit.title} />
-      <div className="mb-5 flex items-center justify-between gap-2 text-sm text-stone-600">
-        <span>
-          {kit.location === 'freezer' ? '🧊 冷凍' : '❄️ 冷蔵'} ・ {kit.servings}食分 ・ {shortDate(kit.plannedOn)}{' '}
-          に食べる予定
-        </span>
-        <ExpiryBadge daysLeft={kit.daysLeft} status={kit.expiryStatus} />
+      <div className="-mx-2 mb-1 flex items-center gap-1">
+        <Link to="/" aria-label="戻る" className="flex size-11 items-center justify-center rounded-full text-ink">
+          <Icon name="chevronLeft" size={22} strokeWidth={2} />
+        </Link>
+        <p className="text-sm font-bold text-ink-muted">調理</p>
+      </div>
+      <div className="mb-6 flex flex-col gap-2">
+        <h1 className="text-[26px] leading-snug font-bold">{kit.title}</h1>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent-strong">
+            {shortDate(kit.plannedOn)} に食べる
+          </span>
+          <LocationBadge location={kit.location} />
+          <span className="text-xs text-ink-muted">{kit.servings}食分</span>
+          <span className="ml-auto">
+            <ExpiryBadge daysLeft={kit.daysLeft} status={kit.expiryStatus} />
+          </span>
+        </div>
       </div>
 
       {view.beforeCook.length > 0 && (
         <Section no={++no} title="直前の作業">
-          <ul className="divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white">
+          <ul className="divide-y divide-line-soft overflow-hidden rounded-[16px] border border-line bg-surface">
             {view.beforeCook.map((b) => {
               const on = done.has(b.ingredientId)
               return (
@@ -204,16 +217,16 @@ export function CookPage() {
                         return next
                       })
                     }
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                    className="flex min-h-15 w-full items-center gap-3 px-4 py-3 text-left"
                   >
                     <span
-                      className={`flex size-6 shrink-0 items-center justify-center rounded-md border-2 text-sm ${
-                        on ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300'
+                      className={`flex size-6 shrink-0 items-center justify-center rounded-md border-2 ${
+                        on ? 'border-leaf bg-leaf text-white' : 'border-line-strong bg-surface'
                       }`}
                     >
-                      {on ? '✓' : ''}
+                      {on && <Icon name="check" size={16} strokeWidth={2.8} />}
                     </span>
-                    <span className={on ? 'text-stone-400 line-through' : ''}>
+                    <span className={on ? 'opacity-55 line-through' : ''}>
                       <span className="font-bold">
                         {b.name} {fmt(b.quantity, b.unit)}
                       </span>
@@ -228,38 +241,45 @@ export function CookPage() {
       )}
 
       <Section no={++no} title="入れる順">
-        <ol className="space-y-2">
+        <ol className="divide-y divide-line-soft rounded-[16px] border border-line bg-surface px-4">
           {view.addOrder.map((a, i) => (
-            <li key={a.ingredientId} className="flex items-baseline gap-2">
-              <span className="w-5 shrink-0 text-right text-sm text-stone-400">{i + 1}.</span>
-              <span className="min-w-0 flex-1">
-                {a.quantity === null ? a.displayText : `${a.name} ${fmt(a.quantity, a.unit)}`}
+            <li key={a.ingredientId} className="flex items-start gap-3 py-3">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-line-strong text-xs font-bold text-ink-muted">
+                {i + 1}
               </span>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${FROM_LABEL[a.from].className}`}>
-                {FROM_LABEL[a.from].label}
+              <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${FROM_LABEL[a.from].className}`}>
+                  {FROM_LABEL[a.from].label}
+                </span>
+                <span className="text-[15px]">
+                  {a.quantity === null ? a.displayText : `${a.name} ${fmt(a.quantity, a.unit)}`}
+                </span>
               </span>
             </li>
           ))}
         </ol>
       </Section>
 
-      <Section no={++no} title="ホットクック">
-        <p className="rounded-xl border border-stone-200 bg-white px-4 py-3 font-bold">
+      <Section no={++no} title="ホットクックの設定">
+        <p className="rounded-[16px] border-[1.5px] border-accent-line bg-surface px-4 py-4 text-lg font-bold">
           {view.hotcookMode ?? '設定が登録されていません'}
         </p>
         {view.cookSteps.length > 0 && (
-          <ol className="mt-2 list-decimal space-y-1 pl-6 text-sm text-stone-700">
+          <ol className="list-decimal space-y-1 pl-6 text-sm text-ink-soft">
             {view.cookSteps.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ol>
         )}
-        {view.notes && <p className="mt-2 text-sm text-stone-500">{view.notes}</p>}
+        {view.notes && <p className="text-sm text-ink-muted">{view.notes}</p>}
       </Section>
 
       {view.frozenNotes.length > 0 && (
-        <section className="mb-5 rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-900">
-          <h2 className="mb-1 font-bold">🧊 冷凍の袋を使うとき</h2>
+        <section className="mb-6 rounded-[16px] bg-frozen-soft px-4 py-3.5 text-sm text-frozen">
+          <h2 className="mb-1 flex items-center gap-1.5 font-bold">
+            <Icon name="frozen" size={18} />
+            冷凍の袋を使うとき
+          </h2>
           <ul className="space-y-1">
             {view.frozenNotes.map((n) => (
               <li key={n}>・{n}</li>
@@ -271,7 +291,7 @@ export function CookPage() {
       {finishing ? (
         <LeftoversForm view={view} onCancel={() => setFinishing(false)} />
       ) : (
-        <Button onClick={() => setFinishing(true)} className="w-full">
+        <Button onClick={() => setFinishing(true)} className="min-h-14 w-full text-base">
           作った
         </Button>
       )}
