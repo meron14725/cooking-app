@@ -169,7 +169,7 @@ export function AgentPage() {
                       type="button"
                       onClick={() => setResult(null)}
                       disabled={apply.isPending}
-                      className="min-h-10 shrink-0 px-2 text-sm font-bold text-ink-soft"
+                      className="min-h-10 shrink-0 px-2 text-sm font-bold text-ink-soft disabled:opacity-50"
                     >
                       やめる
                     </button>

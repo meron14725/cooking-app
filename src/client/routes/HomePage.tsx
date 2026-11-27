@@ -143,7 +143,11 @@ function TodayKitCard({ kit, day }: { kit: MealKit; day: number | null }) {
 function usePlanKits() {
   const stored = useKits()
   const cooked = useKits({ status: 'cooked' })
-  const planId = stored.data?.[0]?.planId
+  // 「この献立」は一番新しく袋詰めした献立（前の献立の冷凍袋が残っていても、新しい献立の進み具合を出す）
+  const latest = [...(stored.data ?? [])].sort(
+    (a, b) => b.packedOn.localeCompare(a.packedOn) || b.id.localeCompare(a.id),
+  )[0]
+  const planId = latest?.planId
   if (!stored.data || !planId) return { kits: [], stored: stored.data ?? [] }
   const kits = [...stored.data, ...(cooked.data ?? []).filter((k) => k.planId === planId)]
     .filter((k) => k.planId === planId)
@@ -259,7 +263,7 @@ export function HomePage() {
   return (
     <>
       <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold">{longDate(todayJst())}</h1>
+        <h1 className="font-display text-xl font-bold">{longDate(todayJst())}</h1>
         <Link
           to="/agent"
           aria-label="AI に頼む"

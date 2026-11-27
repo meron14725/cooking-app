@@ -626,6 +626,9 @@ function DraftPlan({ plan }: { plan: Plan }) {
                 </li>
               ))}
             </ul>
+            {replace.isError && (
+              <p className="text-sm text-danger">{errorMessage(replace.error, '外せませんでした')}</p>
+            )}
           </section>
           <Proposals plan={plan} onChosen={() => setStep('order')} />
         </>

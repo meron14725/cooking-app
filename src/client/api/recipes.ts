@@ -62,17 +62,6 @@ export function useDeleteRecipe() {
 /** AI の呼び出しは画面側でも 90 秒で打ち切る（docs/design/08-agent.md「AI プロバイダ」。サーバ側は 75 秒 + ページ取得 10 秒） */
 const AI_TIMEOUT_MS = 90_000
 
-export function useImportRecipe() {
-  return useMutation({
-    mutationFn: (url: string) =>
-      apiFetch<RecipeDraft>('/recipes/import-url', {
-        method: 'POST',
-        body: JSON.stringify({ url }),
-        signal: AbortSignal.timeout(AI_TIMEOUT_MS),
-      }),
-  })
-}
-
 /** 「＋」のパネル: URL・メモ・料理名など何でも送って下書きを作らせる（保存しない）。signal で取りやめられる */
 export function useDraftRecipe() {
   return useMutation({
