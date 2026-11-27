@@ -32,8 +32,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | GET | `/api/recipes/:id` | 詳細 |
 | PUT | `/api/recipes/:id` | 更新（材料・手順は丸ごと置き換え） |
 | DELETE | `/api/recipes/:id` | 論理削除 |
-| POST | `/api/recipes/import-url` | URL から下書きを作る（保存しない）。COCORO KITCHEN の URL はレシピ 1 件の JSON API を取り、`official`（メニュー番号・写真のキー・件数）も返す |
-| POST | `/api/recipes/draft` | 「＋」のパネル。`{ text }`（URL・メモ・料理名など何でも、4000 文字まで）。URL を含めば `import-url` と同じく取り込み（残りの文はメモとして AI に渡す）、なければ AI が文から下書きを作る（保存しない） |
+| POST | `/api/recipes/draft` | 「＋」のパネル。`{ text }`（URL・メモ・料理名など何でも、4000 文字まで）。URL を含めばそのページから取り込み（残りの文はメモとして AI に渡す）、なければ AI が文から下書きを作る（保存しない）。COCORO KITCHEN の URL は下記 |
 | POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない）。`{ leftovers: [{ ingredientId, quantity }] }`（余りの優先順） |
 | GET | `/api/images/<キー>` | レシピ写真を R2 から返す。キーは `img/` の直下のファイル名だけ（ほかは 400、無ければ 404）。`Cache-Control: private, max-age=86400` |
 | POST | `/api/recipes/estimate-calories` | 材料と人数から 1 人前のカロリーを AI で推定（保存しない）。`{ caloriesKcal }` を返す |
@@ -42,7 +41,11 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 - 更新は材料・手順を丸ごと置き換える。作成元（`sourceType`）は作成時のまま変えない
 - 初期データのレシピは `sourceType = seed`、id は `seed-recipe-<key>` で固定（`migrations/0002_seed_recipes.sql`）
 
-`import-url` / `draft` / `suggest` は `RecipeDraft` を返します。本人が画面で確認・修正し、`POST /api/recipes` で保存します。
+COCORO KITCHEN の URL（`https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/{機種}/{コード}`、機種がなければ KN-HW16G）は、ページの HTML ではなく `GET https://cocoroplus.jp.sharp/kitchen/recipe/api/recipe/{コード}/{機種}` の JSON を 1 件だけ取ります。メモがなければ AI を使わずに、`name`・`quantity`（人数）・`calorie`・`materials`・`methods`・`isMixed`（まぜ技ユニット）・`menuNum` から下書きを組み立て、`hotcookMode` は「メニュー番号で探す → No.063」、`official` にメニュー番号・写真のキー（`imageUrl` があれば `img/{コード}.jpg`）・`favoriteCount`・`cookCount` を入れます。メモがあれば本文とメモを AI に読ませ、メニュー番号だけ JSON の値を使います。公式の本文や写真はリポジトリに入れません。
+
+（以前の `POST /api/recipes/import-url` は、URL 取り込みページを消したので廃止しました。）
+
+`draft` / `suggest` は `RecipeDraft` を返します。本人が画面で確認・修正し、`POST /api/recipes` で保存します。
 
 ```ts
 // RecipeDraft（抜粋）
