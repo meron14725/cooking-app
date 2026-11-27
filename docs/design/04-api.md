@@ -36,6 +36,10 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない） |
 | POST | `/api/recipes/estimate-calories` | 材料と人数から 1 人前のカロリーを AI で推定（保存しない）。`{ caloriesKcal }` を返す |
 
+- 材料の `ingredientId` は食材マスタにあるもの。ない、または削除済み（このレシピですでに使っているものを除く）なら 400 `UNKNOWN_INGREDIENT`
+- 更新は材料・手順を丸ごと置き換える。作成元（`sourceType`）は作成時のまま変えない
+- 初期データのレシピは `sourceType = seed`、id は `seed-recipe-<key>` で固定（`migrations/0002_seed_recipes.sql`）
+
 `import-url` / `suggest` は `RecipeDraft` を返します。本人が画面で確認・修正し、`POST /api/recipes` で保存します。
 
 ```ts
