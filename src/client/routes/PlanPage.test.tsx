@@ -101,7 +101,7 @@ describe('献立の提案: 別の案を出す', () => {
     await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
     // 覚えていた古い回も 1 回目で上書きされる（元の食べたい料理に戻しても復活しない）
     expect(JSON.parse(sessionStorage.getItem('plan-proposals:p1') ?? 'null')).toEqual({
-      anchors: 'a:1',
+      anchors: 'a:1|',
       round: 1,
       shown: [],
     })
@@ -162,5 +162,56 @@ describe('献立の提案: 食分の ＋－', () => {
       { recipeId: 'a', role: 'anchor', servings: 1, dayIndex: 1 },
       { recipeId: 'c', role: 'added', servings: 2, dayIndex: 2 },
     ])
+  })
+})
+
+describe('献立の提案: 鍵で固定', () => {
+  it('押すとその料理と食分を固定して選び直し、行に「固定」と出して ＋－ を押せなくする。「外す」で戻る', async () => {
+    const fetch = mockApi((path, body) => {
+      if (path === '/plans/current') return { plan }
+      if (path === '/plans/p1/recommendations') {
+        const fixed = (body as { fixed?: { recipeId: string; servings: number }[] }).fixed ?? []
+        const lockC = fixed.find((f) => f.recipeId === 'c')
+        if (!lockC) return recommendations(body)
+        // c を固定したら、c を含む案だけ返す
+        const withC = (other: string) => ({
+          ...proposal(other),
+          recipes: [
+            ...proposal(other).recipes,
+            { recipeId: 'c', title: '料理c', role: 'added', servings: lockC.servings, dayIndex: 3, caloriesKcal: null },
+          ],
+        })
+        return { proposals: [withC('d'), withC('e')], aiSuggestionRecommended: false, hasMore: false }
+      }
+      if (path === '/plans/p1/evaluation') {
+        const recipes = (body as { recipes: { recipeId: string; servings: number }[] }).recipes
+        return { ...proposal('c'), recipes: proposal('c').recipes.map((r, i) => ({ ...r, ...recipes[i] })) }
+      }
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+
+    const inc = await screen.findByRole('button', { name: '料理c を1食増やす' })
+    expect(screen.getByText('鍵で料理と食分を固定すると、それに合わせて残りの料理を提案し直します')).toBeTruthy()
+    fireEvent.click(inc)
+    fireEvent.click(screen.getByRole('button', { name: '料理c の料理と食分を固定' }))
+
+    expect(await screen.findByText('固定中：料理c 2食分')).toBeTruthy()
+    expect(
+      screen.getByText('この料理と食分・材料はそのままで、残り1品を余りが少なくなるように提案しています'),
+    ).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('料理d')).toBeTruthy())
+    const call = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations')).at(-1)
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ fixed: [{ recipeId: 'c', servings: 2 }] })
+    const locks = screen.getAllByRole('button', { name: '料理c の料理と食分を固定' })
+    expect(locks.every((b) => b.getAttribute('aria-pressed') === 'true')).toBe(true)
+    for (const b of screen.getAllByRole('button', { name: '料理c を1食増やす' })) {
+      expect((b as HTMLButtonElement).disabled).toBe(true)
+    }
+    expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: '外す' }))
+    expect(await screen.findByText('鍵で料理と食分を固定すると、それに合わせて残りの料理を提案し直します')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
   })
 })

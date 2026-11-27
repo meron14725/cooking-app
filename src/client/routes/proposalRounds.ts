@@ -64,5 +64,16 @@ export const isProposalServings = (v: unknown): v is ProposalServings => {
 
 export const servingsStorageKey = (planId: string) => `plan-servings:${planId}`
 
+/** 鍵で固定した料理と食数（形は食分と同じ）。食べたい料理が変わったら捨てる */
+export const locksStorageKey = (planId: string) => `plan-locks:${planId}`
+
+/** 固定のキー。固定を変えたら「別の案を出す」の回を 1 回目に戻すのに使う */
+export function locksKey(locked: Record<string, number>): string {
+  return Object.entries(locked)
+    .map(([id, sv]) => `${id}:${sv}`)
+    .sort()
+    .join(',')
+}
+
 /** 食数の上限（API の食数の制約と同じ） */
 export const MAX_SERVINGS = 20

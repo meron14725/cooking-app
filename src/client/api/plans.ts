@@ -24,15 +24,24 @@ export function useCurrentPlan() {
 
 /**
  * 提案は保存しない計算結果。在庫やレシピが変わったら取り直す。
- * exclude はもう出した案（「別の案を出す」）。それを除いた次の案が返る
+ * exclude はもう出した案（「別の案を出す」）。それを除いた次の案が返る。
+ * fixed は鍵で固定した料理と食数。必ず含めて残りを選び直す
  */
-export function useRecommendations(planId: string | undefined, exclude: string[][] = [], enabled = true) {
+export function useRecommendations(
+  planId: string | undefined,
+  exclude: string[][] = [],
+  fixed: { recipeId: string; servings: number }[] = [],
+  enabled = true,
+) {
   return useQuery({
-    queryKey: keys.recommendations(planId ?? '', exclude),
+    queryKey: [...keys.recommendations(planId ?? '', exclude), fixed] as const,
     queryFn: () =>
       apiFetch<RecommendationsResponse>(`/plans/${planId}/recommendations`, {
         method: 'POST',
-        body: JSON.stringify(exclude.length > 0 ? { exclude } : {}),
+        body: JSON.stringify({
+          ...(exclude.length > 0 ? { exclude } : {}),
+          ...(fixed.length > 0 ? { fixed } : {}),
+        }),
       }),
     enabled: Boolean(planId) && enabled,
   })
