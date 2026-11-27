@@ -286,16 +286,17 @@ export async function updateShoppingItem(db: Db, id: string, input: ShoppingPatc
 /**
  * 払った金額を入れる（docs/design/10-cost.md「レシートや実際の値段から直す」1）。
  * 入れたら食材の価格も、払った金額 ÷ 買った量 × 代表量で手入力（manual）として直す。
+ * 0 円（もらい物・ポイント払いなど）は行の合計にだけ使い、食材の価格は直さない。
  * 消したとき（null）は食材の価格は戻さない（前の値が分からないため）
  */
 export async function setShoppingItemPaid(db: Db, id: string, input: ShoppingPaidInput): Promise<ShoppingItem> {
   const item = await findItem(db, id)
   const setPaid = db.update(shoppingItems).set({ paidYen: input.paidYen }).where(eq(shoppingItems.id, id))
-  const master =
-    input.paidYen !== null && item.buyQuantity > 0
-      ? await db.query.ingredients.findFirst({ where: eq(ingredients.id, item.ingredientId) })
-      : undefined
-  if (!master || input.paidYen === null) {
+  const updatesPrice = input.paidYen !== null && input.paidYen > 0 && item.buyQuantity > 0
+  const master = updatesPrice
+    ? await db.query.ingredients.findFirst({ where: eq(ingredients.id, item.ingredientId) })
+    : undefined
+  if (!master || input.paidYen === null || !updatesPrice) {
     await setPaid
     return getShoppingItem(db, id)
   }

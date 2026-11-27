@@ -145,6 +145,25 @@ describe('買い物リスト', () => {
     expect(changed.body.paidYen).toBeNull()
   })
 
+  it('0 円を入れても食材の価格は変わらない。行の合計には 0 円で入る', async () => {
+    await api.call('PUT', `/ingredients/${pork.id}`, {
+      ...base,
+      name: '豚こま切れ肉',
+      category: 'meat',
+      unit: 'g',
+      priceYen: 300,
+      packageUnits: pork.packageUnits,
+    })
+    const plan = await confirmed()
+    const porkRow = (await list(plan.id)).find((i) => i.name === '豚こま切れ肉') as ShoppingItem
+    const res = await api.call<ShoppingItem>('PUT', `/shopping-items/${porkRow.id}/paid`, { paidYen: 0 })
+    expect(res.body.paidYen).toBe(0)
+    const master = (await api.call<Ingredient>('GET', `/ingredients/${pork.id}`)).body
+    expect(master.priceYen).toBe(300)
+    const { cost } = (await api.call<ShoppingList>('GET', `/plans/${plan.id}/shopping`)).body
+    expect(cost.buyYen).toBe(0)
+  })
+
   it('払った金額は null で消せる。負の値や小数は入れられない', async () => {
     const plan = await confirmed()
     const row = (await list(plan.id))[0] as ShoppingItem
