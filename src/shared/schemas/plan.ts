@@ -38,7 +38,8 @@ export const planRecipesInputSchema = z.object({
     )
     .min(1, '料理を 1 つ以上入れてください')
     .max(10)
-    .refine((list) => new Set(list.map((r) => r.recipeId)).size === list.length, '同じ料理が重なっています'),
+    .refine((list) => new Set(list.map((r) => r.recipeId)).size === list.length, '同じ料理が重なっています')
+    .refine((list) => new Set(list.map((r) => r.dayIndex)).size === list.length, '同じ日に 2 品入っています'),
 })
 export type PlanRecipesInput = z.infer<typeof planRecipesInputSchema>
 

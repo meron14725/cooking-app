@@ -14,6 +14,7 @@ import {
 import { useRecipes } from '../api/recipes'
 import { Button, inputBaseClass, inputClass } from '../components/form'
 import { PageHeader } from '../components/PageHeader'
+import { ShoppingListView } from '../components/ShoppingListView'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -490,7 +491,10 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
           </li>
         ))}
       </ol>
-      <p className="text-sm text-stone-500">買い物リストは、この先の更新で入ります。</p>
+      {plan.status === 'shopping' && <ShoppingListView planId={plan.id} />}
+      {plan.status === 'prepping' && (
+        <p className="text-sm text-stone-500">下ごしらえと袋詰めの画面は、この先の更新で入ります。</p>
+      )}
       {plan.status === 'shopping' && (
         <Button
           variant="secondary"

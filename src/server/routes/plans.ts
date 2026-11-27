@@ -6,6 +6,7 @@ import {
   planRecipesInputSchema,
   recommendationsInputSchema,
 } from '../../shared/schemas/plan'
+import { shoppingAddSchema } from '../../shared/schemas/shopping'
 import type { AppEnv } from '../app'
 import { createDb } from '../db/client'
 import {
@@ -18,6 +19,7 @@ import {
   recommendForPlan,
   replacePlanRecipes,
 } from '../services/plans'
+import { addShoppingItem, completeShopping, listShopping } from '../services/shopping'
 import { validate } from '../validation'
 
 export const planRoutes = new Hono<AppEnv>()
@@ -37,7 +39,15 @@ export const planRoutes = new Hono<AppEnv>()
     return c.json(await replacePlanRecipes(createDb(c.env.DB), c.req.param('id'), c.req.valid('json')))
   })
   .post('/:id/confirm', validate('json', planConfirmSchema), async (c) => {
-    return c.json(await confirmPlan(createDb(c.env.DB), c.req.param('id'), c.req.valid('json').startsOn))
+    return c.json(await confirmPlan(createDb(c.env.DB), c.req.param('id'), c.req.valid('json').startsOn, todayJst()))
+  })
+  .get('/:id/shopping', async (c) => c.json(await listShopping(createDb(c.env.DB), c.req.param('id'))))
+  .post('/:id/shopping', validate('json', shoppingAddSchema), async (c) => {
+    return c.json(await addShoppingItem(createDb(c.env.DB), c.req.param('id'), c.req.valid('json')), 201)
+  })
+  .post('/:id/shopping/complete', async (c) => {
+    await completeShopping(createDb(c.env.DB), c.req.param('id'))
+    return c.json(await getPlan(createDb(c.env.DB), c.req.param('id')))
   })
   .delete('/:id', async (c) => {
     await deletePlan(createDb(c.env.DB), c.req.param('id'))
