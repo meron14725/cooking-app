@@ -48,6 +48,8 @@ export type ShoppingItem = {
   isManual: boolean
   /** この食材を使う献立の料理 */
   usedFor: string[]
+  /** この行の推定金額（10 円単位）。価格未設定・常備品は null */
+  estimatedYen: number | null
   /** 販売単位の選択肢（修正用） */
   packageUnits: { id: string; label: string; quantity: number }[]
 }

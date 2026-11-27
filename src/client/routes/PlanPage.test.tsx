@@ -42,6 +42,18 @@ function proposal(added: string) {
     totalCaloriesKcal: null,
     warnings: [],
     maxPerishableLeftoverPacks: 0,
+    cost: {
+      buyYen: 1230,
+      fromFridgeYen: 0,
+      leftoverYen: 0,
+      leftoverPerishableYen: 0,
+      eatYen: 1230,
+      perMealYen: 640,
+      totalMeals: 2,
+      unpriced: [],
+      unpricedCount: 0,
+      hasUnpriced: false,
+    },
   }
 }
 
