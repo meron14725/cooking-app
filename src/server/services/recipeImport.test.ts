@@ -14,6 +14,7 @@ import {
 const master = (m: Partial<Ingredient> & Pick<Ingredient, 'id' | 'name' | 'unit'>): Ingredient => ({
   aliases: [],
   category: 'vegetable',
+  attributesSource: null,
   gramsPerUnit: null,
   canFreeze: true,
   fridgeDays: 3,

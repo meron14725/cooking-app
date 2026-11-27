@@ -86,4 +86,26 @@ export class FakeProvider implements AiProvider {
   async estimateCalories(input: Parameters<AiProvider['estimateCalories']>[0]) {
     return { caloriesKcal: Math.round((input.ingredients.length * 150) / input.servings) }
   }
+
+  /** 名前に「肉」があれば meat、ほかは other。重さは needsGrams のときだけ 100g */
+  async classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0]) {
+    return {
+      items: items.map((i) => ({
+        key: i.key,
+        category: i.name.includes('肉') ? ('meat' as const) : ('other' as const),
+        gramsPerUnit: i.needsGrams ? 100 : null,
+      })),
+    }
+  }
+
+  /** 名前に「汁」があれば汁物、ほかは副菜。系統は和 */
+  async classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
+    return {
+      items: items.map((i) => ({
+        key: i.key,
+        dishType: i.title.includes('汁') ? ('soup' as const) : ('side' as const),
+        cuisine: 'japanese' as const,
+      })),
+    }
+  }
 }

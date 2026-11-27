@@ -28,6 +28,7 @@ function toIngredient(row: IngredientRow, units: PackageUnitRow[]): Ingredient {
     preppedFridgeDays: row.preppedFridgeDays,
     preppedFreezerDays: row.preppedFreezerDays,
     defaultLocation: row.defaultLocation,
+    attributesSource: row.attributesSource,
     beforeCookTask: row.beforeCookTask,
     frozenCookNote: row.frozenCookNote,
     isStaple: row.isStaple,
@@ -152,8 +153,13 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
   const currentIds = new Set(current.packageUnits.map((u) => u.id))
   const keptIds = units.flatMap((u) => (u.id && currentIds.has(u.id) ? [u.id] : []))
 
+  // 分類か重さを画面で変えたら manual（まとめて推定で上書きしない）
+  const edited = input.category !== current.category || (input.gramsPerUnit ?? null) !== current.gramsPerUnit
   await db.batch([
-    db.update(ingredients).set(ingredientValues(input)).where(eq(ingredients.id, id)),
+    db
+      .update(ingredients)
+      .set({ ...ingredientValues(input), ...(edited ? { attributesSource: 'manual' as const } : {}) })
+      .where(eq(ingredients.id, id)),
     db
       .delete(packageUnits)
       .where(

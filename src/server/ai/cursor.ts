@@ -1,4 +1,5 @@
 import type { ZodType } from 'zod'
+import { ingredientClassifySchema, recipeClassifySchema } from '../../shared/schemas/attributes'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
 import { looseJsonSchema } from './gemini'
@@ -7,6 +8,10 @@ import {
   caloriePrompt,
   EXTRACT_SYSTEM,
   extractPrompt,
+  INGREDIENT_CLASSIFY_SYSTEM,
+  ingredientClassifyPrompt,
+  RECIPE_CLASSIFY_SYSTEM,
+  recipeClassifyPrompt,
   SUGGEST_SYSTEM,
   suggestPrompt,
   TEXT_DRAFT_SYSTEM,
@@ -45,6 +50,14 @@ export class CursorProvider implements AiProvider {
 
   estimateCalories(input: Parameters<AiProvider['estimateCalories']>[0]) {
     return this.generate(CALORIE_SYSTEM, caloriePrompt(input), calorieEstimateSchema)
+  }
+
+  classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0]) {
+    return this.generate(INGREDIENT_CLASSIFY_SYSTEM, ingredientClassifyPrompt(items), ingredientClassifySchema)
+  }
+
+  classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
+    return this.generate(RECIPE_CLASSIFY_SYSTEM, recipeClassifyPrompt(items), recipeClassifySchema)
   }
 
   private async generate<T>(system: string, prompt: string, schema: ZodType<T>): Promise<T> {

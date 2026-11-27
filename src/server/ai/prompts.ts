@@ -1,3 +1,4 @@
+import type { IngredientClassifyItem, RecipeClassifyItem } from '../../shared/schemas/attributes'
 import type { EstimateCaloriesInput } from '../../shared/schemas/recipeDraft'
 import type { MasterRef, SuggestPromptInput, TextDraftPromptInput } from './provider'
 
@@ -92,3 +93,21 @@ export const AGENT_SYSTEM = `あなたはホットクック料理アプリ（本
 - 同じ行への変更は 1 つの案にまとめる
 - 頼みがあいまい、または道具でできないこと（袋の操作、献立の確定や削除、食材マスタの変更、レシピの削除など）は、案を出さずに返事で説明する
 - 最後に、出した案の要約か、出せなかった理由を日本語で 2〜3 文で返事する`
+
+export const INGREDIENT_CLASSIFY_SYSTEM = `あなたは食材の分類を手伝うアシスタントです。食材ごとに次を決めてください。
+- category: vegetable（野菜・きのこ・いも）/ meat（肉・肉の加工品）/ fish（魚介・魚の加工品）/ tofu_egg_dairy（大豆製品・卵・乳製品）/ seasoning（調味料・油・粉・香辛料・香料）/ dry（乾物・海藻・ごま）/ other（果物・ナッツ・米・麺・パン・こんにゃく・水など）
+- gramsPerUnit: needsGrams が true のときだけ、基準単位 1 つあたりのおよその重さ（g）。分からなければ null。false のときは null
+key は入力のまま返してください。`
+
+export function ingredientClassifyPrompt(items: IngredientClassifyItem[]): string {
+  return `食材:\n${JSON.stringify(items)}`
+}
+
+export const RECIPE_CLASSIFY_SYSTEM = `あなたは家庭料理の献立を手伝うアシスタントです。料理ごとに次を決めてください。
+- dishType: main（主菜。肉・魚・卵・大豆製品が主役のおかず、カレー・シチューなど）/ side（副菜）/ soup（汁物・スープ）/ other（ご飯もの・麺・おやつ・飲み物など）
+- cuisine: japanese（和）/ western（洋）/ chinese（中華）/ ethnic（エスニック・韓国・インドなど）。どれとも言えなければ null
+key は入力のまま返してください。`
+
+export function recipeClassifyPrompt(items: RecipeClassifyItem[]): string {
+  return `料理:\n${JSON.stringify(items)}`
+}

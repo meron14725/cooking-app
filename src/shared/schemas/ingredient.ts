@@ -115,5 +115,7 @@ export type Ingredient = {
   beforeCookTask: string | null
   frozenCookNote: string | null
   isStaple: boolean
+  /** 分類と重さをどう決めたか（rule / ai / manual）。null = 取り込みのまま */
+  attributesSource: 'rule' | 'ai' | 'manual' | null
   packageUnits: PackageUnit[]
 }
