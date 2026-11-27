@@ -23,6 +23,8 @@ export type RecIngredient = {
   canFreeze: boolean
   pantryDays: number | null
   preppedFridgeDays: number | null
+  /** 代表量あたりの価格（円）。未設定は null（docs/design/10-cost.md） */
+  priceYen?: number | null
   /** 登録順（最初に登録されたものが先頭） */
   packageUnits: RecPackageUnit[]
 }
@@ -88,6 +90,7 @@ export type Leftover = {
 
 export type InventoryUse = {
   inventoryItemId: string
+  ingredientId: string
   name: string
   quantity: number
   expiresOn: string
@@ -125,7 +128,10 @@ const EPS = 1e-9
 const round = (n: number) => Math.round(n * 1000) / 1000
 
 /** 代表量: 代表の販売単位 → 最初の販売単位 → 基準単位 1 つ分（g なら 100g） */
-export function representativeQuantity(ing: RecIngredient): number {
+export function representativeQuantity(ing: {
+  unit: string
+  packageUnits: Pick<RecPackageUnit, 'quantity' | 'isDefault'>[]
+}): number {
   const def = ing.packageUnits.find((u) => u.isDefault) ?? ing.packageUnits[0]
   if (def && def.quantity > 0) return def.quantity
   return ing.unit === 'g' ? SCORE_WEIGHTS.gramsRepresentative : 1
@@ -224,6 +230,7 @@ export function evaluate(items: { recipe: RecRecipe; servings: number }[], ctx: 
       const { isExpiringSoon } = expiryOf(stock.expiresOn, ctx.today)
       usesInventory.push({
         inventoryItemId: stock.inventoryItemId,
+        ingredientId,
         name: ing.name,
         quantity: round(take),
         expiresOn: stock.expiresOn,
