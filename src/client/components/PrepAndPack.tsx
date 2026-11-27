@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { diffDays, shortDate } from '../../shared/domain/date'
 import type { KitDraft, KitLocation } from '../../shared/domain/prep'
 import { ApiRequestError } from '../api/client'
 import { usePrepPreview, useSaveKits } from '../api/kits'
+import { isRecordOf, isStringArray, useSessionState, writeSession } from '../sessionState'
 import { DishPhotoButton } from './DishPhoto'
 import { Button } from './form'
 import { Icon } from './Icon'
@@ -12,24 +13,26 @@ import { PlanProgress } from './PlanProgress'
 import { StickyAction } from './StickyAction'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
+function clearPrepSession(planId: string) {
+  for (const name of ['step', 'locations', 'done'] as const) writeSession(sessionKey(planId, name), null)
+}
+
 const fmt = (n: number | null, unit: string) => (n === null ? '少々' : `${Math.round(n * 100) / 100}${unit}`)
 
 /** S05 下ごしらえ。チェックは画面上だけ（進み具合の目印） */
 function PrepStep({
+  planId,
   data,
   onNext,
 }: {
+  planId: string
   data: NonNullable<ReturnType<typeof usePrepPreview>['data']>
   onNext: () => void
 }) {
-  const [done, setDone] = useState<Set<string>>(new Set())
-  const toggle = (id: string) =>
-    setDone((cur) => {
-      const next = new Set(cur)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  // レシピを見に行って戻ってもチェックが残るように、このタブの間は覚えておく
+  const [doneIds, setDoneIds] = useSessionState<string[]>(sessionKey(planId, 'done'), [], isStringArray)
+  const done = new Set(doneIds)
+  const toggle = (id: string) => setDoneIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
   const { cutNow, keepWhole, asIs } = data.prep
   return (
     <div className="flex flex-col gap-6">
@@ -187,7 +190,12 @@ function KitCard({
         </div>
         <div className="flex items-center gap-3">
           <DishPhotoButton recipeId={kit.recipeId} title={kit.title} className="size-12 rounded-[14px]" />
-          <h3 className="line-clamp-2 min-w-0 text-[19px] font-bold">{kit.title}</h3>
+          <h3 className="min-w-0 font-display text-[19px] font-bold">
+            <Link to={`/recipes/${kit.recipeId}`} className="inline-flex min-h-8 items-center gap-1 text-ink">
+              <span className="line-clamp-2">{kit.title}</span>
+              <Icon name="chevronRight" size={18} strokeWidth={2.2} className="shrink-0 opacity-60" />
+            </Link>
+          </h3>
         </div>
         <fieldset className="grid grid-cols-2 gap-1 rounded-[18px] bg-sunken p-1">
           <legend className="sr-only">{kit.title}の保存場所</legend>
@@ -235,9 +243,19 @@ function KitCard({
 }
 
 /** 下ごしらえ中の献立: S05 下ごしらえ → S06 袋詰め */
+/** 下ごしらえ・袋詰めの途中の状態を覚えておくキー。保存したら消す */
+const sessionKey = (planId: string, name: 'step' | 'locations' | 'done') => `prep:${planId}:${name}`
+const isStep = (v: unknown): v is 'prep' | 'pack' => v === 'prep' || v === 'pack'
+const isLocations = isRecordOf(['fridge', 'freezer'] as const)
+
 export function PrepAndPack({ planId }: { planId: string }) {
-  const [step, setStep] = useState<'prep' | 'pack'>('prep')
-  const [locations, setLocations] = useState<Record<string, KitLocation>>({})
+  // 料理名や写真からレシピを見に行って戻ってきても、袋詰めの途中（段階と冷蔵/冷凍の選択）が消えないように覚えておく
+  const [step, setStep] = useSessionState<'prep' | 'pack'>(sessionKey(planId, 'step'), 'prep', isStep)
+  const [locations, setLocations] = useSessionState<Record<string, KitLocation>>(
+    sessionKey(planId, 'locations'),
+    {},
+    isLocations,
+  )
   const preview = usePrepPreview(planId, locations)
   const save = useSaveKits(planId)
   const navigate = useNavigate()
@@ -250,11 +268,13 @@ export function PrepAndPack({ planId }: { planId: string }) {
       // 画面に出ている保存場所をそのまま送る
       const all = Object.fromEntries((preview.data?.kits ?? []).map((k) => [k.recipeId, k.location]))
       await save.mutateAsync({ ...all, ...locations })
+      clearPrepSession(planId)
       navigate('/fridge')
     } catch (err) {
       // 二重送信の 2 本目: もう保存されているので冷蔵庫へ
       if (err instanceof ApiRequestError && err.status === 409) {
         await qc.invalidateQueries({ queryKey: ['plans', 'current'] })
+        clearPrepSession(planId)
         navigate('/fridge')
         return
       }
@@ -297,7 +317,7 @@ export function PrepAndPack({ planId }: { planId: string }) {
         </p>
       )}
       {step === 'prep' ? (
-        <PrepStep data={data} onNext={() => setStep('pack')} />
+        <PrepStep planId={planId} data={data} onNext={() => setStep('pack')} />
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-2">
