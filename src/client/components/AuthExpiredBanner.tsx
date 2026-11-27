@@ -14,15 +14,12 @@ export function AuthExpiredBanner() {
   if (!expired) return null
 
   return (
-    <div
-      role="alert"
-      className="sticky top-0 z-10 flex items-center gap-3 bg-amber-100 px-4 py-3 text-sm text-amber-900"
-    >
+    <div role="alert" className="sticky top-0 z-10 flex items-center gap-3 bg-warn-soft px-4 py-3 text-sm text-warn">
       <span className="flex-1">ログインの有効期限が切れました。</span>
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="min-h-11 rounded-lg bg-amber-600 px-4 font-bold text-white"
+        className="min-h-11 rounded-control bg-accent px-4 font-bold text-white"
       >
         再読み込み
       </button>
