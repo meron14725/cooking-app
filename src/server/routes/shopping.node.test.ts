@@ -117,6 +117,11 @@ describe('買い物リスト', () => {
       hasUnpriced: true,
     })
     expect(cost.unpriced.map((u) => u.name)).toEqual(['キャベツ'])
+    const items = await list(plan.id)
+    expect(items.map((i) => [i.name, i.estimatedYen])).toEqual([
+      ['キャベツ', null],
+      ['豚こま切れ肉', 300],
+    ])
   })
 
   it('在庫で足りる食材は載らない', async () => {
