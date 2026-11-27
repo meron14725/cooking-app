@@ -1,7 +1,62 @@
 @import "tailwindcss";
 
+/*
+ * デザインのトークン（デザインキャンバス「cooking-app デザイン」）。
+ * bg-ground / text-ink-muted / border-line / bg-accent のように使う。
+ */
 @theme {
-  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+  --font-sans: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+
+  /* 地と面 */
+  --color-ground: #f7f4ef;
+  --color-surface: #ffffff;
+  /* 切り替えの溝・進み具合の未完了 */
+  --color-sunken: #ede7de;
+  --color-track: #e2dad0;
+
+  /* 文字 */
+  --color-ink: #1f1a17;
+  --color-ink-soft: #3a332e;
+  --color-ink-muted: #6b6159;
+
+  /* 線 */
+  --color-line: #e7e0d6;
+  --color-line-soft: #efe9e1;
+  --color-line-strong: #d6cec3;
+  --color-line-dashed: #c9bfb2;
+
+  /* 主色（作る・決める） */
+  --color-accent: #c2410c;
+  --color-accent-strong: #9a3412;
+  --color-accent-soft: #fff1e8;
+  --color-accent-wash: #fff8f3;
+  --color-accent-line: #f2c3a6;
+
+  /* 済み・冷蔵 */
+  --color-leaf: #3f4a3c;
+  --color-leaf-soft: #eef0ec;
+
+  /* 冷凍 */
+  --color-frozen: #1f4e8c;
+  --color-frozen-soft: #e6eefa;
+
+  /* 常温 */
+  --color-pantry: #6b5a45;
+  --color-pantry-soft: #f3eee6;
+
+  /* 期限切れ・エラー */
+  --color-danger: #a61b1b;
+  --color-danger-soft: #fde8e6;
+  --color-danger-wash: #fdf0ee;
+
+  /* 期限が近い・注意 */
+  --color-warn: #7a4a00;
+  --color-warn-soft: #fdf1d6;
+  --color-warn-wash: #fdf6e4;
+
+  /* 角丸: カード 20px、ボタン・入力 14px */
+  --radius-card: 20px;
+  --radius-control: 14px;
 }
 
 html,
@@ -11,5 +66,7 @@ body,
 }
 
 body {
-  @apply bg-stone-50 text-stone-900 antialiased;
+  @apply bg-ground text-ink antialiased;
+  /* 和文の詰め（デザインと同じ） */
+  font-feature-settings: "palt";
 }
