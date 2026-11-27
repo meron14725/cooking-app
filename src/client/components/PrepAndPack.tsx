@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { shortDate } from '../../shared/domain/date'
+import { diffDays, shortDate } from '../../shared/domain/date'
 import type { KitDraft, KitLocation } from '../../shared/domain/prep'
 import { ApiRequestError } from '../api/client'
 import { usePrepPreview, useSaveKits } from '../api/kits'
@@ -34,9 +34,12 @@ function PrepStep({
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2.5">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-bold text-ink-muted">今切るもの</h2>
+          <h2 className="flex items-center gap-2 text-base font-bold">
+            <Icon name="pencil" size={20} className="text-accent" />
+            今切るもの
+          </h2>
           {cutNow.length > 0 && (
-            <p className="text-[13px] font-bold tabular-nums">
+            <p className="text-[13px] text-ink-muted tabular-nums">
               {cutNow.filter((c) => done.has(c.ingredientId)).length} / {cutNow.length} 済み
             </p>
           )}
@@ -63,22 +66,22 @@ function PrepStep({
                       {on && <Icon name="check" size={16} strokeWidth={2.8} />}
                     </span>
                     <span className={`flex min-w-0 flex-1 flex-col gap-2 ${on ? 'opacity-60' : ''}`}>
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className={`text-base font-bold ${on ? 'line-through' : ''}`}>{c.name}</span>
+                      <span className="flex items-baseline gap-2">
+                        <span className={`text-[17px] font-bold ${on ? 'line-through' : ''}`}>{c.name}</span>
                         {c.totalQuantity !== null && (
-                          <span className="text-sm text-ink-muted">{fmt(c.totalQuantity, c.unit)}</span>
+                          <span className="text-sm text-ink-soft">{fmt(c.totalQuantity, c.unit)}</span>
                         )}
                       </span>
-                      <span className="flex flex-wrap gap-1.5">
+                      <span className="flex flex-col gap-1">
                         {c.uses.map((u) => (
                           <span
                             key={`${u.recipeTitle}-${u.cutStyle}`}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-ground px-2.5 py-1 text-[13px]"
+                            className="flex justify-between gap-2 rounded-lg bg-ground px-2.5 py-1.5 text-[13px]"
                           >
                             <span className="font-bold">
                               {u.cutStyle} {u.quantity !== null && fmt(u.quantity, c.unit)}
                             </span>
-                            <span className="text-ink-muted">{u.recipeTitle}</span>
+                            <span className="min-w-0 truncate text-ink-muted">{u.recipeTitle}</span>
                           </span>
                         ))}
                       </span>
@@ -93,20 +96,22 @@ function PrepStep({
 
       {keepWhole.length > 0 && (
         <section className="flex flex-col gap-2.5">
-          <h2 className="text-sm font-bold text-ink-muted">切らずに残すもの</h2>
+          <h2 className="flex items-center gap-2 text-base font-bold">
+            <Icon name="clock" size={20} className="text-frozen" />
+            切らずに残すもの
+          </h2>
           <p className="text-[13px] text-ink-muted">作る直前に作業します。袋には入れずに冷蔵庫へ。</p>
           <ul className="flex flex-col gap-2">
             {keepWhole.map((k) => (
               <li
                 key={`${k.recipeTitle}-${k.ingredientId}`}
-                className="flex flex-col gap-1 rounded-item border border-frozen/20 bg-frozen-soft px-4 py-3.5 text-sm"
+                className="flex flex-col gap-2 rounded-item border border-frozen/20 bg-frozen-soft px-4 py-3.5 text-sm"
               >
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="text-base font-bold">{k.name}</span>
-                  <span className="text-ink-muted">{fmt(k.quantity, k.unit)}</span>
+                <span className="flex items-baseline gap-2">
+                  <span className="text-[17px] font-bold">{k.name}</span>
+                  <span className="text-ink-soft">{fmt(k.quantity, k.unit)}</span>
                 </span>
-                <span className="flex items-center gap-1.5 text-frozen">
-                  <Icon name="clock" size={16} />
+                <span className="text-[13px] leading-relaxed">
                   {k.task} ・ {k.recipeTitle}（{shortDate(k.plannedOn)}）
                 </span>
               </li>
@@ -117,7 +122,7 @@ function PrepStep({
 
       {asIs.length > 0 && (
         <section className="flex flex-col gap-2.5">
-          <h2 className="text-sm font-bold text-ink-muted">切らずにそのまま袋へ</h2>
+          <h2 className="text-base font-bold">切らずにそのまま袋へ</h2>
           <p className="rounded-item bg-surface shadow-card px-4 py-3 text-sm">
             {asIs.map((a) => `${a.name} ${fmt(a.quantity, a.unit)}（${a.recipeTitle}）`).join('、')}
           </p>
@@ -135,10 +140,13 @@ function PrepStep({
 
 function KitCard({
   kit,
+  day,
   onLocation,
   disabled,
 }: {
   kit: KitDraft
+  /** 献立の何日目か（1 から） */
+  day: number
   onLocation: (l: KitLocation) => void
   disabled: boolean
 }) {
@@ -154,10 +162,10 @@ function KitCard({
         onClick={() => onLocation(l)}
         disabled={disabled}
         aria-pressed={on}
-        className={`min-h-9 rounded-lg px-3.5 text-[13px] ${
+        className={`min-h-10 rounded-[10px] text-sm font-bold ${
           on
-            ? `bg-surface font-bold shadow-[0_1px_2px_rgba(60,40,20,0.12)] ${l === 'freezer' ? 'text-frozen' : 'text-ink'}`
-            : 'font-medium text-ink-soft'
+            ? `bg-surface shadow-[0_1px_2px_rgba(60,40,20,0.12)] ${l === 'freezer' ? 'text-frozen' : 'text-ink'}`
+            : 'text-ink-soft'
         }`}
       >
         {label}
@@ -167,36 +175,39 @@ function KitCard({
   const warn = kit.warnings.length > 0
   return (
     <li className="overflow-hidden rounded-card bg-surface shadow-card">
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span className="text-xs text-ink-muted">
-              {shortDate(kit.plannedOn)} に食べる ・ {kit.servings}食分
-            </span>
-            <h3 className="line-clamp-2 text-lg font-bold">{kit.title}</h3>
-          </div>
-          <fieldset className="flex shrink-0 gap-0.5 rounded-[10px] bg-sunken p-[3px]">
-            <legend className="sr-only">{kit.title}の保存場所</legend>
-            {locButton('fridge', '冷蔵')}
-            {locButton('freezer', '冷凍')}
-          </fieldset>
+      <div className="flex flex-col gap-2.5 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent-strong">
+            {day}日目
+          </span>
+          <span className="text-xs text-ink-muted">
+            {shortDate(kit.plannedOn)} に食べる ・ {kit.servings}食分
+          </span>
         </div>
-        <div className="flex flex-col gap-1.5 rounded-xl bg-ground px-3.5 py-3 text-sm">
-          <p className="text-xs font-bold text-ink-muted">中身</p>
-          <p>{packed.length === 0 ? 'なし' : packed.map((i) => `${i.name} ${fmt(i.quantity, i.unit)}`).join(' ・ ')}</p>
-          {seasonings.length > 0 && (
-            <p className="text-[13px]">
-              <span className="text-ink-muted">袋に入れる調味料：</span>
-              {seasonings.map((i) => `${i.name} ${fmt(i.quantity, i.unit)}`).join(' ・ ')}
-            </p>
-          )}
-          {beforeCook.map((i) => (
-            <p key={i.ingredientId} className="text-[13px]">
-              <span className="text-ink-muted">直前作業：</span>
-              {i.name} {fmt(i.quantity, i.unit)} … {i.beforeCookTask}
-            </p>
-          ))}
-        </div>
+        <h3 className="line-clamp-2 text-[19px] font-bold">{kit.title}</h3>
+        <fieldset className="grid grid-cols-2 gap-1 rounded-[18px] bg-sunken p-1">
+          <legend className="sr-only">{kit.title}の保存場所</legend>
+          {locButton('fridge', '冷蔵')}
+          {locButton('freezer', '冷凍')}
+        </fieldset>
+      </div>
+      <div className="flex flex-col gap-1.5 px-4 pb-3.5 text-sm">
+        <p className="text-xs font-bold text-ink-muted">中身</p>
+        <p className="leading-relaxed">
+          {packed.length === 0 ? 'なし' : packed.map((i) => `${i.name} ${fmt(i.quantity, i.unit)}`).join(' ・ ')}
+        </p>
+        {seasonings.length > 0 && (
+          <p className="mt-1 rounded-lg bg-ground px-2.5 py-2 text-[13px]">
+            <span className="font-bold">袋に入れる調味料：</span>
+            {seasonings.map((i) => `${i.name} ${fmt(i.quantity, i.unit)}`).join(' ・ ')}
+          </p>
+        )}
+        {beforeCook.map((i) => (
+          <p key={i.ingredientId} className="mt-1 rounded-lg bg-frozen-soft px-2.5 py-2 text-[13px] text-frozen">
+            <span className="font-bold">直前作業：</span>
+            {i.name} {fmt(i.quantity, i.unit)} … {i.beforeCookTask}
+          </p>
+        ))}
         {kit.location !== kit.defaultLocation && (
           <p className="text-xs text-ink-muted">おすすめは{kit.defaultLocation === 'fridge' ? '冷蔵' : '冷凍'}です</p>
         )}
@@ -205,7 +216,7 @@ function KitCard({
         className={`flex items-center justify-between border-t border-line-soft px-4 py-3 text-sm ${warn ? 'bg-danger-wash' : ''}`}
       >
         <span className="text-ink-muted">使用期限</span>
-        <span className={`font-bold ${warn ? 'text-danger' : ''}`}>
+        <span className={`text-[15px] font-bold tabular-nums ${warn ? 'text-danger' : ''}`}>
           {shortDate(kit.useBy)}（{frozen ? '冷凍' : '冷蔵'}）
         </span>
       </div>
@@ -263,6 +274,8 @@ export function PrepAndPack({ planId }: { planId: string }) {
       </>
     )
   const data = preview.data
+  // 袋の「N日目」は献立の最初に食べる日から数える
+  const firstDay = data.kits.map((k) => k.plannedOn).sort()[0]
 
   return (
     <section>
@@ -296,6 +309,7 @@ export function PrepAndPack({ planId }: { planId: string }) {
               <KitCard
                 key={k.recipeId}
                 kit={k}
+                day={firstDay ? diffDays(firstDay, k.plannedOn) + 1 : 1}
                 disabled={preview.isFetching || save.isPending}
                 onLocation={(l) => setLocations((cur) => ({ ...cur, [k.recipeId]: l }))}
               />
