@@ -37,7 +37,7 @@ import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
 import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
-import { type PlanStep, parentOf, stepView, usePlanStepNav } from './planSteps'
+import { type PlanStep, PlanStepProvider, parentOf, stepView, usePlanStepNav } from './planSteps'
 import {
   anchorsKey,
   canMealsUp,
@@ -918,8 +918,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
   async function onConfirm() {
     setError(null)
     try {
-      await confirm.mutateAsync(startsOn)
-      nav.goTo('shopping')
+      await nav.advance('shopping', () => confirm.mutateAsync(startsOn))
     } catch (err) {
       setError(errorMessage(err, '確定できませんでした'))
     }
@@ -1194,7 +1193,11 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
         </ol>
       )}
       {plan.status === 'shopping' && (
-        <ShoppingListView planId={plan.id} dishes={rows.map((r) => r.title)} onCompleted={() => nav.goTo('prep')} />
+        <ShoppingListView
+          planId={plan.id}
+          dishes={rows.map((r) => r.title)}
+          advance={(run) => nav.advance('prep', run)}
+        />
       )}
       {plan.status === 'shopping' && (
         <Button
@@ -1233,18 +1236,38 @@ const PROGRESS: Record<PlanStep, ProgressStep> = {
 }
 
 export function PlanPage() {
+  return (
+    <PlanStepProvider>
+      <PlanPageBody />
+    </PlanStepProvider>
+  )
+}
+
+function PlanPageBody() {
   const current = useCurrentPlan()
   const plan = current.data
   const status = plan?.status
   const nav = usePlanStepNav()
   // 段階は URL（?step=）に持つ。戻るボタンは履歴の 1 つ前の段階へ、直接開いたときはその段階の自然な親へ
-  const view = plan ? stepView(plan, nav.requested) : null
+  const urlView = plan ? stepView(plan, nav.requested) : null
+  // 確定・買い物完了の直後は、献立の状態が URL より先に変わる。URL が追いつくまでは前の段階（見るだけ）を出さず、進む先を出す
+  const view = plan && urlView?.readOnly && nav.pending ? stepView(plan, nav.pending) : urlView
   // 段階のない URL（タブやホームから開いた）は、いまの段階を URL に書いておく。
   // こうしておくと、先へ進んでから戻ったときに、この履歴がどの段階だったか分かる
   const viewStep = view?.step
   useEffect(() => {
     if (viewStep && nav.requested === null) nav.mark(viewStep)
   }, [viewStep, nav.requested, nav.mark])
+  // 進む途中の段階は、URL が追いついたら消す
+  const { pending, requested: urlStep, settle, clear } = nav
+  useEffect(() => {
+    if (pending !== null && urlStep === pending) settle()
+  }, [pending, urlStep, settle])
+  // 献立がない（やめた・取り消した、その後の古い履歴）ときは、URL に残った段階を消す
+  const noPlan = current.isSuccess && !plan
+  useEffect(() => {
+    if (noPlan && urlStep !== null) clear()
+  }, [noPlan, urlStep, clear])
   const title = view ? TITLES[view.step] : TITLES.proposals
   const backTo = view ? parentOf(view.step) : '/'
   const inPrep = view && !view.readOnly && (view.step === 'prep' || view.step === 'pack')

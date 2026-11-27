@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { createContext, createElement, type ReactNode, useCallback, useContext, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import type { Plan, PlanStatus } from '../../shared/schemas/plan'
 
@@ -64,6 +64,20 @@ export function parentOf(step: PlanStep): string {
   }
 }
 
+/**
+ * 確定・買い物完了のように献立の状態を変えて先へ進むとき、進む先の段階。
+ * 献立の状態は URL より先に変わるので、URL が追いつくまでの間に前の段階（見るだけ）が一瞬出ないよう、
+ * この段階を URL の段階の代わりに使う
+ */
+const PendingStep = createContext<{ pending: PlanStep | null; setPending: (step: PlanStep | null) => void } | null>(
+  null,
+)
+
+export function PlanStepProvider({ children }: { children: ReactNode }) {
+  const [pending, setPending] = useState<PlanStep | null>(null)
+  return createElement(PendingStep.Provider, { value: { pending, setPending } }, children)
+}
+
 /** 段階を進める（履歴を積む）。戻るボタンで前の段階に戻れる */
 export function usePlanStepNav() {
   const navigate = useNavigate()
@@ -73,12 +87,35 @@ export function usePlanStepNav() {
     (step: PlanStep) => navigate(`/plan?step=${step}`, { replace: true, state: location.state }),
     [navigate, location.state],
   )
+  const pendingCtx = useContext(PendingStep)
+  const requested = params.get('step')
+  const goTo = (step: PlanStep) => navigate(`/plan?step=${step}`, { state: { fromStep: requested ?? true } })
   return {
-    requested: params.get('step'),
+    /** URL に書いてある段階 */
+    requested,
+    /** 進む途中の段階（URL が追いついたら消す） */
+    pending: pendingCtx?.pending ?? null,
+    settle: useCallback(() => pendingCtx?.setPending(null), [pendingCtx]),
     /** いまの履歴に段階を書く（置き換え。履歴は増やさない） */
     mark,
     /** 次の段階へ進む */
-    goTo: (step: PlanStep) => navigate(`/plan?step=${step}`, { state: { fromStep: params.get('step') ?? true } }),
+    goTo,
+    /**
+     * 献立の状態を変える操作（run）をしてから次の段階へ進む。
+     * 状態が変わった瞬間から進む先の段階を出し、失敗したら元に戻す
+     */
+    advance: async (step: PlanStep, run: () => Promise<unknown>) => {
+      pendingCtx?.setPending(step)
+      try {
+        await run()
+      } catch (err) {
+        pendingCtx?.setPending(null)
+        throw err
+      }
+      goTo(step)
+    },
+    /** 段階を URL から消す（献立がなくなったとき。履歴は増やさない） */
+    clear: useCallback(() => navigate('/plan', { replace: true }), [navigate]),
     /** 前の段階へ。履歴の 1 つ前がその段階ならそこへ戻り、そうでなければ置き換える */
     backTo: (step: PlanStep) => {
       const from = (location.state as { fromStep?: unknown } | null)?.fromStep

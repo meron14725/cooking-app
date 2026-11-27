@@ -353,14 +353,14 @@ export function ShoppingListView({
   planId,
   dishes = [],
   readOnly = false,
-  onCompleted,
+  advance,
 }: {
   planId: string
   dishes?: string[]
   /** 見るだけ（買い物が済んだ後に戻ってきたとき）。チェック・直す・手で足す・完了は出さない */
   readOnly?: boolean
-  /** 買い物完了にできたら呼ぶ（次の段階へ進む） */
-  onCompleted?: () => void
+  /** 買い物完了（run）をして次の段階へ進む。なければ完了だけする */
+  advance?: (run: () => Promise<unknown>) => Promise<void>
 }) {
   const list = useShoppingList(planId)
   const { isPending, isError } = list
@@ -373,8 +373,8 @@ export function ShoppingListView({
   async function onComplete() {
     setError(null)
     try {
-      await complete.mutateAsync()
-      onCompleted?.()
+      const run = () => complete.mutateAsync()
+      await (advance ? advance(run) : run())
     } catch (err) {
       setError(errorMessage(err, '完了にできませんでした'))
     }
