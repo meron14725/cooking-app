@@ -17,7 +17,7 @@ export function PlanProgress({ current }: { current: PlanStep }) {
         return (
           <li key={s.key} aria-current={state === 'current' ? 'step' : undefined} className="flex flex-col gap-1.5">
             <span
-              className={`h-1 rounded-full ${state === 'done' ? 'bg-leaf' : state === 'current' ? 'bg-accent' : 'bg-track'}`}
+              className={`h-2 rounded-full ${state === 'done' ? 'bg-leaf' : state === 'current' ? 'bg-accent' : 'bg-track'}`}
             />
             <span
               className={`text-[11px] ${
