@@ -51,12 +51,19 @@ jobs:
 
       - name: 本番 D1 を書き出す
         if: steps.config.outputs.enabled == 'true'
+        # 書き出しに失敗したらマイグレーションに進まない（pipefail を効かせる）
+        shell: bash
         run: |
+          set -euo pipefail
           # テーブルがまだない（最初のデプロイ）ときは書き出すものがないのでスキップ
           tables=$(npx wrangler d1 execute "$DB_NAME" --remote --json \
             --command "SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations'" \
-            | jq '.[0].results[0].n')
+            | jq -e '.[0].results[0].n')
           echo "tables=$tables"
+          if ! [[ "$tables" =~ ^[0-9]+$ ]]; then
+            echo "::error::テーブル数を取得できませんでした: $tables"
+            exit 1
+          fi
           mkdir -p backup
           if [ "$tables" -gt 0 ]; then
             npx wrangler d1 export "$DB_NAME" --remote --output "backup/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ).sql"
