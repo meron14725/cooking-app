@@ -174,7 +174,7 @@ function AnchorPicker() {
 
 function Stat({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="rounded-xl bg-ground p-2.5">
+    <div className="rounded-[18px] bg-ground p-2.5">
       <p className="text-[11px] text-ink-muted">{label}</p>
       <p className="mt-0.5 text-lg font-bold tabular-nums">
         {value}
@@ -280,25 +280,26 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-card border border-accent-line bg-accent-wash p-4 text-sm text-ink-soft">
+    <div className="flex flex-col gap-2 text-sm text-ink-soft">
       {leftovers.length === 0 ? (
-        <p>登録レシピが少ないため、組み合わせの提案が出せませんでした。レシピを増やすと案が出ます。</p>
+        <p className="rounded-item bg-accent-wash px-4 py-3">
+          登録レシピが少ないため、組み合わせの提案が出せませんでした。レシピを増やすと案が出ます。
+        </p>
       ) : (
         <>
-          <p>
-            登録レシピだけでは余りが出やすい組み合わせです。余る食材（
-            {leftovers.map((l) => l.name).join('、')}）で AI に 1 品提案してもらえます。
-          </p>
           <button
             type="button"
             onClick={onSuggest}
             disabled={suggest.isPending}
-            className="flex min-h-13 items-center justify-center gap-2 rounded-control border border-accent-line bg-surface font-bold text-accent-strong disabled:opacity-60"
+            className="flex min-h-13 items-center justify-center gap-2 rounded-control border border-accent-line bg-accent-wash px-4 text-sm font-bold text-accent-strong disabled:opacity-60"
           >
             <Icon name="sparkle" size={18} />
             {suggest.isPending ? 'AI が考えています…（1 分ほど）' : '余る食材で AI に 1 品提案してもらう'}
           </button>
-          <p className="text-xs text-ink-muted">下書きを確認して保存すると、提案を計算し直します</p>
+          <p className="px-1 text-xs text-ink-muted">
+            余りが出やすい組み合わせです（{leftovers.map((l) => l.name).join('、')}
+            ）。下書きを確認して保存すると、提案を計算し直します
+          </p>
         </>
       )}
       {error && <p className="text-danger">{error}</p>}
@@ -346,7 +347,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
             <li
               key={proposalKey(p)}
               className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 ${
-                on ? 'border-2 border-accent shadow-[0_6px_20px_rgba(194,65,12,0.10)]' : 'border border-line'
+                on ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]' : 'border-2 border-transparent'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -383,7 +384,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                 <button
                   type="button"
                   onClick={() => setPickedKey(proposalKey(p))}
-                  className="min-h-11 rounded-xl border border-line-strong bg-surface text-sm font-bold"
+                  className="min-h-11 rounded-[18px] border border-line bg-surface text-sm font-bold"
                 >
                   この案を選ぶ
                 </button>
@@ -586,6 +587,15 @@ function DraftPlan({ plan }: { plan: Plan }) {
     setStep('proposals')
   }
 
+  /** 食べたい料理を 1 つ外して、提案を計算し直す */
+  function removeAnchor(recipeId: string) {
+    replace.mutate({
+      recipes: anchors
+        .filter((r) => r.recipeId !== recipeId)
+        .map((r, i) => ({ recipeId: r.recipeId, role: r.role, servings: r.servings, dayIndex: i + 1 })),
+    })
+  }
+
   return (
     <>
       {step === 'proposals' ? (
@@ -596,9 +606,23 @@ function DraftPlan({ plan }: { plan: Plan }) {
               {anchors.map((r) => (
                 <li
                   key={r.recipeId}
-                  className="flex min-h-10 items-center rounded-full bg-ink px-3.5 text-sm font-bold text-white"
+                  className={`flex min-h-10 items-center gap-1 rounded-full bg-ink text-sm font-bold text-white ${
+                    anchors.length > 1 ? 'pr-1.5 pl-3.5' : 'px-3.5'
+                  }`}
                 >
                   {r.title}（{r.servings}食）
+                  {/* 1 品だけのときは外さない（献立をやめるのは下のボタン） */}
+                  {anchors.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeAnchor(r.recipeId)}
+                      disabled={replace.isPending}
+                      aria-label={`${r.title}を外す`}
+                      className="flex size-8 items-center justify-center rounded-full disabled:opacity-50"
+                    >
+                      <Icon name="close" size={14} strokeWidth={2.4} />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
