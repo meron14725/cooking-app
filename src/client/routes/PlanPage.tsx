@@ -344,12 +344,19 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
         {proposals.map((p, i) => {
           const on = i === picked
           return (
-            // カードのどこを押してもその案を選ぶ。キーボードでは下の「この案を選ぶ」ボタンで選べる
-            // biome-ignore lint/a11y/useKeyWithClickEvents: キーボード操作は中のボタンが受け持つ
+            // カードを押すとその案を選ぶ（キーボードでは Tab で移って Enter / Space）
             <li
               key={proposalKey(p)}
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: カード全体が選ぶ操作なので Tab で移れるようにする
+              tabIndex={0}
+              aria-current={on ? 'true' : undefined}
               onClick={() => setPickedKey(proposalKey(p))}
-              className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 ${
+              onKeyDown={(e) => {
+                if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+                e.preventDefault()
+                setPickedKey(proposalKey(p))
+              }}
+              className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 focus-visible:outline-2 focus-visible:outline-accent ${
                 on
                   ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]'
                   : 'cursor-pointer border-2 border-transparent'
@@ -385,15 +392,6 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                 ))}
               </ul>
               <EvaluationDetails p={p} />
-              {!on && (
-                <button
-                  type="button"
-                  onClick={() => setPickedKey(proposalKey(p))}
-                  className="min-h-11 rounded-[18px] border border-line bg-surface text-sm font-bold"
-                >
-                  この案を選ぶ
-                </button>
-              )}
             </li>
           )
         })}
