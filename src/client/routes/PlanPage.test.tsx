@@ -99,5 +99,11 @@ describe('献立の提案: 別の案を出す', () => {
     renderRoutes({ '/plan': <PlanPage /> }, '/plan')
     expect(await screen.findByRole('heading', { name: '提案（3案）' })).toBeTruthy()
     await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
+    // 覚えていた古い回も 1 回目で上書きされる（元の食べたい料理に戻しても復活しない）
+    expect(JSON.parse(sessionStorage.getItem('plan-proposals:p1') ?? 'null')).toEqual({
+      anchors: 'a:1',
+      round: 1,
+      shown: [],
+    })
   })
 })

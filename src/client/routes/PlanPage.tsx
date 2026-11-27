@@ -406,6 +406,10 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理が変わったら 1 回目に戻る）
   const [savedRounds, setRounds] = useSessionState(roundsStorageKey(plan.id), firstRound(anchors), isProposalRounds)
   const rounds = currentRounds(savedRounds, anchors)
+  // 食べたい料理が変わったら保存値も 1 回目で上書きする（元に戻したときに古い回が復活しないように）
+  useEffect(() => {
+    if (savedRounds.anchors !== anchors) setRounds(firstRound(anchors))
+  }, [savedRounds.anchors, anchors, setRounds])
   const recs = useRecommendations(plan.id, rounds.shown)
   const replace = useReplacePlanRecipes(plan.id)
   // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
@@ -472,9 +476,12 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
       </div>
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
-      {recs.isSuccess && !hasMore && (rounds.round > 1 || proposals.length === 0) && (
+      {((recs.isSuccess && !hasMore && (rounds.round > 1 || proposals.length === 0)) ||
+        (recs.isError && rounds.round > 1)) && (
         <div className="flex items-center justify-between gap-3 rounded-item bg-sunken px-4 py-3">
-          <p className="text-sm text-ink-soft">これ以上の案はありません</p>
+          <p className="text-sm text-ink-soft">
+            {recs.isError ? '最初の案から選び直せます' : 'これ以上の案はありません'}
+          </p>
           {rounds.round > 1 && (
             <button
               type="button"
