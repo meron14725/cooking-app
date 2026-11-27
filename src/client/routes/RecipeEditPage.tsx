@@ -107,6 +107,13 @@ function unitChoices(m: UnitMaster | undefined): string[] {
   return choices
 }
 
+/** 表示文字列を空にしたときに使う文字列（例: 玉ねぎ 150g） */
+function autoDisplayText(row: IngredientRow, master: UnitMaster | undefined): string {
+  if (!master) return ''
+  const amount = parseNumber(row.quantity)
+  return `${master.name} ${amount === null ? '適量' : `${amount}${row.unit || master.unit}`}`
+}
+
 type Converted = { input: RecipeInput; unitErrors: Record<string, string> }
 
 function toInput(f: FormState, masters: Map<string, UnitMaster>): Converted {
@@ -120,9 +127,7 @@ function toInput(f: FormState, masters: Map<string, UnitMaster>): Converted {
       if (converted.warning) unitErrors[`ingredients.${index}.quantity`] = converted.warning
       quantity = converted.quantity
     }
-    const fallbackText = master
-      ? `${master.name}${amount === null ? ' 適量' : ` ${amount}${row.unit || master.unit}`}`
-      : ''
+    const fallbackText = autoDisplayText(row, master)
     return {
       ingredientId: row.ingredientId,
       quantity,
@@ -324,7 +329,7 @@ export function RecipeEditPage() {
                   value={row.ingredientId}
                   onChange={(e) => {
                     const m = masters.get(e.target.value)
-                    setRow(row.key, { ingredientId: e.target.value, unit: m?.unit ?? '' })
+                    setRow(row.key, { ingredientId: e.target.value, unit: m?.unit ?? '', displayText: '' })
                   }}
                   aria-label="食材"
                   className={`${inputBaseClass} min-w-0 flex-1`}
@@ -375,14 +380,14 @@ export function RecipeEditPage() {
                   min={0}
                   step="any"
                   value={row.quantity}
-                  onChange={(e) => setRow(row.key, { quantity: e.target.value })}
+                  onChange={(e) => setRow(row.key, { quantity: e.target.value, displayText: '' })}
                   placeholder="量"
                   aria-label="量"
                   className={`${inputBaseClass} min-w-0 flex-1`}
                 />
                 <select
                   value={unit}
-                  onChange={(e) => setRow(row.key, { unit: e.target.value })}
+                  onChange={(e) => setRow(row.key, { unit: e.target.value, displayText: '' })}
                   aria-label="単位"
                   disabled={choices.length <= 1}
                   className={`${inputBaseClass} w-24 shrink-0`}
@@ -404,7 +409,7 @@ export function RecipeEditPage() {
               <input
                 value={row.displayText}
                 onChange={(e) => setRow(row.key, { displayText: e.target.value })}
-                placeholder={master ? `表示（空なら「${master.name} …」）` : '表示（例: 玉ねぎ 1/2個）'}
+                placeholder={master ? `表示（空なら「${autoDisplayText(row, master)}」）` : '表示（例: 玉ねぎ 1/2個）'}
                 aria-label="表示"
                 className={inputClass}
               />
