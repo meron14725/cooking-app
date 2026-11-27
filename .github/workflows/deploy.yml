@@ -1,7 +1,8 @@
 name: Deploy
 
 # main にマージされたら本番にデプロイする（docs/design/01-architecture.md「デプロイとマイグレーション」）
-# 1. チェック → 2. 本番 D1 を書き出して artifact に保存 → 3. マイグレーション → 4. デプロイ
+# 1. チェック → 2. 本番 D1 を書き出して非公開の R2 バケットに保存 → 3. マイグレーション → 4. デプロイ
+# リポジトリは公開なので、DB の中身を Actions の成果物（artifact）やログに出さない（docs/deploy.md「本番 DB のバックアップ」）
 on:
   push:
     branches: [main]
@@ -19,6 +20,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       DB_NAME: cooking-app
+      BACKUP_BUCKET: cooking-app-backups
     steps:
       - name: Cloudflare の設定があるか確認
         id: config
@@ -49,9 +51,10 @@ jobs:
           npm run typecheck
           npm test
 
-      - name: 本番 D1 を書き出す
+      - name: 本番 D1 を書き出して R2 に保存
         if: steps.config.outputs.enabled == 'true'
-        # 書き出しに失敗したらマイグレーションに進まない（pipefail を効かせる）
+        # 書き出し・保存に失敗したらマイグレーションに進まない（pipefail を効かせる）
+        # 書き出した SQL は runner の一時ディレクトリに置くだけで、artifact にもログにも出さない
         shell: bash
         run: |
           set -euo pipefail
@@ -59,25 +62,24 @@ jobs:
           tables=$(npx wrangler d1 execute "$DB_NAME" --remote --json \
             --command "SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations'" \
             | jq -e '.[0].results[0].n')
-          echo "tables=$tables"
           if ! [[ "$tables" =~ ^[0-9]+$ ]]; then
-            echo "::error::テーブル数を取得できませんでした: $tables"
+            echo "::error::テーブル数を取得できませんでした"
             exit 1
           fi
-          mkdir -p backup
-          if [ "$tables" -gt 0 ]; then
-            npx wrangler d1 export "$DB_NAME" --remote --output "backup/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ).sql"
-          else
-            echo "テーブルがないため書き出しをスキップ" > backup/SKIPPED.txt
+          echo "tables=$tables"
+          if [ "$tables" -eq 0 ]; then
+            echo "テーブルがないため書き出しをスキップ"
+            exit 0
           fi
-
-      - name: 書き出した SQL を保存
-        if: steps.config.outputs.enabled == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: d1-backup-${{ github.sha }}
-          path: backup/
-          retention-days: 30
+          file="$RUNNER_TEMP/$DB_NAME.sql"
+          key="d1/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::7}.sql"
+          npx wrangler d1 export "$DB_NAME" --remote --output "$file" > /dev/null
+          if ! npx wrangler r2 object put "$BACKUP_BUCKET/$key" --file "$file" --remote --content-type application/sql > /dev/null; then
+            echo "::error::R2 バケット $BACKUP_BUCKET に保存できませんでした。バケットの作成とトークンの権限を確認してください（docs/deploy.md「本番 DB のバックアップ」）"
+            exit 1
+          fi
+          rm -f "$file"
+          echo "保存しました: $BACKUP_BUCKET/$key"
 
       - name: マイグレーション
         if: steps.config.outputs.enabled == 'true'
