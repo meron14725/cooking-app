@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
+import { PRICE_STALE_DAYS } from '../../shared/domain/constants'
+import { representativeLabel } from '../../shared/domain/cost'
+import { diffDays, todayJst } from '../../shared/domain/date'
 import {
   CATEGORY_OPTIONS,
   type Category,
@@ -33,6 +36,7 @@ type FormState = {
   beforeCookTask: string
   frozenCookNote: string
   isStaple: boolean
+  priceYen: string
   packageUnits: UnitForm[]
 }
 
@@ -55,6 +59,7 @@ const emptyForm: FormState = {
   beforeCookTask: '',
   frozenCookNote: '',
   isStaple: false,
+  priceYen: '',
   packageUnits: [],
 }
 
@@ -77,6 +82,7 @@ function toForm(i: Ingredient): FormState {
     beforeCookTask: i.beforeCookTask ?? '',
     frozenCookNote: i.frozenCookNote ?? '',
     isStaple: i.isStaple,
+    priceYen: str(i.priceYen),
     packageUnits: i.packageUnits.map((u) => ({
       key: newUnitKey(),
       id: u.id,
@@ -108,6 +114,7 @@ function toInput(f: FormState): IngredientInput {
     beforeCookTask: f.beforeCookTask,
     frozenCookNote: f.frozenCookNote,
     isStaple: f.isStaple,
+    priceYen: parseNumber(f.priceYen),
     packageUnits: f.packageUnits.map((u) => ({
       id: u.id,
       label: u.label,
@@ -115,6 +122,24 @@ function toInput(f: FormState): IngredientInput {
       isDefault: u.isDefault,
     })),
   }
+}
+
+/** 価格の欄のラベル（代表量の名前）。入力中の販売単位から出す */
+function priceBasisLabel(f: FormState): string {
+  return representativeLabel({
+    unit: f.unit.trim(),
+    packageUnits: f.packageUnits
+      .map((u) => ({ label: u.label.trim(), quantity: parseNumber(u.quantity) ?? 0, isDefault: u.isDefault }))
+      .filter((u) => u.label && u.quantity > 0),
+  })
+}
+
+/** 「目安（自動）· 2026-11-27」「手入力 · 2026-11-27（1 年以上前の価格）」 */
+function priceNote(i: Ingredient | undefined): { text: string; stale: boolean } | null {
+  if (!i || i.priceYen === null || !i.priceUpdatedAt) return null
+  const date = todayJst(new Date(i.priceUpdatedAt))
+  const stale = diffDays(date, todayJst()) > PRICE_STALE_DAYS
+  return { text: `${i.priceSource === 'manual' ? '手入力' : '目安（自動）'} · ${date}`, stale }
 }
 
 const UNIT_SUGGESTIONS = ['個', '本', '枚', '袋', 'パック', '丁', '株', '切れ', '缶', 'g', 'ml']
@@ -360,6 +385,39 @@ export function IngredientEditPage() {
           <Icon name="plus" size={18} strokeWidth={2} />
           販売単位を追加
         </Button>
+      </fieldset>
+
+      <fieldset className="space-y-2 rounded-card bg-surface shadow-card p-4">
+        <legend className="px-1 text-sm font-bold text-ink-soft">価格（目安）</legend>
+        <Field
+          label={`${priceBasisLabel(form)} あたり（円）`}
+          hint={
+            form.isStaple
+              ? '常備品は買い物の合計に入れません'
+              : '空 = 未設定。代表の販売単位を変えると、保存時に同じ単価になるよう直します'
+          }
+          error={errors.priceYen}
+        >
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={form.priceYen}
+            onChange={(e) => set('priceYen', e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        {(() => {
+          const note = priceNote(existing.data)
+          if (!note) return null
+          return (
+            <p className={`text-xs ${note.stale ? 'text-warn' : 'text-ink-muted'}`}>
+              {note.text}
+              {note.stale && '（1 年以上前の価格）'}
+            </p>
+          )
+        })()}
       </fieldset>
 
       {errors.form && <p className="text-sm text-danger">{errors.form}</p>}

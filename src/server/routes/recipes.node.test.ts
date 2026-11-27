@@ -231,6 +231,105 @@ describe('レシピ API', () => {
   })
 })
 
+describe('区分・系統・まぜ技・調理時間', () => {
+  it('作成時に名前・材料・ホットクックの設定から決める', async () => {
+    const res = await api.call<Recipe>(
+      'POST',
+      '/recipes',
+      curry({ title: '豚肉と玉ねぎの和風煮物', hotcookMode: '手動 > 煮物を作る > まぜる > 20分' }),
+    )
+    // 豚こま 200g ÷ 2 人前 = 100g（60g 以上）なので主菜
+    expect(res.body).toMatchObject({
+      dishType: 'main',
+      cuisine: 'japanese',
+      usesMixingUnit: true,
+      cookMinutes: 30,
+      attributesSource: 'rule',
+    })
+    const list = await api.call<{ items: RecipeSummary[] }>('GET', '/recipes')
+    expect(list.body.items[0]).toMatchObject({ dishType: 'main', cuisine: 'japanese' })
+  })
+
+  it('決められないものは null。取り込み元の値はルールより優先する', async () => {
+    const res = await api.call<Recipe>(
+      'POST',
+      '/recipes',
+      curry({ title: '豚肉と玉ねぎ', cookMinutes: 45, usesMixingUnit: false }),
+    )
+    expect(res.body).toMatchObject({ cuisine: null, cookMinutes: 45, usesMixingUnit: false })
+  })
+
+  it('手で直したら manual。そのあと省略して保存しても残り、名前を変えても上書きしない', async () => {
+    const created = (await api.call<Recipe>('POST', '/recipes', curry())).body
+    const manual = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({ dishType: 'side', cuisine: 'chinese', usesMixingUnit: null, cookMinutes: null, attributesManual: true }),
+    )
+    expect(manual.body).toMatchObject({ dishType: 'side', cuisine: 'chinese', attributesSource: 'manual' })
+    const again = await api.call<Recipe>('PUT', `/recipes/${created.id}`, curry({ title: '豚肉の和風スープ' }))
+    expect(again.body).toMatchObject({ dishType: 'side', cuisine: 'chinese', attributesSource: 'manual' })
+    const reset = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({ title: '豚肉の和風スープ', attributesManual: false }),
+    )
+    expect(reset.body).toMatchObject({ dishType: 'soup', attributesSource: 'rule' })
+  })
+
+  it('手で直していなければ、保存のたびにルールで決め直す', async () => {
+    const created = (await api.call<Recipe>('POST', '/recipes', curry())).body
+    expect(created.dishType).toBe('main')
+    const edited = await api.call<Recipe>('PUT', `/recipes/${created.id}`, curry({ title: '豚肉と玉ねぎのスープ' }))
+    expect(edited.body.dishType).toBe('soup')
+  })
+
+  it('取り込み元のまぜ技と調理時間は、省略して保存しても残る（編集画面は official を送らない）', async () => {
+    // COCORO の下書きから作る（画面は official の cookMinutes・usesMixingUnit をそのまま送る）
+    const created = (
+      await api.call<Recipe>(
+        'POST',
+        '/recipes',
+        curry({ hotcookMode: '手動 > 煮物を作る > まぜない > 20分', cookMinutes: 45, usesMixingUnit: true }),
+      )
+    ).body
+    expect(created).toMatchObject({ cookMinutes: 45, usesMixingUnit: true, attributesSource: 'rule' })
+    // 編集画面と同じ形（4 項目を省略）で保存
+    const edited = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({ title: '豚肉と玉ねぎのスープ', hotcookMode: '手動 > 煮物を作る > まぜない > 20分' }),
+    )
+    expect(edited.body).toMatchObject({ cookMinutes: 45, usesMixingUnit: true, dishType: 'soup' })
+  })
+
+  it('手で直すとき、送らなかった欄はルールで決める', async () => {
+    const created = (await api.call<Recipe>('POST', '/recipes', curry())).body
+    const manual = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({
+        title: '豚肉と玉ねぎの和風煮物',
+        hotcookMode: '手動 > 煮物を作る > まぜる > 20分',
+        dishType: 'side',
+        attributesManual: true,
+      }),
+    )
+    expect(manual.body).toMatchObject({
+      dishType: 'side',
+      cuisine: 'japanese',
+      usesMixingUnit: true,
+      cookMinutes: 30,
+      attributesSource: 'manual',
+    })
+  })
+
+  it('値の形が違えば 400', async () => {
+    expect((await api.call('POST', '/recipes', curry({ dishType: 'dessert' as never }))).status).toBe(400)
+    expect((await api.call('POST', '/recipes', curry({ cookMinutes: 0 }))).status).toBe(400)
+  })
+})
+
 describe('初期データのレシピ', () => {
   it('一覧と詳細で読める', async () => {
     const seeded = createTestApi({ seed: true })

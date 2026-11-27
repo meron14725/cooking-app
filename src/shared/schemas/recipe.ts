@@ -17,6 +17,33 @@ export const SOURCE_TYPE_LABELS: Record<RecipeSourceType, string> = {
   seed: '初期データ',
 }
 
+/** 料理の区分（docs/design/09-recommendation-v2.md） */
+export const DISH_TYPES = ['main', 'side', 'soup', 'other'] as const
+/** 味の系統 */
+export const CUISINES = ['japanese', 'western', 'chinese', 'ethnic'] as const
+/** 区分・系統・まぜ技・調理時間をどう決めたか。manual は推定で上書きしない */
+export const ATTRIBUTE_SOURCES = ['rule', 'ai', 'manual'] as const
+
+export const dishTypeSchema = z.enum(DISH_TYPES)
+export const cuisineSchema = z.enum(CUISINES)
+export type DishType = z.infer<typeof dishTypeSchema>
+export type Cuisine = z.infer<typeof cuisineSchema>
+export type AttributeSource = (typeof ATTRIBUTE_SOURCES)[number]
+
+export const DISH_TYPE_LABELS: Record<DishType, string> = {
+  main: '主菜',
+  side: '副菜',
+  soup: '汁物',
+  other: 'その他',
+}
+
+export const CUISINE_LABELS: Record<Cuisine, string> = {
+  japanese: '和',
+  western: '洋',
+  chinese: '中',
+  ethnic: 'エスニック',
+}
+
 export const STEP_PHASE_LABELS: Record<StepPhase, string> = {
   prep: '下ごしらえ',
   cook: '調理',
@@ -99,6 +126,20 @@ export const recipeInputSchema = z.object({
   favoriteCount: optionalCount,
   cookCount: optionalCount,
   score: optionalCount,
+  /**
+   * 区分・系統・まぜ技・調理時間。値があればそれを使う。省略（undefined）か null なら、名前・材料・
+   * ホットクックの設定から決める。ただし、まぜ技と調理時間は省略したら今の値を残す（取り込み元の値を消さない）。
+   * 手で直したレシピは、省略した欄も今の値を残す
+   */
+  dishType: dishTypeSchema.nullish(),
+  cuisine: cuisineSchema.nullish(),
+  usesMixingUnit: z.boolean().nullish(),
+  cookMinutes: z.number().int().min(1).max(600).nullish(),
+  /**
+   * true = 上の 4 つを本人が直した（送った値を保存し、以後は推定で上書きしない。省いた欄はルールで決める）。
+   * false = 手で直した値を捨てて自動に戻す。省略 = 手で直したレシピならその値を残す
+   */
+  attributesManual: z.boolean().optional(),
   ingredients: z.array(recipeIngredientInputSchema).min(1, '材料を 1 つ以上入れてください').max(50),
   steps: z.array(recipeStepInputSchema).max(50).default([]),
 })
@@ -146,6 +187,12 @@ export type Recipe = {
   isFavorite: boolean
   cookCount: number | null
   score: number | null
+  dishType: DishType | null
+  cuisine: Cuisine | null
+  usesMixingUnit: boolean | null
+  cookMinutes: number | null
+  /** 上の 4 つをどう決めたか。null = まだ決めていない */
+  attributesSource: AttributeSource | null
   ingredients: RecipeIngredient[]
   steps: RecipeStep[]
   updatedAt: string
@@ -166,6 +213,8 @@ export type RecipeSummary = Pick<
   | 'favoriteCount'
   | 'isFavorite'
   | 'cookCount'
+  | 'dishType'
+  | 'cuisine'
 > & {
   /** 材料の食材名（並び順どおり、重複なし） */
   ingredientNames: string[]

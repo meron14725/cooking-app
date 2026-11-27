@@ -42,6 +42,18 @@ function proposal(added: string) {
     totalCaloriesKcal: null,
     warnings: [],
     maxPerishableLeftoverPacks: 0,
+    cost: {
+      buyYen: 1230,
+      fromFridgeYen: 0,
+      leftoverYen: 0,
+      leftoverPerishableYen: 0,
+      eatYen: 1230,
+      perMealYen: 640,
+      totalMeals: 2,
+      unpriced: [],
+      unpricedCount: 0,
+      hasUnpriced: false,
+    },
   }
 }
 
@@ -101,7 +113,7 @@ describe('献立の提案: 別の案を出す', () => {
     await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
     // 覚えていた古い回も 1 回目で上書きされる（元の食べたい料理に戻しても復活しない）
     expect(JSON.parse(sessionStorage.getItem('plan-proposals:p1') ?? 'null')).toEqual({
-      anchors: 'a:1',
+      anchors: 'a:1|',
       round: 1,
       shown: [],
     })
@@ -133,6 +145,9 @@ describe('献立の提案: 食分の ＋－', () => {
           leftovers: [
             { ingredientId: 'i1', name: '玉ねぎ', quantity: 2, unit: '個', perishable: false, packs: 0.67 },
             { ingredientId: 'i2', name: '塩', quantity: 1, unit: 'g', perishable: false, packs: 0.01 },
+            // 冷蔵のみの食材は 3% 以上なら出し、ほかの食材は 1 割未満なら出さない
+            { ingredientId: 'i3', name: '豆腐', quantity: 0.05, unit: '丁', perishable: true, packs: 0.05 },
+            { ingredientId: 'i4', name: 'にんじん', quantity: 0.2, unit: '本', perishable: false, packs: 0.07 },
           ],
         }
       }
@@ -143,15 +158,25 @@ describe('献立の提案: 食分の ＋－', () => {
 
     // 1 回目は余りなし
     expect((await screen.findAllByText('ほぼ使い切れます')).length).toBe(3)
-    fireEvent.click(screen.getByRole('button', { name: '料理c を1食増やす' }))
+    fireEvent.click(screen.getByRole('button', { name: '料理c の食分を増やす' }))
 
     // 案1 のまま、案2（料理c）の食分と合計が変わる
     expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
-    expect((screen.getByRole('button', { name: '料理c を1食減らす' }) as HTMLButtonElement).disabled).toBe(false)
+    // 刻みは SERVINGS_STEP（2）: 1 → 2 → 4。2 より下げられず、4（MAX_SERVINGS_PER_DISH）より上げられない
+    const dec = () => screen.getByRole('button', { name: '料理c の食分を減らす' }) as HTMLButtonElement
+    const inc = () => screen.getByRole('button', { name: '料理c の食分を増やす' }) as HTMLButtonElement
+    expect(dec().disabled).toBe(true)
+    expect(screen.getByText('3食分')).toBeTruthy()
+    fireEvent.click(inc())
+    expect(screen.getByText('5食分')).toBeTruthy()
+    expect(inc().disabled).toBe(true)
+    fireEvent.click(dec())
     expect(screen.getByText('3食分')).toBeTruthy()
     // 評価し直した結果: 多めに余る玉ねぎだけラベルで出す（ごく少しの塩は数えない）
     expect(await screen.findByText('玉ねぎ 2個')).toBeTruthy()
     expect(screen.queryByText(/塩/)).toBeNull()
+    expect(screen.getByText('豆腐 0.05丁')).toBeTruthy()
+    expect(screen.queryByText(/にんじん/)).toBeNull()
     expect(screen.getAllByText('ほぼ使い切れます')).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('radio', { name: '案2を選ぶ' }))
@@ -162,5 +187,86 @@ describe('献立の提案: 食分の ＋－', () => {
       { recipeId: 'a', role: 'anchor', servings: 1, dayIndex: 1 },
       { recipeId: 'c', role: 'added', servings: 2, dayIndex: 2 },
     ])
+  })
+})
+
+describe('献立の提案: 鍵で固定', () => {
+  it('押すとその料理と食分を固定して選び直し、行に「固定」と出して ＋－ を押せなくする。「外す」で戻る', async () => {
+    const fetch = mockApi((path, body) => {
+      if (path === '/plans/current') return { plan }
+      if (path === '/plans/p1/recommendations') {
+        const fixed = (body as { fixed?: { recipeId: string; servings: number }[] }).fixed ?? []
+        const lockC = fixed.find((f) => f.recipeId === 'c')
+        if (!lockC) return recommendations(body)
+        // c を固定したら、c を含む案だけ返す
+        const withC = (other: string) => ({
+          ...proposal(other),
+          recipes: [
+            ...proposal(other).recipes,
+            { recipeId: 'c', title: '料理c', role: 'added', servings: lockC.servings, dayIndex: 3, caloriesKcal: null },
+          ],
+        })
+        return { proposals: [withC('d'), withC('e')], aiSuggestionRecommended: false, hasMore: false }
+      }
+      if (path === '/plans/p1/evaluation') {
+        const recipes = (body as { recipes: { recipeId: string; servings: number }[] }).recipes
+        return { ...proposal('c'), recipes: proposal('c').recipes.map((r, i) => ({ ...r, ...recipes[i] })) }
+      }
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+
+    const inc = await screen.findByRole('button', { name: '料理c の食分を増やす' })
+    expect(screen.getByText('鍵で料理と食分を固定すると、それに合わせて残りの料理を提案し直します')).toBeTruthy()
+    fireEvent.click(inc)
+    fireEvent.click(screen.getByRole('button', { name: '料理c の料理と食分を固定' }))
+
+    expect(await screen.findByText('固定中：料理c 2食分')).toBeTruthy()
+    expect(
+      screen.getByText('この料理と食分・材料はそのままで、残り1品を余りが少なくなるように提案しています'),
+    ).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('料理d')).toBeTruthy())
+    const call = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations')).at(-1)
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ fixed: [{ recipeId: 'c', servings: 2 }] })
+    const locks = screen.getAllByRole('button', { name: '料理c の料理と食分を固定' })
+    expect(locks.every((b) => b.getAttribute('aria-pressed') === 'true')).toBe(true)
+    for (const b of screen.getAllByRole('button', { name: '料理c の食分を増やす' })) {
+      expect((b as HTMLButtonElement).disabled).toBe(true)
+    }
+    expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: '外す' }))
+    expect(await screen.findByText('鍵で料理と食分を固定すると、それに合わせて残りの料理を提案し直します')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
+  })
+})
+
+describe('献立の提案: 上限より多い食数の食べたい料理', () => {
+  it('上限（4）を超える食数で作った献立でも、鍵を押すと 4 に丸めて固定できる', async () => {
+    const big = { ...plan, recipes: plan.recipes.map((r) => ({ ...r, servings: 6 })) }
+    const fetch = mockApi((path, body) => {
+      if (path === '/plans/current') return { plan: big }
+      if (path === '/plans/p1/recommendations') {
+        // サーバは献立の食数（6）のまま返す
+        const r = recommendations(body)
+        return {
+          ...r,
+          proposals: r.proposals.map((p) => ({
+            ...p,
+            recipes: p.recipes.map((x) => (x.recipeId === 'a' ? { ...x, servings: 6 } : x)),
+          })),
+        }
+      }
+      if (path === '/plans/p1/evaluation') return proposal('b')
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+    const lock = (await screen.findAllByRole('button', { name: '肉じゃが の料理と食分を固定' }))[0] as HTMLElement
+    fireEvent.click(lock)
+    await waitFor(() => {
+      const call = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations')).at(-1)
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({ fixed: [{ recipeId: 'a', servings: 4 }] })
+    })
+    expect(await screen.findByText('固定中：肉じゃが 4食分')).toBeTruthy()
   })
 })

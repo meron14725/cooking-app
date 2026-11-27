@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
+import { costOfShopping, roundYen, unitPrice } from '../../shared/domain/cost'
 import { computeExpiresOn } from '../../shared/domain/expiry'
 import type { ShoppingLine } from '../../shared/domain/recommend'
 import { roundQuantity } from '../../shared/domain/units'
@@ -17,6 +18,7 @@ import {
   shoppingItems,
 } from '../db/schema'
 import { ApiError } from '../errors'
+import { loadRecIngredients } from './recIngredients'
 
 const CATEGORY_ORDER = new Map<string, number>(CATEGORY_OPTIONS.map((o, i) => [o.value, i]))
 
@@ -66,7 +68,7 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
     .innerJoin(ingredients, eq(ingredients.id, shoppingItems.ingredientId))
     .leftJoin(packageUnits, eq(packageUnits.id, shoppingItems.packageUnitId))
     .where(eq(shoppingItems.planId, planId))
-  const [units, uses] = await Promise.all([
+  const loaded = await Promise.all([
     // 買い物リストの食材は 100 種を超えうるので、ID を並べずにサブクエリで取る（D1 のバインド変数の上限は 100）
     rows.length === 0
       ? []
@@ -91,7 +93,27 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
       .innerJoin(recipeIngredients, eq(recipeIngredients.recipeId, planRecipes.recipeId))
       .where(eq(planRecipes.planId, planId))
       .orderBy(asc(planRecipes.dayIndex)),
+    // 金額の「食べる分」: 献立の料理の材料を食数で倍率（docs/design/10-cost.md）
+    db
+      .select({
+        recipeId: planRecipes.recipeId,
+        planServings: planRecipes.servings,
+        recipeServings: recipes.servings,
+        ingredientId: recipeIngredients.ingredientId,
+        quantity: recipeIngredients.quantity,
+      })
+      .from(planRecipes)
+      .innerJoin(recipes, eq(recipes.id, planRecipes.recipeId))
+      .leftJoin(recipeIngredients, eq(recipeIngredients.recipeId, planRecipes.recipeId))
+      .where(eq(planRecipes.planId, planId)),
+    loadRecIngredients(db),
   ])
+  const [units, uses, parts, ingredientMap] = loaded
+  const estimate = (ingredientId: string, quantity: number) => {
+    const ing = ingredientMap.get(ingredientId)
+    const price = ing && !ing.isStaple ? unitPrice(ing) : null
+    return price === null ? null : roundYen(quantity * price)
+  }
   const items: ShoppingItem[] = rows
     .sort(
       (a, b) =>
@@ -102,12 +124,33 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
     )
     .map(({ createdAt: _, ...r }) => ({
       ...r,
+      estimatedYen: estimate(r.ingredientId, r.buyQuantity),
       usedFor: [...new Set(uses.filter((u) => u.ingredientId === r.ingredientId).map((u) => u.title))],
       packageUnits: units
         .filter((u) => u.ingredientId === r.ingredientId)
         .map((u) => ({ id: u.id, label: u.label, quantity: u.quantity })),
     }))
-  return { planId, items }
+  const eatQuantities = new Map<string, number>()
+  const mealsByRecipe = new Map<string, number>()
+  for (const p of parts) {
+    mealsByRecipe.set(p.recipeId, p.planServings)
+    if (!p.ingredientId || p.quantity === null) continue
+    const quantity = (p.quantity * p.planServings) / p.recipeServings
+    eatQuantities.set(p.ingredientId, (eatQuantities.get(p.ingredientId) ?? 0) + quantity)
+  }
+  const cost = costOfShopping({
+    rows: items.map((i) => ({
+      ingredientId: i.ingredientId,
+      needQuantity: i.needQuantity,
+      buyQuantity: i.buyQuantity,
+      isManual: i.isManual,
+      checked: i.checkedAt !== null,
+    })),
+    eatQuantities,
+    ingredients: ingredientMap,
+    totalMeals: [...mealsByRecipe.values()].reduce((sum, n) => sum + n, 0),
+  })
+  return { planId, items, cost }
 }
 
 async function findPackageUnit(db: Db, ingredientId: string, packageUnitId: string) {

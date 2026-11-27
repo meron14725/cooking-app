@@ -22,7 +22,7 @@
 
 ## 単価の持ち方
 
-### ingredients に足す列（migration 0008）
+### ingredients に足す列（migration 0007）
 
 | 列 | 型 | 内容 |
 |---|---|---|
@@ -73,7 +73,7 @@
 
 - `buyYen`: 今の行の `buyQuantity × 単価`。手で足した行（`is_manual`）も入れる
 - `leftoverYen`: 料理の行だけ `buyQuantity − needQuantity`。手で足した行は「足したかったもの」なので余りにしない
-- `fromFridgeYen` と `eatYen`: 献立の料理の材料（`plan_recipes × recipe_ingredients`、食数で倍率）から `eatYen` を出し、`fromFridgeYen = eatYen − (buyYen(料理の行) − leftoverYen)` とする（在庫の確保の表を引き直さない）
+- `fromFridgeYen` と `eatYen`: 献立の料理の材料（`plan_recipes × recipe_ingredients`、食数で倍率）から `eatYen` を出し、`fromFridgeYen = eatYen − 不足量（料理の行の needQuantity）の金額` とする（在庫の確保の表を引き直さない。個数を不足量より減らしても、減らした分は冷蔵庫から使う分に数えない）
 - チェックした行・していない行を問わず全部の合計（「今回買う分」）。「あと ◯ 円」（チェックしていない行だけ）も出す
 - クエリは今の 3 本（行・販売単位・使い道）に、献立の材料の量を 1 本足す。ID を `IN` に並べない（献立の ID で絞る）
 
@@ -192,7 +192,7 @@ shopping =
 
 | # | 内容 | 種類 | 前提 |
 |---|---|---|---|
-| 1 | migration 0008（ingredients の価格 3 列）、`cost.ts`、食材の API に価格、買い物リストと提案の API に `cost` | API | 09 の PR 1（0007）の後 |
+| 1 | migration 0007（ingredients の価格 3 列）、`cost.ts`、食材の API に価格、買い物リストと提案の API に `cost` | API | — |
 | 2 | 食材の編集に価格、食材一覧の「価格未設定」「価格が古い」 | 画面 | 1 |
 | 3 | 買い物リストのまとめと提案カードに金額 | 画面 | 1 |
 | 4 | 買ったチェックで払った金額を入れる（`shopping_items.paid_yen`、価格を manual で更新） | API | 3 |
@@ -201,6 +201,6 @@ shopping =
 | 7 | まとめて推定のボタンの名前と、古い目安を見直すボタン | 画面 | 6・09 の PR 4 |
 | 8 | 点数に金額（パック換算、`w.cost`、仮の単価、内訳） | API | 09 の PR 5a |
 
-- migration の番号は 09 が 0007 を使うので 0008。09 の PR 1 より先に入れることになったら、こちらを 0007 にして 09 を 0008 にずらす（どちらも列を足すだけで、順番に依存しない）
+- migration の番号は、先にマージしたほうから振る（実際は 0007 = 価格（#65）、0008 = 09 の PR 1（#60）、0009 = 払った金額（#68））。どれも列を足すだけで、順番に依存しない
 - 1〜5 は 09 を待たずに進められる（価格は手で入れられる）。6 以降は 09 の PR と交互に進める
-- 払った金額の migration（`shopping_items.paid_yen`）は 4 で足す（0008 の次の番号）
+- 払った金額の migration（`shopping_items.paid_yen`）は 4 で足す

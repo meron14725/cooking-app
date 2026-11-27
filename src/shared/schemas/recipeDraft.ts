@@ -73,6 +73,10 @@ export type RecipeDraftOfficial = {
   favoriteCount: number | null
   cookCount: number | null
   score: number | null
+  /** 取り込み元の調理時間（分）。読めなければ null */
+  cookMinutes: number | null
+  /** まぜ技ユニットを使うか。取り込み元になければ null */
+  usesMixingUnit: boolean | null
 }
 
 /** 「＋」のパネル: URL・メモ・料理名など何でも。URL を含めばそのページから、なければ文から下書きを作る */

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import { MAX_SERVINGS_PER_DISH } from '../../shared/domain/constants'
 import { addDays, shortDate, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
 import { favoriteTotal, type RecipeSort } from '../../shared/schemas/recipe'
@@ -15,6 +16,7 @@ import {
   useReplacePlanRecipes,
 } from '../api/plans'
 import { aiErrorMessage, useRecipes, useSuggestRecipe } from '../api/recipes'
+import { ProposalCost } from '../components/CostSummary'
 import { DishPhotoButton } from '../components/DishPhoto'
 import { Button, inputClass } from '../components/form'
 import { Icon } from '../components/Icon'
@@ -30,15 +32,20 @@ import { useSessionState } from '../sessionState'
 import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
 import {
   anchorsKey,
+  canStepDown,
+  canStepUp,
   currentRounds,
   firstRound,
   isProposalRounds,
   isProposalServings,
-  MAX_SERVINGS,
+  locksKey,
+  locksStorageKey,
   nextRound,
   noServings,
   roundsStorageKey,
   servingsStorageKey,
+  stepDown,
+  stepUp,
 } from './proposalRounds'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
@@ -89,7 +96,7 @@ function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => voi
       <button
         type="button"
         onClick={() => onChange(p.servings + 1)}
-        disabled={p.servings >= 20}
+        disabled={p.servings >= MAX_SERVINGS_PER_DISH}
         aria-label={`${p.title} を1食増やす`}
         className={`${btn} disabled:text-line-strong`}
       >
@@ -143,7 +150,13 @@ function AnchorPicker() {
   async function onSubmit() {
     setError(null)
     try {
-      await create.mutateAsync({ anchors: picked.map(({ recipeId, servings }) => ({ recipeId, servings })) })
+      // 前に覚えた選択が上限を超えていても作れるように丸める
+      await create.mutateAsync({
+        anchors: picked.map(({ recipeId, servings }) => ({
+          recipeId,
+          servings: Math.min(servings, MAX_SERVINGS_PER_DISH),
+        })),
+      })
       savePicked([])
     } catch (err) {
       setError(errorMessage(err, '献立を作れませんでした'))
@@ -283,14 +296,17 @@ function Stat({ label, value, unit }: { label: string; value: string; unit: stri
   )
 }
 
-/** これより少ない余り（代表量の 1 割未満）は数えない */
+/** これより少ない余り（代表量の 1 割未満）は数えない。冷蔵のみの食材は傷みやすいので、ごく少しでなければ出す */
 const NEGLIGIBLE_PACKS = 0.1
+const NEGLIGIBLE_PERISHABLE_PACKS = 0.03
 /** 代表量の半分以上余るものは目立たせる */
 const BIG_LEFTOVER_PACKS = 0.5
 
 /** 余る食材をラベルで並べる。多いものを先に、多めに余るものは目立たせる。なければ「ほぼ使い切れます」 */
 function Leftovers({ p }: { p: ProposalView }) {
-  const list = p.leftovers.filter((l) => l.packs >= NEGLIGIBLE_PACKS).sort((a, b) => b.packs - a.packs)
+  const list = p.leftovers
+    .filter((l) => l.packs >= (l.perishable ? NEGLIGIBLE_PERISHABLE_PACKS : NEGLIGIBLE_PACKS))
+    .sort((a, b) => b.packs - a.packs)
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-ink-muted">余る食材</span>
@@ -433,7 +449,18 @@ const proposalKey = (p: ProposalView) => p.recipes.map((r) => r.recipeId).join()
  * 提案カードの料理ごとの「− ○食分 ＋」（案D D-PlanNew）。
  * カード全体が案を選ぶラベルなので、押しても案は切り替えない（ボタンはラベルを働かせないが、念のため止める）
  */
-function DishServings({ title, value, onChange }: { title: string; value: number; onChange: (v: number) => void }) {
+function DishServings({
+  title,
+  value,
+  disabled = false,
+  onChange,
+}: {
+  title: string
+  value: number
+  /** 固定中は押せない */
+  disabled?: boolean
+  onChange: (v: number) => void
+}) {
   const btn =
     'flex size-8 items-center justify-center rounded-full bg-surface text-ink disabled:text-line-strong disabled:cursor-default'
   const press = (e: React.MouseEvent, v: number) => {
@@ -442,12 +469,12 @@ function DishServings({ title, value, onChange }: { title: string; value: number
     onChange(v)
   }
   return (
-    <span className="flex shrink-0 items-center rounded-full bg-sunken p-0.5">
+    <span className={`flex shrink-0 items-center rounded-full bg-sunken p-0.5 ${disabled ? 'opacity-45' : ''}`}>
       <button
         type="button"
-        onClick={(e) => press(e, value - 1)}
-        disabled={value <= 1}
-        aria-label={`${title} を1食減らす`}
+        onClick={(e) => press(e, stepDown(value))}
+        disabled={disabled || !canStepDown(value)}
+        aria-label={`${title} の食分を減らす`}
         className={btn}
       >
         <Icon name="minus" size={15} strokeWidth={2.2} />
@@ -455,9 +482,9 @@ function DishServings({ title, value, onChange }: { title: string; value: number
       <span className="min-w-10.5 text-center text-[13px] font-bold tabular-nums">{fmtServings(value)}食分</span>
       <button
         type="button"
-        onClick={(e) => press(e, value + 1)}
-        disabled={value >= MAX_SERVINGS}
-        aria-label={`${title} を1食増やす`}
+        onClick={(e) => press(e, stepUp(value))}
+        disabled={disabled || !canStepUp(value)}
+        aria-label={`${title} の食分を増やす`}
         className={btn}
       >
         <Icon name="plus" size={15} strokeWidth={2.2} />
@@ -473,14 +500,22 @@ function fmtServings(n: number): string {
 
 function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   const anchors = anchorsKey(plan)
-  // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理が変わったら 1 回目に戻る）
-  const [savedRounds, setRounds] = useSessionState(roundsStorageKey(plan.id), firstRound(anchors), isProposalRounds)
-  const rounds = currentRounds(savedRounds, anchors)
-  // 食べたい料理が変わったら保存値も 1 回目で上書きする（元に戻したときに古い回が復活しないように）
+  // 鍵で固定した料理と食数（食べたい料理が変わったら捨てる）
+  const [savedLocks, setSavedLocks] = useSessionState(locksStorageKey(plan.id), noServings(anchors), isProposalServings)
   useEffect(() => {
-    if (savedRounds.anchors !== anchors) setRounds(firstRound(anchors))
-  }, [savedRounds.anchors, anchors, setRounds])
-  const recs = useRecommendations(plan.id, rounds.shown)
+    if (savedLocks.anchors !== anchors) setSavedLocks(noServings(anchors))
+  }, [savedLocks.anchors, anchors, setSavedLocks])
+  const locked = savedLocks.anchors === anchors ? savedLocks.servings : {}
+  const fixed = Object.entries(locked).map(([recipeId, servings]) => ({ recipeId, servings }))
+  // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理か固定が変わったら 1 回目に戻る）
+  const roundsKey = `${anchors}|${locksKey(locked)}`
+  const [savedRounds, setRounds] = useSessionState(roundsStorageKey(plan.id), firstRound(roundsKey), isProposalRounds)
+  const rounds = currentRounds(savedRounds, roundsKey)
+  // 変わったら保存値も 1 回目で上書きする（元に戻したときに古い回が復活しないように）
+  useEffect(() => {
+    if (savedRounds.anchors !== roundsKey) setRounds(firstRound(roundsKey))
+  }, [savedRounds.anchors, roundsKey, setRounds])
+  const recs = useRecommendations(plan.id, rounds.shown, fixed)
   const replace = useReplacePlanRecipes(plan.id)
   // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
   const [pickedKey, setPickedKey] = useState<string | null>(null)
@@ -499,9 +534,32 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   }, [savedServings.anchors, anchors, setSavedServings])
   const servings = savedServings.anchors === anchors ? savedServings.servings : {}
   function setDishServings(recipeId: string, value: number) {
-    const v = Math.max(1, Math.min(MAX_SERVINGS, value))
-    setSavedServings({ anchors, servings: { ...servings, [recipeId]: v } })
+    setSavedServings({ anchors, servings: { ...servings, [recipeId]: value } })
   }
+  // 鍵: その料理と今の食分を固定する／外す。固定を変えたら選び直すので、選択は新しい 1 番目に戻す
+  function toggleLock(recipeId: string, sv: number) {
+    const next = { ...locked }
+    if (recipeId in next) delete next[recipeId]
+    // 上限より多い食数で作った献立（上限を入れる前のもの）でも固定できるように丸める
+    else next[recipeId] = Math.min(sv, MAX_SERVINGS_PER_DISH)
+    setSavedLocks({ anchors, servings: next })
+    setPickedKey(null)
+    setError(null)
+  }
+  function unlockAll() {
+    setSavedLocks(noServings(anchors))
+    setPickedKey(null)
+    setError(null)
+  }
+  // 料理名は案から。選び直している間（案が空）はレシピ一覧から引く
+  const catalog = useRecipes()
+  const titles = new Map([
+    ...(catalog.data ?? []).map((r) => [r.id, r.title] as const),
+    ...proposals.flatMap((p) => p.recipes.map((r) => [r.recipeId, r.title] as const)),
+  ])
+  const anchorIds = new Set(plan.recipes.filter((r) => r.role === 'anchor').map((r) => r.recipeId))
+  const fixedCount = new Set([...anchorIds, ...Object.keys(locked)]).size
+  const restCount = Math.max(0, (proposals[0]?.recipes.length ?? fixedCount) - fixedCount)
   // 食分を変えた案だけ、その食分で評価し直す（案の顔ぶれは変えない）
   const adjusted = proposals.map((p) =>
     p.recipes.map(({ recipeId, role, servings: sv, dayIndex }) => ({
@@ -529,7 +587,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
     setError(null)
   }
   function backToFirst() {
-    setRounds(firstRound(anchors))
+    setRounds(firstRound(roundsKey))
     setPickedKey(null)
     setError(null)
   }
@@ -573,6 +631,34 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
           </button>
         )}
       </div>
+      {fixed.length > 0 ? (
+        <div className="flex items-start gap-3 rounded-[22px] bg-accent-soft px-4 py-3.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-white">
+            <Icon name="lock" size={16} strokeWidth={2.2} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <p className="text-sm font-bold">
+              固定中：
+              {fixed.map((f) => `${titles.get(f.recipeId) ?? ''} ${fmtServings(f.servings)}食分`).join('、')}
+            </p>
+            <p className="text-xs leading-relaxed text-[#5c3a22]">
+              この料理と食分・材料はそのままで、残り{restCount}品を余りが少なくなるように提案しています
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={unlockAll}
+            className="min-h-9 shrink-0 rounded-full bg-surface px-3 text-xs font-bold text-accent-strong"
+          >
+            外す
+          </button>
+        </div>
+      ) : (
+        <p className="flex items-center gap-2 text-xs text-ink-muted">
+          <Icon name="lock" size={14} strokeWidth={2} className="shrink-0" />
+          鍵で料理と食分を固定すると、それに合わせて残りの料理を提案し直します
+        </p>
+      )}
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
       {((recs.isSuccess && !hasMore && (rounds.round > 1 || proposals.length === 0)) ||
@@ -642,26 +728,54 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                     )}
                   </span>
                   <ul className="flex flex-col gap-2.5">
-                    {p.recipes.map((r, j) => (
-                      <li key={r.recipeId} className="flex items-center gap-2">
-                        <DishPhotoButton recipeId={r.recipeId} title={r.title} />
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate text-[15px] font-bold">{r.title}</span>
-                          <span className="text-xs text-ink-muted">
-                            {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
-                            {kitLocation(view, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                    {p.recipes.map((r, j) => {
+                      const isLocked = r.recipeId in locked
+                      const value = list[j]?.servings ?? r.servings
+                      return (
+                        <li
+                          key={r.recipeId}
+                          className={`-mx-1.5 flex items-center gap-2 rounded-[18px] p-1.5 ${isLocked ? 'bg-accent-wash' : ''}`}
+                        >
+                          <DishPhotoButton recipeId={r.recipeId} title={r.title} />
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate text-[15px] font-bold">{r.title}</span>
+                            <span className={`text-xs ${isLocked ? 'font-bold text-accent-strong' : 'text-ink-muted'}`}>
+                              {/* キャンバスに合わせて、固定した追加料理は「固定」だけ */}
+                              {r.role === 'anchor' ? '選んだ料理' : isLocked ? '固定' : '追加'}
+                              {r.role === 'anchor' && isLocked && ' ・ 固定'} ・ {r.dayIndex}日目
+                              {kitLocation(view, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                            </span>
                           </span>
-                        </span>
-                        <DishServings
-                          title={r.title}
-                          value={list[j]?.servings ?? r.servings}
-                          onChange={(v) => setDishServings(r.recipeId, v)}
-                        />
-                      </li>
-                    ))}
+                          <DishServings
+                            title={r.title}
+                            value={value}
+                            disabled={isLocked}
+                            onChange={(v) => setDishServings(r.recipeId, v)}
+                          />
+                          <button
+                            type="button"
+                            aria-pressed={isLocked}
+                            aria-label={`${r.title} の料理と食分を固定`}
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              toggleLock(r.recipeId, value)
+                            }}
+                            className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
+                              isLocked ? 'bg-accent text-white' : 'bg-ground text-ink-muted'
+                            }`}
+                          >
+                            <Icon name={isLocked ? 'lock' : 'unlock'} size={16} strokeWidth={isLocked ? 2.2 : 2} />
+                          </button>
+                        </li>
+                      )
+                    })}
                   </ul>
-                  <span className="-mt-1 text-right text-[13px] text-ink-soft">
-                    合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
+                  <span className="-mt-1 flex flex-col items-end gap-0.5 text-right text-[13px] text-ink-soft">
+                    <span>
+                      合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
+                    </span>
+                    <ProposalCost cost={view.cost} />
                   </span>
                   {evaluation?.isError && (
                     <p className="text-[13px] text-danger">

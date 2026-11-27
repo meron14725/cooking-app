@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_PRICE_YEN } from '../domain/constants'
 
 /** 売り場の区分（買い物リストの並び順もこの順） */
 export const CATEGORY_OPTIONS = [
@@ -70,6 +71,17 @@ export const ingredientInputSchema = z
     beforeCookTask: optionalText,
     frozenCookNote: optionalText,
     isStaple: z.boolean().default(false),
+    /**
+     * 代表量あたりの価格（円）。省略 = 今の値のまま、null = 未設定に戻す。
+     * 今の値と違えば手入力（manual）として保存する
+     */
+    priceYen: z
+      .number()
+      .int('価格は整数で入れてください')
+      .min(0, '価格は 0 以上にしてください')
+      .max(MAX_PRICE_YEN)
+      .nullable()
+      .optional(),
     packageUnits: z.array(packageUnitInputSchema).max(10).default([]),
   })
   .superRefine((v, ctx) => {
@@ -90,6 +102,10 @@ export const ingredientInputSchema = z
 
 export type IngredientInput = z.input<typeof ingredientInputSchema>
 export type IngredientInputParsed = z.output<typeof ingredientInputSchema>
+
+export const PRICE_FILTERS = ['missing', 'stale'] as const
+export type PriceFilter = (typeof PRICE_FILTERS)[number]
+export type PriceSource = 'default' | 'manual'
 
 export type PackageUnit = {
   id: string
@@ -115,5 +131,9 @@ export type Ingredient = {
   beforeCookTask: string | null
   frozenCookNote: string | null
   isStaple: boolean
+  /** 代表量あたりの価格（円）。未設定は null */
+  priceYen: number | null
+  priceSource: PriceSource | null
+  priceUpdatedAt: string | null
   packageUnits: PackageUnit[]
 }
