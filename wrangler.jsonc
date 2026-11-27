@@ -14,9 +14,9 @@
     "run_worker_first": true
   },
   "vars": {
-    // Cloudflare Access の設定（docs/deploy.md の手順で値を入れる）。空のままだと全リクエストを拒否する
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": ""
+    // Cloudflare Access の設定（docs/deploy.md の手順 3）。空にすると全リクエストを拒否する
+    "ACCESS_TEAM_DOMAIN": "gentle-moon-9112.cloudflareaccess.com",
+    "ACCESS_AUD": "f4834e60b903606d53e47b43db601d0f8732ce35d1c6791e39bc46876da74a2e"
   },
   "d1_databases": [
     {
