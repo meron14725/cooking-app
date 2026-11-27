@@ -123,10 +123,24 @@ describe('レシピの編集: 分類', () => {
     })
   })
 
+  it('1 つだけ直したら、空の欄は送らない（サーバがルールで決める）', async () => {
+    const saved = setup(recipe({ cuisine: null, cookMinutes: null }))
+    fireEvent.change(await screen.findByLabelText('区分'), { target: { value: 'main' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(saved).toHaveLength(1))
+    expect(saved[0]).toMatchObject({ dishType: 'main', attributesManual: true })
+    expect(saved[0]).not.toHaveProperty('cuisine')
+    expect(saved[0]).not.toHaveProperty('usesMixingUnit')
+    expect(saved[0]).not.toHaveProperty('cookMinutes')
+  })
+
   it('手で設定したレシピは「自動に戻す」で自動に戻せる', async () => {
     const saved = setup(recipe({ attributesSource: 'manual' }))
     expect(await screen.findByText('手で設定しました')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('区分'), { target: { value: 'soup' } })
     fireEvent.click(screen.getByRole('button', { name: '自動に戻す' }))
+    // 欄は保存されている値に戻る
+    expect(screen.getByLabelText('区分')).toHaveProperty('value', 'side')
     expect(screen.getByText('保存すると、料理名と材料から自動で決め直します')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(saved).toHaveLength(1))

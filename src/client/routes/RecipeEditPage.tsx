@@ -265,16 +265,20 @@ function toInput(f: FormState, masters: Map<string, UnitMaster>): Converted {
   }
 }
 
-/** 区分などの送り方: 直したら値と manual、自動に戻すなら false、触っていなければ送らない */
+/**
+ * 区分などの送り方: 直したら manual の印と、空でない欄の値。空の欄は送らず、サーバがルールで決める
+ * （まぜ技・調理時間は今の値を残す）。自動に戻すなら false、触っていなければ何も送らない
+ */
 function attributesInput(f: FormState): Partial<RecipeInput> {
   if (f.attributesMode === 'reset') return { attributesManual: false }
   if (f.attributesMode === 'auto') return {}
   const a = f.attributes
+  const minutes = parseNumber(a.cookMinutes)
   return {
-    dishType: a.dishType || null,
-    cuisine: a.cuisine || null,
-    usesMixingUnit: a.usesMixingUnit === '' ? null : a.usesMixingUnit === 'yes',
-    cookMinutes: parseNumber(a.cookMinutes),
+    ...(a.dishType ? { dishType: a.dishType } : {}),
+    ...(a.cuisine ? { cuisine: a.cuisine } : {}),
+    ...(a.usesMixingUnit ? { usesMixingUnit: a.usesMixingUnit === 'yes' } : {}),
+    ...(minutes !== null ? { cookMinutes: minutes } : {}),
     attributesManual: true,
   }
 }
@@ -501,7 +505,14 @@ export function RecipeEditPage() {
         source={existing.data?.attributesSource ?? null}
         error={errors.cookMinutes}
         onChange={setAttribute}
-        onReset={() => set('attributesMode', 'reset')}
+        onReset={() =>
+          // 欄も保存されている値に戻す（直した値が残って見えないように）
+          setForm((f) => ({
+            ...f,
+            attributesMode: 'reset',
+            attributes: existing.data ? toForm(existing.data).attributes : emptyAttributes(),
+          }))
+        }
       />
 
       <Checkbox
@@ -792,7 +803,7 @@ function AttributesFields({
     form.attributesMode === 'reset'
       ? '保存すると、料理名と材料から自動で決め直します'
       : form.attributesMode === 'manual'
-        ? '保存すると、この値を手で設定した値として残します'
+        ? '保存すると、この値を手で設定した値として残します。空の欄は自動で決めます'
         : source
           ? ATTRIBUTE_SOURCE_NOTES[source]
           : '空なら、保存するときに料理名と材料から自動で決めます'
