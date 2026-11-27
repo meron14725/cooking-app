@@ -312,6 +312,8 @@ export const shoppingItems = sqliteTable(
     buyQuantity: real('buy_quantity').notNull(),
     checkedAt: text('checked_at'),
     isManual: bool('is_manual').notNull().default(false),
+    /** 実際に払った金額（円）。入れたら合計にこの値を使う（docs/design/10-cost.md）。CHECK は付けない（テーブルの作り直しになるため） */
+    paidYen: integer('paid_yen'),
     ...timestamps,
   },
   (t) => [

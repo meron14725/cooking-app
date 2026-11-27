@@ -124,6 +124,37 @@ describe('買い物リスト', () => {
     ])
   })
 
+  it('払った金額を入れると合計にその値を使い、食材の価格も手入力として直す。量を変えたら消える', async () => {
+    const plan = await confirmed()
+    const porkRow = (await list(plan.id)).find((i) => i.name === '豚こま切れ肉') as ShoppingItem
+    // 200g を 280 円で買った → 代表量（200gパック）あたり 280 円
+    const res = await api.call<ShoppingItem>('PUT', `/shopping-items/${porkRow.id}/paid`, { paidYen: 280 })
+    expect(res.status).toBe(200)
+    expect(res.body.paidYen).toBe(280)
+    const master = (await api.call<Ingredient>('GET', `/ingredients/${pork.id}`)).body
+    expect(master).toMatchObject({ priceYen: 280, priceSource: 'manual' })
+    const { cost } = (await api.call<ShoppingList>('GET', `/plans/${plan.id}/shopping`)).body
+    expect(cost.buyYen).toBe(280)
+
+    // 400g パックに変えたら、払った金額は合わないので消す
+    const units = porkRow.packageUnits
+    const changed = await api.call<ShoppingItem>('PATCH', `/shopping-items/${porkRow.id}`, {
+      packageUnitId: units[1]?.id,
+      packageCount: 1,
+    })
+    expect(changed.body.paidYen).toBeNull()
+  })
+
+  it('払った金額は null で消せる。負の値や小数は入れられない', async () => {
+    const plan = await confirmed()
+    const row = (await list(plan.id))[0] as ShoppingItem
+    expect((await api.call('PUT', `/shopping-items/${row.id}/paid`, { paidYen: -1 })).status).toBe(400)
+    expect((await api.call('PUT', `/shopping-items/${row.id}/paid`, { paidYen: 1.5 })).status).toBe(400)
+    await api.call('PUT', `/shopping-items/${row.id}/paid`, { paidYen: 150 })
+    const cleared = await api.call<ShoppingItem>('PUT', `/shopping-items/${row.id}/paid`, { paidYen: null })
+    expect(cleared.body.paidYen).toBeNull()
+  })
+
   it('在庫で足りる食材は載らない', async () => {
     await api.call('POST', '/inventory', { ingredientId: pork.id, quantity: 300 })
     const plan = await confirmed()
