@@ -127,15 +127,16 @@ export const recipeInputSchema = z.object({
   cookCount: optionalCount,
   score: optionalCount,
   /**
-   * 区分・系統・まぜ技・調理時間。省略（undefined）か null なら、名前・材料・ホットクックの設定から決める
-   * （手で直したレシピは今の値を残す）。値があればそれを使う
+   * 区分・系統・まぜ技・調理時間。値があればそれを使う。省略（undefined）か null なら、名前・材料・
+   * ホットクックの設定から決める。ただし、まぜ技と調理時間は省略したら今の値を残す（取り込み元の値を消さない）。
+   * 手で直したレシピは、省略した欄も今の値を残す
    */
   dishType: dishTypeSchema.nullish(),
   cuisine: cuisineSchema.nullish(),
   usesMixingUnit: z.boolean().nullish(),
   cookMinutes: z.number().int().min(1).max(600).nullish(),
   /**
-   * true = 上の 4 つを本人が直した（null も含めてそのまま保存し、推定で上書きしない）。
+   * true = 上の 4 つを本人が直した（送った値を保存し、以後は推定で上書きしない。省いた欄はルールで決める）。
    * false = 手で直した値を捨てて自動に戻す。省略 = 手で直したレシピならその値を残す
    */
   attributesManual: z.boolean().optional(),

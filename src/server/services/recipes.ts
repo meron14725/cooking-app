@@ -40,25 +40,19 @@ const ATTRIBUTE_KEYS = ['dishType', 'cuisine', 'usesMixingUnit', 'cookMinutes'] 
 
 /**
  * 区分・系統・まぜ技・調理時間を決める（docs/design/09-recommendation-v2.md）。
- * - attributesManual: 入力のまま保存（manual）
- * - 手で直したレシピ: 入力で省略した欄は今の値を残す（manual のまま）。attributesManual: false なら自動に戻す
- * - それ以外: 入力の値 → ルール → AI で決めた今の値、の順。AI の値が残れば ai、なければ rule
+ * - 入力で省略（undefined）・null の欄は、ルールで決める
+ * - まぜ技と調理時間は、入力で省略したら今の値を残す（取り込み元の値を、編集で保存しても消さないため）
+ * - attributesManual: true なら manual（以後、推定で上書きしない）。false なら手で直した値を捨てて自動に戻す
+ * - 手で直したレシピは、入力で省略した欄も今の値を残す（manual のまま）
+ * - それ以外は、ルールで決まらなかった欄に AI で決めた今の値を残す（残れば ai、なければ rule）
  */
 export function resolveAttributes(
   input: RecipeInputParsed,
   ingredientRows: Map<string, IngredientRow>,
   existing?: RecipeRow,
 ): RecipeAttributes & { attributesSource: AttributeSource } {
-  if (input.attributesManual) {
-    return {
-      dishType: input.dishType ?? null,
-      cuisine: input.cuisine ?? null,
-      usesMixingUnit: input.usesMixingUnit ?? null,
-      cookMinutes: input.cookMinutes ?? null,
-      attributesSource: 'manual',
-    }
-  }
-  if (existing?.attributesSource === 'manual' && input.attributesManual !== false) {
+  const reset = input.attributesManual === false
+  if (existing?.attributesSource === 'manual' && !reset && !input.attributesManual) {
     return {
       dishType: input.dishType === undefined ? existing.dishType : input.dishType,
       cuisine: input.cuisine === undefined ? existing.cuisine : input.cuisine,
@@ -67,6 +61,9 @@ export function resolveAttributes(
       attributesSource: 'manual',
     }
   }
+  // 自動に戻すときは、手で直した値を残さない
+  const keep = <K extends 'usesMixingUnit' | 'cookMinutes'>(key: K) =>
+    input[key] !== undefined || reset ? input[key] : existing?.[key]
   const derived = deriveAttributes(
     {
       title: input.title,
@@ -80,12 +77,13 @@ export function resolveAttributes(
     {
       dishType: input.dishType,
       cuisine: input.cuisine,
-      usesMixingUnit: input.usesMixingUnit,
-      cookMinutes: input.cookMinutes,
+      usesMixingUnit: keep('usesMixingUnit'),
+      cookMinutes: keep('cookMinutes'),
     },
   )
+  if (input.attributesManual) return { ...derived, attributesSource: 'manual' }
   let usedAi = false
-  if (existing?.attributesSource === 'ai') {
+  if (existing?.attributesSource === 'ai' && !reset) {
     for (const key of ATTRIBUTE_KEYS) {
       if (derived[key] === null && existing[key] !== null) {
         ;(derived as Record<string, unknown>)[key] = existing[key]
@@ -294,8 +292,8 @@ export async function setRecipeFavorite(db: Db, id: string, favorite: boolean): 
  * 公式レシピの情報（imageKey・件数など）は入力で省略されたら今の値を残す（drizzle は undefined を set しない）
  */
 export async function updateRecipe(db: Db, id: string, input: RecipeInputParsed): Promise<Recipe> {
-  await getRecipe(db, id)
-  const existing = await db.query.recipes.findFirst({ where: eq(recipes.id, id) })
+  const existing = await db.query.recipes.findFirst({ where: and(eq(recipes.id, id), isNull(recipes.archivedAt)) })
+  if (!existing) throw new ApiError(404, 'NOT_FOUND', 'レシピが見つかりません')
   const rows = await assertIngredientsExist(db, input, id)
   const { sourceType: _, ...values } = recipeValues(input)
   await db.batch([
