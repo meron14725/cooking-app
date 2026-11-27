@@ -95,6 +95,30 @@ describe('買い物リスト', () => {
     expect(items[1]?.packageUnits.map((u) => u.label)).toEqual(['200gパック', '400gパック'])
   })
 
+  it('推定金額: 今回買う分・余り・1 食あたり。価格のない食材は未設定に数える', async () => {
+    await api.call('PUT', `/ingredients/${pork.id}`, {
+      ...base,
+      name: '豚こま切れ肉',
+      category: 'meat',
+      unit: 'g',
+      priceYen: 300,
+      packageUnits: pork.packageUnits,
+    })
+    const plan = await confirmed()
+    const { cost } = (await api.call<ShoppingList>('GET', `/plans/${plan.id}/shopping`)).body
+    // 豚こま 200g 300 円を買い、150g 使う（余り 50g = 75 円）。キャベツは価格なし
+    expect(cost).toMatchObject({
+      buyYen: 300,
+      leftoverYen: 80,
+      eatYen: 230,
+      remainingYen: 300,
+      totalMeals: 1,
+      unpricedCount: 1,
+      hasUnpriced: true,
+    })
+    expect(cost.unpriced.map((u) => u.name)).toEqual(['キャベツ'])
+  })
+
   it('在庫で足りる食材は載らない', async () => {
     await api.call('POST', '/inventory', { ingredientId: pork.id, quantity: 300 })
     const plan = await confirmed()

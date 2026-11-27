@@ -1,5 +1,8 @@
-import { and, asc, eq, isNull, notInArray, sql } from 'drizzle-orm'
-import type { Ingredient, IngredientInputParsed, PackageUnit } from '../../shared/schemas/ingredient'
+import { and, asc, eq, isNotNull, isNull, lt, notInArray, sql } from 'drizzle-orm'
+import { PRICE_STALE_DAYS } from '../../shared/domain/constants'
+import { rescalePrice } from '../../shared/domain/cost'
+import { representativeQuantity } from '../../shared/domain/recommend'
+import type { Ingredient, IngredientInputParsed, PackageUnit, PriceFilter } from '../../shared/schemas/ingredient'
 import { ulid } from '../../shared/ulid'
 import type { Db } from '../db/client'
 import { escapeLike } from '../db/like'
@@ -31,6 +34,9 @@ function toIngredient(row: IngredientRow, units: PackageUnitRow[]): Ingredient {
     beforeCookTask: row.beforeCookTask,
     frozenCookNote: row.frozenCookNote,
     isStaple: row.isStaple,
+    priceYen: row.priceYen,
+    priceSource: row.priceYen === null ? null : row.priceSource,
+    priceUpdatedAt: row.priceYen === null ? null : row.priceUpdatedAt,
     packageUnits: units.map(toPackageUnit),
   }
 }
@@ -46,8 +52,37 @@ export function normalizeDefaultUnit<T extends { isDefault: boolean }>(units: T[
 }
 
 function ingredientValues(input: IngredientInputParsed) {
-  const { packageUnits: _, ...rest } = input
+  const { packageUnits: _, priceYen: __, ...rest } = input
   return rest
+}
+
+type PriceColumns = Pick<IngredientRow, 'priceYen' | 'priceSource' | 'priceUpdatedAt'>
+
+/** 手で入れた価格の列。null なら 3 列とも未設定に戻す */
+function manualPrice(priceYen: number | null): PriceColumns {
+  return priceYen === null
+    ? { priceYen: null, priceSource: null, priceUpdatedAt: null }
+    : { priceYen, priceSource: 'manual', priceUpdatedAt: new Date().toISOString() }
+}
+
+/**
+ * 更新後の価格の列（docs/design/10-cost.md）
+ * - 入力の価格が今と違う → 手入力として保存
+ * - 同じか省略 → 今の値のまま。代表量が変わったら、単価が変わらないように換算する（出どころと日付はそのまま）
+ */
+export function nextPriceColumns(
+  current: PriceColumns,
+  inputPriceYen: number | null | undefined,
+  oldRepresentative: number,
+  newRepresentative: number,
+): PriceColumns {
+  if (inputPriceYen !== undefined && inputPriceYen !== current.priceYen) return manualPrice(inputPriceYen)
+  if (current.priceYen === null) return { priceYen: null, priceSource: null, priceUpdatedAt: null }
+  return {
+    priceYen: rescalePrice(current.priceYen, oldRepresentative, newRepresentative),
+    priceSource: current.priceSource,
+    priceUpdatedAt: current.priceUpdatedAt,
+  }
 }
 
 function findByName(db: Db, name: string) {
@@ -65,8 +100,19 @@ async function assertNameAvailable(db: Db, name: string, exceptId?: string) {
   }
 }
 
-export async function listIngredients(db: Db, opts: { q?: string; category?: string } = {}): Promise<Ingredient[]> {
+export async function listIngredients(
+  db: Db,
+  opts: { q?: string; category?: string; price?: PriceFilter; now?: Date } = {},
+): Promise<Ingredient[]> {
   const conditions = [isNull(ingredients.archivedAt)]
+  if (opts.price === 'missing') {
+    // 常備品は金額の合計に入れないので「未設定」にも出さない
+    conditions.push(isNull(ingredients.priceYen), eq(ingredients.isStaple, false))
+  }
+  if (opts.price === 'stale') {
+    const before = new Date((opts.now ?? new Date()).getTime() - PRICE_STALE_DAYS * 86_400_000).toISOString()
+    conditions.push(isNotNull(ingredients.priceYen), lt(ingredients.priceUpdatedAt, before))
+  }
   if (opts.category) conditions.push(eq(ingredients.category, opts.category as IngredientRow['category']))
   if (opts.q) {
     const like = `%${escapeLike(opts.q)}%`
@@ -124,7 +170,11 @@ export async function createIngredient(db: Db, input: IngredientInputParsed): Pr
     await db.batch([
       db
         .update(ingredients)
-        .set({ ...ingredientValues(input), archivedAt: null })
+        .set({
+          ...ingredientValues(input),
+          ...(input.priceYen === undefined ? {} : manualPrice(input.priceYen)),
+          archivedAt: null,
+        })
         .where(eq(ingredients.id, existing.id)),
       db.delete(packageUnits).where(eq(packageUnits.ingredientId, existing.id)),
       ...units.map(({ id: _, ...u }) => db.insert(packageUnits).values({ ingredientId: existing.id, ...u })),
@@ -134,7 +184,7 @@ export async function createIngredient(db: Db, input: IngredientInputParsed): Pr
   const id = ulid()
   const units = normalizeDefaultUnit(input.packageUnits)
   await db.batch([
-    db.insert(ingredients).values({ id, ...ingredientValues(input) }),
+    db.insert(ingredients).values({ id, ...ingredientValues(input), ...manualPrice(input.priceYen ?? null) }),
     ...units.map(({ id: _, ...u }) => db.insert(packageUnits).values({ ingredientId: id, ...u })),
   ])
   return getIngredient(db, id)
@@ -149,11 +199,20 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
   await assertNameAvailable(db, input.name, id)
 
   const units = normalizeDefaultUnit(input.packageUnits)
+  const price = nextPriceColumns(
+    current,
+    input.priceYen,
+    representativeQuantity(current),
+    representativeQuantity({ unit: input.unit, packageUnits: units }),
+  )
   const currentIds = new Set(current.packageUnits.map((u) => u.id))
   const keptIds = units.flatMap((u) => (u.id && currentIds.has(u.id) ? [u.id] : []))
 
   await db.batch([
-    db.update(ingredients).set(ingredientValues(input)).where(eq(ingredients.id, id)),
+    db
+      .update(ingredients)
+      .set({ ...ingredientValues(input), ...price })
+      .where(eq(ingredients.id, id)),
     db
       .delete(packageUnits)
       .where(

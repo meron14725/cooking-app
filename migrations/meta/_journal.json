@@ -50,6 +50,13 @@
       "when": 1795790230137,
       "tag": "0006_recipe_favorite",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1795795856225,
+      "tag": "0007_ingredient_price",
+      "breakpoints": true
     }
   ]
 }
