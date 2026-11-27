@@ -12,7 +12,9 @@ import {
   useUpdateShoppingItem,
 } from '../api/shopping'
 import { Button, inputBaseClass, parseNumber } from './form'
+import { Icon } from './Icon'
 import { IngredientSelect } from './ingredientInputs'
+import { StickyAction } from './StickyAction'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 const fmt = (n: number) => String(Math.round(n * 100) / 100)
@@ -124,7 +126,7 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
   }
 
   return (
-    <div className="space-y-2 border-t border-stone-100 bg-stone-50 px-4 py-3">
+    <div className="space-y-2 border-t border-line-soft bg-ground px-4 py-3">
       <AmountInputs
         units={item.packageUnits}
         unitLabel={item.unit}
@@ -135,8 +137,8 @@ function EditPanel({ planId, item, onDone }: { planId: string; item: ShoppingIte
         quantity={quantity}
         setQuantity={setQuantity}
       />
-      {item.checkedAt && <p className="text-xs text-stone-500">在庫に入れた量も合わせて直します</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {item.checkedAt && <p className="text-xs text-ink-muted">在庫に入れた量も合わせて直します</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSave} disabled={update.isPending} className="flex-1">
           保存
@@ -164,19 +166,21 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
           aria-pressed={checked}
           onClick={() => toggle.mutate({ id: item.id, checked: !checked })}
           disabled={toggle.isPending}
-          className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 py-2 text-left"
+          className="flex min-h-15 min-w-0 flex-1 items-center gap-3 py-2 pl-3.5 text-left"
         >
           <span
-            className={`flex size-7 shrink-0 items-center justify-center rounded-md border-2 text-base ${
-              checked ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 bg-white'
+            className={`flex size-6 shrink-0 items-center justify-center rounded-md border-2 ${
+              checked ? 'border-leaf bg-leaf text-white' : 'border-line-strong bg-surface'
             }`}
           >
-            {checked ? '✓' : ''}
+            {checked && <Icon name="check" size={16} strokeWidth={2.8} />}
           </span>
-          <span className={`min-w-0 ${checked ? 'text-stone-400 line-through' : ''}`}>
-            <span className="font-bold">{item.name}</span> <span>{main}</span>
-            {note && <span className="text-xs text-stone-500">（{note}）</span>}
-            <span className="block truncate text-xs text-stone-400 no-underline">
+          <span className={`flex min-w-0 flex-col gap-0.5 ${checked ? 'opacity-55' : ''}`}>
+            <span className={`text-base font-bold ${checked ? 'line-through' : ''}`}>
+              {item.name} <span className="font-medium">{main}</span>
+            </span>
+            <span className="truncate text-xs text-ink-muted">
+              {note && `${note} ・ `}
               {item.isManual ? '手で追加' : item.usedFor.join('・')}
             </span>
           </span>
@@ -186,12 +190,12 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-label={`${item.name}を直す`}
-          className="min-h-11 shrink-0 px-2 text-sm text-orange-700"
+          className="min-h-11 shrink-0 px-2 text-sm text-accent"
         >
           直す
         </button>
       </div>
-      {toggle.isError && <p className="px-4 pb-2 text-xs text-red-600">通信できませんでした。もう一度押してください</p>}
+      {toggle.isError && <p className="px-4 pb-2 text-xs text-danger">通信できませんでした。もう一度押してください</p>}
       {open && <EditPanel planId={planId} item={item} onDone={() => setOpen(false)} />}
     </li>
   )
@@ -225,7 +229,7 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
   }
 
   return (
-    <div className="mb-4 space-y-2 rounded-xl border border-orange-200 bg-orange-50 p-4">
+    <div className="space-y-2 rounded-card border border-accent-line bg-accent-wash p-4">
       <IngredientSelect
         value={ingredientId}
         onChange={(id) => {
@@ -250,7 +254,7 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
           setQuantity={setQuantity}
         />
       )}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={onSubmit} disabled={add.isPending} className="flex-1">
           リストに足す
@@ -280,30 +284,42 @@ export function ShoppingListView({ planId }: { planId: string }) {
     }
   }
 
+  const total = data?.length ?? 0
+  const done = total - unchecked
+
   return (
-    <section>
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-stone-500">
-          買い物リスト{data && data.length > 0 && `（${data.length - unchecked}/${data.length}）`}
-        </h2>
-        {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className="text-sm text-orange-700">
-            ＋ 手で足す
-          </button>
-        )}
-      </div>
-      {adding && <AddForm planId={planId} onDone={() => setAdding(false)} />}
-      {isPending && <p className="text-stone-500">読み込み中…</p>}
-      {isError && <p className="text-red-600">読み込めませんでした</p>}
-      {data && data.length === 0 && <p className="mb-4 text-stone-500">買うものはありません。在庫で足ります</p>}
+    <section className="flex flex-col gap-5">
+      {total > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-bold text-ink-muted">買えたもの</h2>
+            <p className="text-[15px] font-bold tabular-nums">
+              {done} / {total}
+            </p>
+          </div>
+          <div
+            role="progressbar"
+            aria-label="買えた数"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={done}
+            className="h-2 overflow-hidden rounded-full bg-line"
+          >
+            <div className="h-full rounded-full bg-leaf" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+      {isPending && <p className="text-ink-muted">読み込み中…</p>}
+      {isError && <p className="text-danger">読み込めませんでした</p>}
+      {data && data.length === 0 && <p className="text-ink-muted">買うものはありません。在庫で足ります</p>}
       {data &&
         CATEGORY_OPTIONS.map((cat) => {
           const items = data.filter((i) => i.category === cat.value)
           if (items.length === 0) return null
           return (
-            <div key={cat.value} className="mb-3">
-              <h3 className="mb-1 text-xs font-bold text-stone-500">{cat.label}</h3>
-              <ul className="divide-y divide-stone-200 overflow-hidden rounded-xl border border-stone-200 bg-white">
+            <div key={cat.value} className="flex flex-col gap-2">
+              <h3 className="text-[13px] font-bold tracking-[0.04em] text-ink-muted">{cat.label}</h3>
+              <ul className="divide-y divide-line-soft overflow-hidden rounded-[16px] border border-line bg-surface">
                 {items.map((i) => (
                   <Row key={i.id} planId={planId} item={i} />
                 ))}
@@ -311,18 +327,31 @@ export function ShoppingListView({ planId }: { planId: string }) {
             </div>
           )
         })}
+      {adding ? (
+        <AddForm planId={planId} onDone={() => setAdding(false)} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="flex min-h-12 items-center justify-center gap-1.5 rounded-control border border-dashed border-line-dashed font-bold text-ink-soft"
+        >
+          <Icon name="plus" size={18} strokeWidth={2} />
+          手で足す
+        </button>
+      )}
       {data && (
-        <>
-          {unchecked > 0 && data.length > 0 && (
-            <p className="mt-4 text-sm text-stone-500">
-              チェックしていないものが {unchecked} 件あります。買わなかったものはそのままで完了できます
-            </p>
-          )}
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          <Button onClick={onComplete} disabled={complete.isPending} className="mt-3 w-full">
+        <StickyAction
+          hint={
+            unchecked > 0 && total > 0
+              ? `チェックしていないものが ${unchecked} 件あります。買わなかったものはそのままで完了できます`
+              : 'チェックしたものは在庫に入ります'
+          }
+        >
+          {error && <p className="text-center text-sm text-danger">{error}</p>}
+          <Button onClick={onComplete} disabled={complete.isPending} className="min-h-13 w-full text-base">
             買い物完了
           </Button>
-        </>
+        </StickyAction>
       )}
     </section>
   )
