@@ -21,6 +21,8 @@ describe('priceByRule', () => {
     expect(priceByRule(ing({ name: '豚肉' }))).toBe(170)
     expect(priceByRule(ing({ name: '高野豆腐', unit: '丁' }))).toBeNull()
     expect(priceByRule(ing({ name: '木綿豆腐', unit: '丁' }))).toBe(80)
+    expect(priceByRule(ing({ name: '卵豆腐', unit: '丁' }))).toBeNull()
+    expect(priceByRule(ing({ name: '切り干し大根' }))).toBe(300)
   })
 
   it('個の食材は代表の販売単位の量をかける', () => {
