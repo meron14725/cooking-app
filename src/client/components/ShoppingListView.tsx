@@ -229,7 +229,7 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
   }
 
   return (
-    <div className="space-y-2 rounded-card border border-accent-line bg-accent-wash p-4">
+    <div className="space-y-2 rounded-card bg-surface p-5 shadow-card">
       <IngredientSelect
         value={ingredientId}
         onChange={(id) => {
@@ -268,7 +268,7 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
 }
 
 /** S04 買い物リスト。売り場ごとに並べ、チェックすると在庫に入る */
-export function ShoppingListView({ planId }: { planId: string }) {
+export function ShoppingListView({ planId, dishes = [] }: { planId: string; dishes?: string[] }) {
   const { data, isPending, isError } = useShoppingList(planId)
   const complete = useCompleteShopping(planId)
   const [adding, setAdding] = useState(false)
@@ -291,9 +291,9 @@ export function ShoppingListView({ planId }: { planId: string }) {
     <section className="flex flex-col gap-5">
       {total > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-bold text-ink-muted">買えたもの</h2>
-            <p className="text-[15px] font-bold tabular-nums">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="min-w-0 text-sm text-ink-muted">{dishes.length > 0 ? dishes.join(' ・ ') : '買えたもの'}</p>
+            <p className="shrink-0 text-[15px] font-bold tabular-nums">
               {done} / {total}
             </p>
           </div>
@@ -305,7 +305,10 @@ export function ShoppingListView({ planId }: { planId: string }) {
             aria-valuenow={done}
             className="h-2 overflow-hidden rounded-full bg-line"
           >
-            <div className="h-full rounded-full bg-leaf" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+            <div
+              className="h-full rounded-full bg-leaf-bright"
+              style={{ width: `${Math.round((done / total) * 100)}%` }}
+            />
           </div>
         </div>
       )}

@@ -37,6 +37,8 @@
   /* 済み・冷蔵 */
   --color-leaf: #3d5236;
   --color-leaf-soft: #e4eadf;
+  /* 進み具合のバー（買い物の買えた数） */
+  --color-leaf-bright: #7e9b6e;
   /* 進み具合の済み */
   --color-leaf-line: #b9cdae;
 

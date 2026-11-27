@@ -625,7 +625,8 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
   const rows = [...plan.recipes].sort((a, b) => a.dayIndex - b.dayIndex)
   return (
     <section>
-      {plan.status !== 'prepping' && (
+      {/* 買い物中は料理名をリストの上に出す（案D） */}
+      {plan.status !== 'prepping' && plan.status !== 'shopping' && (
         <ol className="mb-5 divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
           {rows.map((r) => (
             <li key={r.recipeId} className="py-3">
@@ -639,7 +640,7 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
           ))}
         </ol>
       )}
-      {plan.status === 'shopping' && <ShoppingListView planId={plan.id} />}
+      {plan.status === 'shopping' && <ShoppingListView planId={plan.id} dishes={rows.map((r) => r.title)} />}
       {plan.status === 'prepping' && <PrepAndPack planId={plan.id} />}
       {plan.status === 'shopping' && (
         <Button
