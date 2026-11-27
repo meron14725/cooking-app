@@ -79,6 +79,19 @@ export const importUrlInputSchema = z.object({
   url: z.url('URL の形式が正しくありません').max(2000),
 })
 
+/** 「＋」のパネル: URL・メモ・料理名など何でも。URL を含めばそのページから、なければ文から下書きを作る */
+export const draftInputSchema = z.object({
+  text: z.string().trim().min(1, '送る内容を入れてください').max(4000, '4000 文字までにしてください'),
+})
+export type DraftInput = z.infer<typeof draftInputSchema>
+
+/** 文の中の最初の http(s) の URL と、それ以外の文（メモ） */
+export function splitUrl(text: string): { url: string | null; memo: string } {
+  const m = text.match(/https?:\/\/[^\s<>"'「」（）()]+/)
+  if (!m) return { url: null, memo: text.trim() }
+  return { url: m[0], memo: text.replace(m[0], ' ').replace(/\s+/g, ' ').trim() }
+}
+
 /** 補完提案: 余りそうな食材（レコメンドの余り。冷蔵のみのものを先に） */
 export const suggestRecipeInputSchema = z.object({
   leftovers: z

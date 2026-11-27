@@ -2,12 +2,16 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
 import {
+  draftInputSchema,
   estimateCaloriesInputSchema,
   importUrlInputSchema,
+  type RecipeDraft,
+  splitUrl,
   suggestRecipeInputSchema,
 } from '../../shared/schemas/recipeDraft'
 import { getProvider } from '../ai'
 import type { AppEnv } from '../app'
+import type { Db } from '../db/client'
 import { createDb } from '../db/client'
 import { ApiError } from '../errors'
 import { cocoroOfficial, cocoroSourceText, fetchCocoroRecipe, parseCocoroUrl } from '../services/cocoro'
@@ -22,6 +26,34 @@ const listQuerySchema = z.object({
   sort: recipeSortSchema.optional(),
 })
 
+const masterRefs = (masters: { name: string; unit: string; gramsPerUnit: number | null }[]) =>
+  masters.map((m) => ({ name: m.name, unit: m.unit, gramsPerUnit: m.gramsPerUnit }))
+
+/**
+ * URL のページから下書きを作る（保存しない）。memo があれば利用者のメモとしてページの本文の後ろに付ける。
+ * COCORO KITCHEN のページは HTML に本文がないので、レシピ 1 件の JSON API を取る（services/cocoro.ts）
+ */
+async function draftFromUrl(env: Env, db: Db, rawUrl: string, memo = ''): Promise<RecipeDraft> {
+  const url = assertPublicUrl(rawUrl)
+  const ai = getProvider(env)
+  const cocoro = parseCocoroUrl(url)
+  const [source, masters] = await Promise.all([
+    cocoro
+      ? fetchCocoroRecipe(cocoro).then((recipe) => ({
+          text: cocoroSourceText(recipe),
+          official: cocoroOfficial(recipe, cocoro),
+        }))
+      : fetchPage(url).then((html) => ({ text: buildSourceText(html).text, official: null })),
+    listIngredients(db),
+  ])
+  const raw = await ai.extractRecipe({
+    url: url.toString(),
+    text: memo ? `${source.text}\n\n## 利用者のメモ（ページより優先する）\n${memo}` : source.text,
+    ingredients: masterRefs(masters),
+  })
+  return { ...normalizeDraft(raw, masters, url.toString()), official: source.official }
+}
+
 export const recipeRoutes = new Hono<AppEnv>()
   .get('/', validate('query', listQuerySchema), async (c) => {
     const items = await listRecipes(createDb(c.env.DB), c.req.valid('query'))
@@ -33,26 +65,18 @@ export const recipeRoutes = new Hono<AppEnv>()
   })
   // URL から下書きを作る（保存しない。docs/design/06-ai.md「URL 取り込みの流れ」）
   .post('/import-url', validate('json', importUrlInputSchema), async (c) => {
-    const url = assertPublicUrl(c.req.valid('json').url)
-    const ai = getProvider(c.env)
+    return c.json(await draftFromUrl(c.env, createDb(c.env.DB), c.req.valid('json').url))
+  })
+  // 「＋」のパネル: URL・メモ・料理名など何でも受けて下書きを作る（保存しない）。
+  // URL を含めば import-url と同じ（残りの文はメモとして AI に渡す）、なければ文から AI が下書きを作る
+  .post('/draft', validate('json', draftInputSchema), async (c) => {
     const db = createDb(c.env.DB)
-    // COCORO KITCHEN のページは HTML に本文がないので、レシピ 1 件の JSON API を取る（services/cocoro.ts）
-    const cocoro = parseCocoroUrl(url)
-    const [source, masters] = await Promise.all([
-      cocoro
-        ? fetchCocoroRecipe(cocoro).then((recipe) => ({
-            text: cocoroSourceText(recipe),
-            official: cocoroOfficial(recipe, cocoro),
-          }))
-        : fetchPage(url).then((html) => ({ text: buildSourceText(html).text, official: null })),
-      listIngredients(db),
-    ])
-    const raw = await ai.extractRecipe({
-      url: url.toString(),
-      text: source.text,
-      ingredients: masters.map((m) => ({ name: m.name, unit: m.unit, gramsPerUnit: m.gramsPerUnit })),
-    })
-    return c.json({ ...normalizeDraft(raw, masters, url.toString()), official: source.official })
+    const { url, memo } = splitUrl(c.req.valid('json').text)
+    if (url) return c.json(await draftFromUrl(c.env, db, url, memo))
+    const ai = getProvider(c.env)
+    const masters = await listIngredients(db)
+    const raw = await ai.draftFromText({ text: memo, ingredients: masterRefs(masters) })
+    return c.json(normalizeDraft(raw, masters, null))
   })
   // 余りそうな食材から 1 品の下書きを作る（保存しない。docs/design/06-ai.md「補完レシピ提案の流れ」）
   .post('/suggest', validate('json', suggestRecipeInputSchema), async (c) => {
@@ -68,7 +92,7 @@ export const recipeRoutes = new Hono<AppEnv>()
     const raw = await ai.suggestRecipe({
       leftovers,
       avoidTitles: catalog.map((r) => r.title),
-      ingredients: masters.map((m) => ({ name: m.name, unit: m.unit, gramsPerUnit: m.gramsPerUnit })),
+      ingredients: masterRefs(masters),
     })
     return c.json(normalizeDraft(raw, masters, null))
   })

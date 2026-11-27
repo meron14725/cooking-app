@@ -33,6 +33,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | PUT | `/api/recipes/:id` | 更新（材料・手順は丸ごと置き換え） |
 | DELETE | `/api/recipes/:id` | 論理削除 |
 | POST | `/api/recipes/import-url` | URL から下書きを作る（保存しない）。COCORO KITCHEN の URL はレシピ 1 件の JSON API を取り、`official`（メニュー番号・写真のキー・件数）も返す |
+| POST | `/api/recipes/draft` | 「＋」のパネル。`{ text }`（URL・メモ・料理名など何でも、4000 文字まで）。URL を含めば `import-url` と同じく取り込み（残りの文はメモとして AI に渡す）、なければ AI が文から下書きを作る（保存しない） |
 | POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない）。`{ leftovers: [{ ingredientId, quantity }] }`（余りの優先順） |
 | GET | `/api/images/<キー>` | レシピ写真を R2 から返す。キーは `img/` の直下のファイル名だけ（ほかは 400、無ければ 404）。`Cache-Control: private, max-age=86400` |
 | POST | `/api/recipes/estimate-calories` | 材料と人数から 1 人前のカロリーを AI で推定（保存しない）。`{ caloriesKcal }` を返す |
@@ -41,7 +42,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 - 更新は材料・手順を丸ごと置き換える。作成元（`sourceType`）は作成時のまま変えない
 - 初期データのレシピは `sourceType = seed`、id は `seed-recipe-<key>` で固定（`migrations/0002_seed_recipes.sql`）
 
-`import-url` / `suggest` は `RecipeDraft` を返します。本人が画面で確認・修正し、`POST /api/recipes` で保存します。
+`import-url` / `draft` / `suggest` は `RecipeDraft` を返します。本人が画面で確認・修正し、`POST /api/recipes` で保存します。
 
 ```ts
 // RecipeDraft（抜粋）

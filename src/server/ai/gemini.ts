@@ -1,6 +1,15 @@
 import { type ZodType, z } from 'zod'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
-import { CALORIE_SYSTEM, caloriePrompt, EXTRACT_SYSTEM, extractPrompt, SUGGEST_SYSTEM, suggestPrompt } from './prompts'
+import {
+  CALORIE_SYSTEM,
+  caloriePrompt,
+  EXTRACT_SYSTEM,
+  extractPrompt,
+  SUGGEST_SYSTEM,
+  suggestPrompt,
+  TEXT_DRAFT_SYSTEM,
+  textDraftPrompt,
+} from './prompts'
 import { AiError, type AiProvider } from './provider'
 
 const DEFAULT_MODEL = 'gemini-3.8-flash'
@@ -55,6 +64,10 @@ export class GeminiProvider implements AiProvider {
 
   extractRecipe(input: Parameters<AiProvider['extractRecipe']>[0]) {
     return this.generate(EXTRACT_SYSTEM, extractPrompt(input), recipeDraftRawSchema)
+  }
+
+  draftFromText(input: Parameters<AiProvider['draftFromText']>[0]) {
+    return this.generate(TEXT_DRAFT_SYSTEM, textDraftPrompt(input), recipeDraftRawSchema)
   }
 
   suggestRecipe(input: Parameters<AiProvider['suggestRecipe']>[0]) {

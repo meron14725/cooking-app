@@ -11,8 +11,12 @@ export type SuggestPromptInput = {
   ingredients: MasterRef[]
 }
 
+/** 「＋」のパネルに書いた文（メモ・料理名・材料の一覧など。URL は含まない）から下書きを作るときに渡すもの */
+export type TextDraftPromptInput = { text: string; ingredients: MasterRef[] }
+
 export interface AiProvider {
   extractRecipe(input: { url: string; text: string; ingredients: MasterRef[] }): Promise<RecipeDraftRaw>
+  draftFromText(input: TextDraftPromptInput): Promise<RecipeDraftRaw>
   suggestRecipe(input: SuggestPromptInput): Promise<RecipeDraftRaw>
   estimateCalories(input: EstimateCaloriesInput): Promise<{ caloriesKcal: number }>
 }
