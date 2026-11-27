@@ -13,13 +13,15 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/ingredients` | 一覧（`?q=` で名前・別名を検索、`?category=`） |
-| POST | `/api/ingredients` | 作成（販売単位を含めて作れる） |
+| GET | `/api/ingredients` | 一覧（`?q=` で名前・別名を検索、`?category=`）。`{ items }` |
+| POST | `/api/ingredients` | 作成（販売単位を含めて作る） |
 | GET | `/api/ingredients/:id` | 詳細（販売単位を含む） |
-| PATCH | `/api/ingredients/:id` | 更新 |
-| DELETE | `/api/ingredients/:id` | 論理削除 |
-| POST | `/api/ingredients/:id/package-units` | 販売単位を追加 |
-| PATCH / DELETE | `/api/package-units/:id` | 販売単位を更新・削除 |
+| PUT | `/api/ingredients/:id` | 丸ごと更新。販売単位は `id` があれば更新、なければ追加、送らなかったものは削除 |
+| DELETE | `/api/ingredients/:id` | 論理削除（204） |
+
+- 代表の販売単位（`isDefault`）は食材ごとにちょうど 1 つ。2 つ指定すると 400、指定がなければ先頭を代表にする
+- 名前は重複できない（409 `DUPLICATE_NAME`）。ただし作成（POST）で同じ名前の削除済み食材があれば、その行を復活させて入力値で上書きし、販売単位も入力どおりに置き換える（id が変わらないので、過去のレシピや在庫の参照も生きたまま戻る）。更新（PUT）で削除済み食材と同じ名前にするのは 409
+- 画面では食材と販売単位を 1 つのフォームで編集するので、販売単位だけの API は持たない
 
 ## レシピ
 
