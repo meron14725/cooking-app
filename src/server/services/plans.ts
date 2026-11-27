@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm'
-import { DEFAULT_SERVINGS } from '../../shared/domain/constants'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from 'drizzle-orm'
+import { DEFAULT_SERVINGS, DEFAULT_TARGET_MEALS } from '../../shared/domain/constants'
 import { costOfEvaluation } from '../../shared/domain/cost'
 import {
   type AvailableStock,
@@ -13,8 +13,10 @@ import {
 import type {
   Plan,
   PlanCreateInput,
+  PlanDefaults,
   PlanRecipesInput,
   PlanStatus,
+  PlanUpdateInput,
   ProposalView,
   RecommendationsInput,
   RecommendationsResponse,
@@ -51,6 +53,12 @@ async function loadRecRecipes(db: Db, includeIds: string[] = []): Promise<RecRec
       .from(recipeIngredients)
       .orderBy(asc(recipeIngredients.sortOrder)),
   ])
+  const byRecipe = new Map<string, { ingredientId: string; quantity: number | null }[]>()
+  for (const p of parts) {
+    const list = byRecipe.get(p.recipeId) ?? []
+    list.push({ ingredientId: p.ingredientId, quantity: p.quantity })
+    byRecipe.set(p.recipeId, list)
+  }
   return rows.map((r) => ({
     id: r.id,
     archived: r.archivedAt !== null,
@@ -58,9 +66,14 @@ async function loadRecRecipes(db: Db, includeIds: string[] = []): Promise<RecRec
     servings: r.servings,
     caloriesKcal: r.caloriesKcal,
     maxServings1_6l: r.maxServings1_6l,
-    ingredients: parts
-      .filter((p) => p.recipeId === r.id)
-      .map((p) => ({ ingredientId: p.ingredientId, quantity: p.quantity })),
+    ingredients: byRecipe.get(r.id) ?? [],
+    hotcookMode: r.hotcookMode,
+    dishType: r.dishType,
+    cuisine: r.cuisine,
+    cookMinutes: r.cookMinutes,
+    favoriteCount: r.favoriteCount,
+    isFavorite: r.isFavorite,
+    cookCount: r.cookCount,
   }))
 }
 
@@ -102,7 +115,14 @@ export async function getPlan(db: Db, id: string): Promise<Plan> {
     .innerJoin(recipes, eq(recipes.id, planRecipes.recipeId))
     .where(eq(planRecipes.planId, id))
     .orderBy(asc(planRecipes.dayIndex), asc(recipes.title))
-  return { id: row.id, status: row.status, startsOn: row.startsOn, confirmedAt: row.confirmedAt, recipes: items }
+  return {
+    id: row.id,
+    status: row.status,
+    startsOn: row.startsOn,
+    confirmedAt: row.confirmedAt,
+    targetMeals: row.targetMeals,
+    recipes: items,
+  }
 }
 
 /** 進行中（draft / shopping / prepping）の献立。なければ null */
@@ -121,6 +141,16 @@ async function assertRecipesExist(db: Db, ids: string[]) {
   if (missing.length > 0) throw new ApiError(400, 'UNKNOWN_RECIPE', 'レシピが見つかりません', { recipeIds: missing })
 }
 
+/** 献立を作るときの既定値。合計◯食は前回の献立の値（なければ DEFAULT_TARGET_MEALS） */
+export async function getPlanDefaults(db: Db): Promise<PlanDefaults> {
+  const last = await db.query.plans.findFirst({
+    columns: { targetMeals: true },
+    where: isNotNull(plans.targetMeals),
+    orderBy: [desc(plans.createdAt), desc(plans.id)],
+  })
+  return { targetMeals: last?.targetMeals ?? DEFAULT_TARGET_MEALS }
+}
+
 /** 献立を作る（draft）。進行中の献立があれば 409 */
 export async function createPlan(db: Db, input: PlanCreateInput): Promise<Plan> {
   if (await getCurrentPlan(db)) {
@@ -129,7 +159,8 @@ export async function createPlan(db: Db, input: PlanCreateInput): Promise<Plan> 
   const ids = input.anchors.map((a) => a.recipeId)
   if (new Set(ids).size !== ids.length) throw new ApiError(400, 'VALIDATION_ERROR', '同じ料理が重なっています')
   await assertRecipesExist(db, ids)
-  const [row] = await db.insert(plans).values({ status: 'draft' }).returning({ id: plans.id })
+  const targetMeals = input.targetMeals ?? (await getPlanDefaults(db)).targetMeals
+  const [row] = await db.insert(plans).values({ status: 'draft', targetMeals }).returning({ id: plans.id })
   if (!row) throw new Error('献立を作れませんでした')
   await db.batch([
     // 食べる順は仮の値（確定前に提案や画面で決め直す）
@@ -144,6 +175,14 @@ export async function createPlan(db: Db, input: PlanCreateInput): Promise<Plan> 
     ),
   ])
   return getPlan(db, row.id)
+}
+
+/** 献立の設定（合計◯食）を変える。draft のときだけ */
+export async function updatePlan(db: Db, id: string, input: PlanUpdateInput): Promise<Plan> {
+  const row = await findPlanRow(db, id)
+  assertDraft(row.status)
+  await db.update(plans).set({ targetMeals: input.targetMeals }).where(eq(plans.id, id))
+  return getPlan(db, id)
 }
 
 /** 提案を計算して返す（保存しない） */
@@ -185,6 +224,7 @@ export async function recommendForPlan(
     available,
     ingredients: ingredientMap,
     today,
+    targetMeals: plan.targetMeals ?? DEFAULT_TARGET_MEALS,
     exclude: opts.exclude,
     fixed: fixed.flatMap((f) => (f.recipe ? [{ recipe: f.recipe, servings: f.servings }] : [])),
     options: { maxProposals: opts.maxProposals },

@@ -135,7 +135,7 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
-      options: { targetCount: 2 },
+      options: { targetCount: 2, defaultServings: 1 },
     })
     expect(result.proposals[0]?.recipes.map((r) => r.recipeId).sort()).toEqual(['anchor', 'onionSoup'])
     expect(result.proposals[0]?.leftovers).toEqual([])

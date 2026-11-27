@@ -67,7 +67,8 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
       <span className="w-12 text-center text-sm font-bold tabular-nums">{value}食</span>
       <button
         type="button"
-        onClick={() => onChange(Math.min(20, value + 1))}
+        onClick={() => onChange(Math.min(MAX_SERVINGS_PER_DISH, value + 1))}
+        disabled={value >= MAX_SERVINGS_PER_DISH}
         aria-label={`${label}を増やす`}
         className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-surface text-lg"
       >

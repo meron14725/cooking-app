@@ -6,8 +6,8 @@ export const TARGET_RECIPE_COUNT = 3
 /** 期限まで何日以内なら「期限が近い」とするか */
 export const EXPIRING_SOON_DAYS = 2
 
-/** 献立に入れる料理の既定の食数 */
-export const DEFAULT_SERVINGS = 1
+/** 献立に入れる料理の既定の食数（2 人で 1 回分） */
+export const DEFAULT_SERVINGS = 2
 
 /** 食数を ＋－ で変えるときの刻み（2 人で食べる前提で 2。1 にも戻せる） */
 export const SERVINGS_STEP = 2
@@ -53,3 +53,50 @@ export const PRICE_STALE_DAYS = 365
 
 /** 食材の価格（代表量あたり）の上限（円） */
 export const MAX_PRICE_YEN = 100_000
+
+// ---------- 提案 v2（docs/design/09-recommendation-v2.md） ----------
+
+/** 合計◯食の既定（2 人 × 3 日）。前回の献立の値があればそちら */
+export const DEFAULT_TARGET_MEALS = 6
+/** 合計◯食の上限（1 品 4 食 × 4 品） */
+export const MAX_TARGET_MEALS = 16
+/** 1 回の献立の品数の上限（1 品 = 1 日） */
+export const MAX_DISHES = 4
+/** 調理時間が分からない料理の目安（分） */
+export const DEFAULT_COOK_MINUTES = 30
+/** 同じ料理をこの食数までは食べ続けても減点しない */
+export const REPEAT_FREE_SERVINGS = 2
+/** 1 食あたりのカロリーの目標の範囲（kcal） */
+export const KCAL_PER_MEAL = { min: 450, max: 800 } as const
+/** 1 食あたりの野菜の目標（g。1 日 350g の 1/3 の目安） */
+export const VEGETABLE_G_PER_MEAL = 120
+/** 追加の品数ごとに、組み合わせに使う候補の数（単品の点数の良い順に上から） */
+export const CANDIDATES_BY_ADD_COUNT: Record<number, number> = { 1: 30, 2: 20, 3: 10 }
+/** 1 回の提案で評価する組み合わせ × 食数の配り方の上限 */
+export const MAX_EVALUATIONS = 4000
+
+/**
+ * 提案 v2 の点数の重み（小さいほど良い点数に足す。popularity だけは引く）。
+ * 単位は「パック 1 個分のムダ」くらいにそろえてある。実際に使って調整する（npm run rec:try で確かめる）
+ */
+export const RECOMMEND_WEIGHTS = {
+  /** 1 食あたりのカロリーが目標の範囲から 100kcal 外れるごと */
+  calorie: 0.3,
+  /** 1 食あたりの野菜が目標に 50g 足りないごと */
+  vegetable: 0.3,
+  /** 調理時間の合計 60 分ごと */
+  time: 0.2,
+  /** ホットクックを 1 回回すごと */
+  hotcook: 0.1,
+  /** 同じ料理を REPEAT_FREE_SERVINGS を超えて食べる 1 食ごと */
+  repeat: 0.3,
+  /** 区分の偏り（主菜が少ない・汁物やその他ばかり）1 つごと */
+  typeBalance: 0.5,
+  /** 案の中で主な食材や系統が重なる 1 つごと */
+  inPlanSimilarity: 0.2,
+  /** 食べたい料理の食数が、選んだときの食数から 1 食ずれるごと */
+  wantDeviation: 0.1,
+  /** 追加した料理の人気（0〜1）。いちばん人気の料理で −0.5 */
+  popularity: 0.5,
+}
+export type RecommendWeights = typeof RECOMMEND_WEIGHTS

@@ -17,6 +17,8 @@ export async function loadRecIngredients(db: Db): Promise<Map<string, RecIngredi
         name: r.name,
         unit: r.unit,
         isStaple: r.isStaple,
+        category: r.category,
+        gramsPerUnit: r.gramsPerUnit,
         canFreeze: r.canFreeze,
         pantryDays: r.pantryDays,
         preppedFridgeDays: r.preppedFridgeDays,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MAX_SERVINGS_PER_DISH } from '../domain/constants'
+import { MAX_SERVINGS_PER_DISH, MAX_TARGET_MEALS, SERVINGS_STEP } from '../domain/constants'
 import type { Cost } from '../domain/cost'
 import type { Proposal } from '../domain/recommend'
 
@@ -16,7 +16,18 @@ export const PLAN_STATUS_LABELS: Record<PlanStatus, string> = {
   done: '完了',
 }
 
-const servingsSchema = z.number().positive('食数は 0 より大きくしてください').max(20)
+const servingsSchema = z
+  .number()
+  .positive('食数は 0 より大きくしてください')
+  .max(MAX_SERVINGS_PER_DISH, `1 品は ${MAX_SERVINGS_PER_DISH} 食分までです`)
+
+/** 合計◯食: 刻み（SERVINGS_STEP）の倍数で、刻みから MAX_TARGET_MEALS まで */
+export const targetMealsSchema = z
+  .number()
+  .int()
+  .min(SERVINGS_STEP, `合計は ${SERVINGS_STEP} 食以上にしてください`)
+  .max(MAX_TARGET_MEALS, `合計は ${MAX_TARGET_MEALS} 食までです`)
+  .refine((n) => n % SERVINGS_STEP === 0, `合計は ${SERVINGS_STEP} 食ずつ変えてください`)
 
 export const planCreateSchema = z.object({
   anchors: z
@@ -24,11 +35,13 @@ export const planCreateSchema = z.object({
       z.object({
         recipeId: z.string().min(1),
         // 1 品は 1.6L で作れる量まで（鍵で固定する食数と同じ上限）
-        servings: servingsSchema.max(MAX_SERVINGS_PER_DISH, `1 品は ${MAX_SERVINGS_PER_DISH} 食分までです`).optional(),
+        servings: servingsSchema.optional(),
       }),
     )
     .min(1, '食べたい料理を 1 つ以上選んでください')
     .max(10),
+  /** 合計◯食。省略したら前回の献立の値（なければ既定） */
+  targetMeals: targetMealsSchema.optional(),
 })
 export type PlanCreateInput = z.infer<typeof planCreateSchema>
 
@@ -44,7 +57,7 @@ export const recommendationsInputSchema = z.object({
     .array(
       z.object({
         recipeId: z.string().min(1).max(100),
-        servings: servingsSchema.max(MAX_SERVINGS_PER_DISH, `1 品は ${MAX_SERVINGS_PER_DISH} 食分までです`),
+        servings: servingsSchema,
       }),
     )
     .max(10)
@@ -70,6 +83,9 @@ export const planRecipesInputSchema = z.object({
 })
 export type PlanRecipesInput = z.infer<typeof planRecipesInputSchema>
 
+export const planUpdateSchema = z.object({ targetMeals: targetMealsSchema })
+export type PlanUpdateInput = z.infer<typeof planUpdateSchema>
+
 export const planConfirmSchema = z.object({ startsOn: z.iso.date('日付は YYYY-MM-DD で入れてください') })
 
 export type PlanRecipe = {
@@ -87,8 +103,13 @@ export type Plan = {
   status: PlanStatus
   startsOn: string | null
   confirmedAt: string | null
+  /** 合計◯食の目標。古い献立は null */
+  targetMeals: number | null
   recipes: PlanRecipe[]
 }
+
+/** 献立を作るときの既定値（GET /api/plans/defaults） */
+export type PlanDefaults = { targetMeals: number }
 
 /** 画面向けに料理名などを足した提案 */
 export type ProposalView = Omit<Proposal, 'recipes'> & {

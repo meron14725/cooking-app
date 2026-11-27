@@ -5,6 +5,7 @@ import {
   planConfirmSchema,
   planCreateSchema,
   planRecipesInputSchema,
+  planUpdateSchema,
   recommendationsInputSchema,
 } from '../../shared/schemas/plan'
 import { shoppingAddSchema } from '../../shared/schemas/shopping'
@@ -19,8 +20,10 @@ import {
   evaluatePlanById,
   getCurrentPlan,
   getPlan,
+  getPlanDefaults,
   recommendForPlan,
   replacePlanRecipes,
+  updatePlan,
 } from '../services/plans'
 import { addShoppingItem, completeShopping, listShopping } from '../services/shopping'
 import { validate } from '../validation'
@@ -30,7 +33,11 @@ export const planRoutes = new Hono<AppEnv>()
   .post('/', validate('json', planCreateSchema), async (c) => {
     return c.json(await createPlan(createDb(c.env.DB), c.req.valid('json')), 201)
   })
+  .get('/defaults', async (c) => c.json(await getPlanDefaults(createDb(c.env.DB))))
   .get('/:id', async (c) => c.json(await getPlan(createDb(c.env.DB), c.req.param('id'))))
+  .patch('/:id', validate('json', planUpdateSchema), async (c) =>
+    c.json(await updatePlan(createDb(c.env.DB), c.req.param('id'), c.req.valid('json'))),
+  )
   .post('/:id/recommendations', validate('json', recommendationsInputSchema), async (c) => {
     const result = await recommendForPlan(createDb(c.env.DB), c.req.param('id'), todayJst(), c.req.valid('json'))
     return c.json(result)

@@ -2,14 +2,22 @@
  * レコメンド（docs/design/05-recommendation.md）。DB に依存しない純粋関数。
  * 食べたい料理（anchor）に、買ったパックを食べ切れる追加料理を組み合わせた案を出す。
  */
+import type { Cuisine, DishType } from '../schemas/recipe'
 import {
+  CANDIDATES_BY_ADD_COUNT,
   DEFAULT_PREPPED_FRIDGE_DAYS,
   DEFAULT_SERVINGS,
+  MAX_DISHES,
+  MAX_EVALUATIONS,
   MAX_PROPOSALS,
+  RECOMMEND_WEIGHTS,
+  type RecommendWeights,
   SCORE_WEIGHTS,
+  SERVINGS_STEP,
   TARGET_RECIPE_COUNT,
 } from './constants'
 import { expiryOf } from './expiry'
+import { type RecipeFeatures, recipeFeatures, type ScoreBreakdown, scoreProposal } from './recommendScore'
 
 // ---------- 入力 ----------
 
@@ -23,6 +31,10 @@ export type RecIngredient = {
   canFreeze: boolean
   pantryDays: number | null
   preppedFridgeDays: number | null
+  /** 食材マスタの分類（vegetable など）。提案 v2 の野菜の量・主な食材に使う */
+  category?: string
+  /** 基準単位 1 つあたりの重さ（g） */
+  gramsPerUnit?: number | null
   /** 代表量あたりの価格（円）。未設定は null（docs/design/10-cost.md） */
   priceYen?: number | null
   /** 登録順（最初に登録されたものが先頭） */
@@ -39,6 +51,14 @@ export type RecRecipe = {
   ingredients: { ingredientId: string; quantity: number | null }[]
   /** 削除済み（献立には残っているが、提案の候補にはしない） */
   archived?: boolean
+  // 提案 v2 の点数に使う（docs/design/09-recommendation-v2.md）。なければ不明として扱う
+  hotcookMode?: string | null
+  dishType?: DishType | null
+  cuisine?: Cuisine | null
+  cookMinutes?: number | null
+  favoriteCount?: number | null
+  isFavorite?: boolean
+  cookCount?: number | null
 }
 
 /** 使える在庫（袋用の確保分を引いた量）。行ごと */
@@ -62,7 +82,20 @@ export type RecommendInput = {
    * anchor を固定したときはその食数を使い、追加料理を固定したときは追加料理（added）のまま入れる
    */
   fixed?: { recipe: RecRecipe; servings: number }[]
-  options?: { targetCount?: number; maxProposals?: number; defaultServings?: number }
+  /**
+   * 合計◯食の目標。あれば提案 v2（料理ごとの食数を配り、点数の項目を増やした探索）で選ぶ。
+   * なければ品数（targetCount）と既定の食数で選ぶ（v2 の絞り込みと多様性が入ったら v2 だけにする）
+   */
+  targetMeals?: number
+  /** 提案 v2 の重み（一部だけ上書きできる。調整のスクリプトとテスト用） */
+  weights?: Partial<RecommendWeights>
+  options?: {
+    targetCount?: number
+    maxProposals?: number
+    defaultServings?: number
+    /** 提案 v2 の食数の刻み（既定 SERVINGS_STEP） */
+    servingsStep?: number
+  }
 }
 
 // ---------- 出力 ----------
@@ -109,6 +142,8 @@ export type Evaluation = {
 export type ProposalRecipe = { recipeId: string; role: Role; servings: number; dayIndex: number }
 
 export type Proposal = Evaluation & {
+  /** 提案 v2 のときだけ。項目ごとの点数（足すと score） */
+  scoreBreakdown?: ScoreBreakdown
   recipes: ProposalRecipe[]
   kitLocations: { recipeId: string; location: 'fridge' | 'freezer' }[]
   totalCaloriesKcal: number | null
@@ -120,6 +155,8 @@ export type RecommendResult = {
   aiSuggestionRecommended: boolean
   /** 今回の案と exclude のほかに、まだ出していない組み合わせが残っているか */
   hasMore: boolean
+  /** 提案 v2 のときだけ。評価した組み合わせ × 食数の配り方の数（計算量の確認用） */
+  evaluations?: number
 }
 
 // ---------- 小さな関数 ----------
@@ -430,6 +467,7 @@ function comboKey(recipeIds: string[], baseIds: Set<string>): string {
 }
 
 export function recommend(input: RecommendInput): RecommendResult {
+  if (input.targetMeals !== undefined) return recommendByMeals(input, input.targetMeals)
   const targetCount = input.options?.targetCount ?? TARGET_RECIPE_COUNT
   const maxProposals = input.options?.maxProposals ?? MAX_PROPOSALS
   const defaultServings = input.options?.defaultServings ?? DEFAULT_SERVINGS
@@ -516,4 +554,220 @@ export function recommend(input: RecommendInput): RecommendResult {
     ),
   )
   return { proposals, aiSuggestionRecommended, hasMore: remaining.length > picked.length }
+}
+
+// ---------- 提案 v2: 合計◯食に食数を配る（docs/design/09-recommendation-v2.md） ----------
+
+/** 1 品に配れる食数: 刻みの倍数で、1 回で作れる量まで。刻みより小さい量しか作れなければその量だけ */
+export function allowedServings(f: RecipeFeatures, step: number): number[] {
+  const values: number[] = []
+  for (let s = step; s <= f.potCap + EPS; s += step) values.push(s)
+  return values.length > 0 ? values : f.potCap > 0 ? [f.potCap] : []
+}
+
+/** 料理ごとの食数の候補から、合計が total になる配り方を全部出す */
+export function* allocations(options: number[][], total: number): Generator<number[]> {
+  const mins = options.map((o) => Math.min(...o))
+  const maxs = options.map((o) => Math.max(...o))
+  const suffixMin = mins.map((_, i) => mins.slice(i).reduce((a, b) => a + b, 0))
+  const suffixMax = maxs.map((_, i) => maxs.slice(i).reduce((a, b) => a + b, 0))
+  const picked: number[] = []
+  function* walk(i: number, rest: number): Generator<number[]> {
+    if (i === options.length) {
+      if (Math.abs(rest) <= EPS) yield [...picked]
+      return
+    }
+    if (rest < (suffixMin[i] ?? 0) - EPS || rest > (suffixMax[i] ?? 0) + EPS) return
+    for (const v of options[i] ?? []) {
+      picked.push(v)
+      yield* walk(i + 1, rest - v)
+      picked.pop()
+    }
+  }
+  if (options.length === 0) {
+    if (Math.abs(total) <= EPS) yield []
+    return
+  }
+  yield* walk(0, total)
+}
+
+type MealItem = { recipe: RecRecipe; servings: number; role: Role; wanted: number | null }
+type MealScored = {
+  items: MealItem[]
+  added: RecRecipe[]
+  evaluation: Evaluation
+  score: number
+  breakdown: ScoreBreakdown
+}
+
+function recommendByMeals(input: RecommendInput, targetMeals: number): RecommendResult {
+  const maxProposals = input.options?.maxProposals ?? MAX_PROPOSALS
+  const step = input.options?.servingsStep ?? SERVINGS_STEP
+  const weights: RecommendWeights = { ...RECOMMEND_WEIGHTS, ...input.weights }
+  const ctx: Ctx = { available: input.available, ingredients: input.ingredients, today: input.today }
+
+  const fixedServings = new Map((input.fixed ?? []).map((f) => [f.recipe.id, f.servings]))
+  const anchorIds = new Set(input.anchors.map((a) => a.recipe.id))
+  const fixedAdded = (input.fixed ?? []).filter((f) => !anchorIds.has(f.recipe.id))
+  const baseIds = new Set([...anchorIds, ...fixedAdded.map((f) => f.recipe.id)])
+  const excluded = new Set((input.exclude ?? []).map((ids) => comboKey(ids, baseIds)))
+
+  const all = new Map<string, RecRecipe>()
+  for (const r of [...input.catalog, ...input.anchors.map((a) => a.recipe), ...fixedAdded.map((f) => f.recipe)]) {
+    all.set(r.id, r)
+  }
+  const features = recipeFeatures([...all.values()], input.ingredients)
+  const featureOf = (r: RecRecipe) => features.get(r.id) as RecipeFeatures
+
+  // 食数が決まっている料理（固定した anchor と追加料理）と、配り直す anchor
+  const fixedItems: MealItem[] = [
+    ...input.anchors
+      .filter((a) => fixedServings.has(a.recipe.id))
+      .map((a) => ({
+        recipe: a.recipe,
+        servings: fixedServings.get(a.recipe.id) as number,
+        role: 'anchor' as const,
+        wanted: null,
+      })),
+    ...fixedAdded.map((f) => ({ recipe: f.recipe, servings: f.servings, role: 'added' as const, wanted: null })),
+  ]
+  const freeAnchors = input.anchors.filter((a) => !fixedServings.has(a.recipe.id))
+  const restMeals = targetMeals - fixedItems.reduce((a, i) => a + i.servings, 0)
+
+  let evaluations = 0
+  const score = (items: MealItem[], added: RecRecipe[]): MealScored => {
+    const evaluation = evaluate(items, ctx)
+    const { score: total, breakdown } = scoreProposal(
+      items.map((i) => ({ recipeId: i.recipe.id, servings: i.servings, role: i.role, wantedServings: i.wanted })),
+      evaluation.score,
+      features,
+      weights,
+    )
+    return { items, added, evaluation, score: total, breakdown }
+  }
+
+  // 選んだときの食数のままの anchor（目標に配れないときの 1 案、単品の点数の土台）
+  const wantedAnchors: MealItem[] = freeAnchors.map((a) => ({
+    recipe: a.recipe,
+    servings: a.servings,
+    role: 'anchor' as const,
+    wanted: a.servings,
+  }))
+  const asProposal = (s: MealScored): Proposal => ({
+    ...buildProposal(s.items, s.evaluation, input.ingredients),
+    score: s.score,
+    scoreBreakdown: s.breakdown,
+  })
+  const baseOnly = (aiSuggestionRecommended: boolean): RecommendResult => {
+    const s = score([...fixedItems, ...wantedAnchors], [])
+    return {
+      proposals: excluded.has('') ? [] : [asProposal(s)],
+      aiSuggestionRecommended,
+      hasMore: false,
+      evaluations: 1,
+    }
+  }
+
+  // 刻みより少ししか作れない料理（1.6L で 1 食分など）は、追加の候補にしない（合計がぴったりにならないため）
+  const candidates = input.catalog.filter((r) => !baseIds.has(r.id) && !r.archived && featureOf(r).potCap >= step)
+  // 単品の点数: anchor（選んだときの食数）＋その料理（最小の食数）で、候補を良い順に並べる
+  const singles = candidates
+    .map((c) => {
+      const min = allowedServings(featureOf(c), step)[0] as number
+      const item: MealItem = { recipe: c, servings: min, role: 'added', wanted: null }
+      return { recipe: c, score: score([...fixedItems, ...wantedAnchors, item], [c]).score }
+    })
+    .sort((a, b) => a.score - b.score || a.recipe.id.localeCompare(b.recipe.id))
+
+  const maxAdd = Math.min(3, MAX_DISHES - fixedItems.length - freeAnchors.length)
+  const results: MealScored[] = []
+  const anchorOptions = freeAnchors.map((a) => allowedServings(featureOf(a.recipe), step))
+  // anchor や固定に刻みより少ししか作れない料理があると、合計が目標ぴったりにならないことがある。
+  // そのときは目標以下でいちばん近い合計を探す
+  for (let goal = restMeals; goal > restMeals - step && results.length === 0 && goal > 0; goal--) {
+    searchMeals(goal)
+  }
+
+  function searchMeals(goal: number) {
+    outer: for (let addCount = 0; addCount <= Math.max(0, maxAdd); addCount++) {
+      const pool = addCount === 0 ? [] : singles.slice(0, CANDIDATES_BY_ADD_COUNT[addCount] ?? 0).map((s) => s.recipe)
+      if (addCount > 0 && pool.length < addCount) break
+      for (const added of addCount === 0 ? [[] as RecRecipe[]] : combinations(pool, addCount)) {
+        const options = [...anchorOptions, ...added.map((r) => allowedServings(featureOf(r), step))]
+        for (const alloc of allocations(options, goal)) {
+          if (evaluations >= MAX_EVALUATIONS) break outer
+          evaluations++
+          const items: MealItem[] = [
+            ...fixedItems,
+            ...freeAnchors.map((a, i) => ({
+              recipe: a.recipe,
+              servings: alloc[i] as number,
+              role: 'anchor' as const,
+              wanted: a.servings,
+            })),
+            ...added.map((recipe, i) => ({
+              recipe,
+              servings: alloc[freeAnchors.length + i] as number,
+              role: 'added' as const,
+              wanted: null,
+            })),
+          ]
+          results.push(score(items, added))
+        }
+      }
+    }
+  }
+
+  // 目標の食数に配れない（anchor だけで超える、作れる量が足りないなど）ときは、選んだときの食数のまま 1 案
+  if (results.length === 0) return baseOnly(candidates.length === 0)
+
+  const key = (s: MealScored) =>
+    s.added
+      .map((r) => r.id)
+      .sort()
+      .join('\n')
+  results.sort((a, b) => a.score - b.score || key(a).localeCompare(key(b)))
+  const best = results[0]
+  const aiSuggestionRecommended =
+    candidates.length === 0 ||
+    (best?.evaluation.maxPerishableLeftoverPacks ?? 0) >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS
+
+  // 出した組み合わせ（追加料理の集合）を除く。同じ集合の食数違いもまとめて除く（食数込みの比べ方は次の PR）
+  const remaining = results.filter((s) => !excluded.has(key(s)))
+  // 似た案（追加料理が 1 品でも同じで、食数の配り方も同じ）を避けて上位を選び、足りなければ飛ばした案で埋める。
+  // 配り方が違えば（カレー 4 ＋副菜 2 と、カレー 2 ＋ 2 品を 2 食ずつ）料理が重なっても別の案として出す
+  const picked: MealScored[] = []
+  const skipped: MealScored[] = []
+  const used = new Map<string, Set<string>>()
+  const pickedKeys = new Set<string>()
+  const shapeOf = (s: MealScored) =>
+    s.items
+      .map((i) => i.servings)
+      .sort((a, b) => b - a)
+      .join(',')
+  for (const s of remaining) {
+    if (picked.length >= maxProposals) break
+    const ids = s.added.length === 0 ? [''] : s.added.map((r) => r.id)
+    const shape = shapeOf(s)
+    if (ids.some((id) => used.get(id)?.has(shape))) {
+      skipped.push(s)
+      continue
+    }
+    picked.push(s)
+    pickedKeys.add(key(s))
+    for (const id of ids) used.set(id, new Set([...(used.get(id) ?? []), shape]))
+  }
+  for (const s of skipped) {
+    if (picked.length >= maxProposals) break
+    picked.push(s)
+    pickedKeys.add(key(s))
+  }
+  picked.sort((a, b) => a.score - b.score)
+  const remainingKeys = new Set(remaining.map(key))
+  return {
+    proposals: picked.map(asProposal),
+    aiSuggestionRecommended,
+    hasMore: remainingKeys.size > pickedKeys.size,
+    evaluations,
+  }
 }

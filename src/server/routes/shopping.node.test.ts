@@ -76,7 +76,7 @@ beforeEach(async () => {
 
 /** 1 品だけの献立を作って確定する */
 async function confirmed(): Promise<Plan> {
-  const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id }] })).body
+  const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id, servings: 1 }] })).body
   return (await api.call<Plan>('POST', `/plans/${plan.id}/confirm`, { startsOn: addDays(today, 1) })).body
 }
 
@@ -237,7 +237,7 @@ describe('買い物リスト', () => {
 
 describe('確定の入力チェック', () => {
   it('1日目が過去の日付なら 400', async () => {
-    const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id }] })).body
+    const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id, servings: 1 }] })).body
     const res = await api.call('POST', `/plans/${plan.id}/confirm`, { startsOn: addDays(today, -1) })
     expect(res.status).toBe(400)
     expect((await api.call('POST', `/plans/${plan.id}/confirm`, { startsOn: today })).status).toBe(200)
@@ -245,7 +245,7 @@ describe('確定の入力チェック', () => {
 
   it('同じ日に 2 品は入れられない', async () => {
     const other = (await api.call<Recipe>('POST', '/recipes', recipe('キャベツの浅漬け', [[cabbage, 0.5]]))).body
-    const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id }] })).body
+    const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id, servings: 1 }] })).body
     const res = await api.call('PUT', `/plans/${plan.id}/recipes`, {
       recipes: [
         { recipeId: nabe.id, role: 'anchor', servings: 1, dayIndex: 1 },
@@ -256,7 +256,7 @@ describe('確定の入力チェック', () => {
   })
 
   it('献立の料理があとで削除されても、評価に残り注意が出る', async () => {
-    const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id }] })).body
+    const plan = (await api.call<Plan>('POST', '/plans', { anchors: [{ recipeId: nabe.id, servings: 1 }] })).body
     await api.call('DELETE', `/recipes/${nabe.id}`)
     const ev = (await api.call<ProposalView>('GET', `/plans/${plan.id}/evaluation`)).body
     expect(ev.recipes.map((r) => r.title)).toEqual(['豚キャベツ鍋'])
