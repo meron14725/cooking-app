@@ -139,6 +139,9 @@ describe('レシピ API', () => {
     expect(byPork.body.items.map((r) => r.title)).toEqual(['豚肉と玉ねぎの煮物'])
     const byTitle = await api.call<{ items: RecipeSummary[] }>('GET', `/recipes?q=${encodeURIComponent('スープ')}`)
     expect(byTitle.body.items.map((r) => r.title)).toEqual(['オニオンスープ'])
+    // 料理名になくても、材料の食材名で見つかる
+    const byIngredient = await api.call<{ items: RecipeSummary[] }>('GET', `/recipes?q=${encodeURIComponent('豚こま')}`)
+    expect(byIngredient.body.items.map((r) => r.title)).toEqual(['豚肉と玉ねぎの煮物'])
   })
 
   it('削除は論理削除。一覧と取得から消える', async () => {

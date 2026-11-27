@@ -68,7 +68,13 @@ export async function listRecipes(
   opts: { q?: string; ingredientId?: string; sort?: RecipeSort } = {},
 ): Promise<RecipeSummary[]> {
   const conditions = [isNull(recipes.archivedAt)]
-  if (opts.q) conditions.push(sql`${recipes.title} LIKE ${`%${escapeLike(opts.q)}%`} ESCAPE '\\'`)
+  if (opts.q) {
+    // 料理名か、材料の食材名で探す
+    const like = `%${escapeLike(opts.q)}%`
+    conditions.push(
+      sql`(${recipes.title} LIKE ${like} ESCAPE '\\' OR EXISTS (SELECT 1 FROM ${recipeIngredients} INNER JOIN ${ingredients} ON ${ingredients.id} = ${recipeIngredients.ingredientId} WHERE ${recipeIngredients.recipeId} = ${recipes.id} AND ${ingredients.name} LIKE ${like} ESCAPE '\\'))`,
+    )
+  }
   if (opts.ingredientId) {
     conditions.push(
       sql`EXISTS (SELECT 1 FROM ${recipeIngredients} WHERE ${recipeIngredients.recipeId} = ${recipes.id} AND ${recipeIngredients.ingredientId} = ${opts.ingredientId})`,
@@ -101,6 +107,7 @@ export async function listRecipes(
     caloriesEstimated: r.caloriesEstimated,
     hotcookMode: r.hotcookMode,
     sourceType: r.sourceType,
+    packSeasonings: r.packSeasonings,
     officialMenuNo: r.officialMenuNo,
     imageKey: r.imageKey,
     favoriteCount: r.favoriteCount,

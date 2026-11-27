@@ -158,6 +158,7 @@ export type RecipeSummary = Pick<
   | 'caloriesEstimated'
   | 'hotcookMode'
   | 'sourceType'
+  | 'packSeasonings'
   | 'officialMenuNo'
   | 'imageKey'
   | 'favoriteCount'
