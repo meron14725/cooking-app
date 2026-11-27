@@ -41,7 +41,7 @@ const ATTRIBUTE_KEYS = ['dishType', 'cuisine', 'usesMixingUnit', 'cookMinutes'] 
 /**
  * 区分・系統・まぜ技・調理時間を決める（docs/design/09-recommendation-v2.md）。
  * - attributesManual: 入力のまま保存（manual）
- * - 手で直したレシピ: 入力で省略した欄は今の値を残す（manual のまま）
+ * - 手で直したレシピ: 入力で省略した欄は今の値を残す（manual のまま）。attributesManual: false なら自動に戻す
  * - それ以外: 入力の値 → ルール → AI で決めた今の値、の順。AI の値が残れば ai、なければ rule
  */
 export function resolveAttributes(
@@ -58,7 +58,7 @@ export function resolveAttributes(
       attributesSource: 'manual',
     }
   }
-  if (existing?.attributesSource === 'manual') {
+  if (existing?.attributesSource === 'manual' && input.attributesManual !== false) {
     return {
       dishType: input.dishType === undefined ? existing.dishType : input.dishType,
       cuisine: input.cuisine === undefined ? existing.cuisine : input.cuisine,

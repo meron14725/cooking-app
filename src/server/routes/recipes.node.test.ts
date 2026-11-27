@@ -269,6 +269,12 @@ describe('区分・系統・まぜ技・調理時間', () => {
     expect(manual.body).toMatchObject({ dishType: 'side', cuisine: 'chinese', attributesSource: 'manual' })
     const again = await api.call<Recipe>('PUT', `/recipes/${created.id}`, curry({ title: '豚肉の和風スープ' }))
     expect(again.body).toMatchObject({ dishType: 'side', cuisine: 'chinese', attributesSource: 'manual' })
+    const reset = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({ title: '豚肉の和風スープ', attributesManual: false }),
+    )
+    expect(reset.body).toMatchObject({ dishType: 'soup', attributesSource: 'rule' })
   })
 
   it('手で直していなければ、保存のたびにルールで決め直す', async () => {

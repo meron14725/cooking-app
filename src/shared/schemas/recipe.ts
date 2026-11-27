@@ -134,7 +134,10 @@ export const recipeInputSchema = z.object({
   cuisine: cuisineSchema.nullish(),
   usesMixingUnit: z.boolean().nullish(),
   cookMinutes: z.number().int().min(1).max(600).nullish(),
-  /** true = 上の 4 つを本人が直した（null も含めてそのまま保存し、推定で上書きしない） */
+  /**
+   * true = 上の 4 つを本人が直した（null も含めてそのまま保存し、推定で上書きしない）。
+   * false = 手で直した値を捨てて自動に戻す。省略 = 手で直したレシピならその値を残す
+   */
   attributesManual: z.boolean().optional(),
   ingredients: z.array(recipeIngredientInputSchema).min(1, '材料を 1 つ以上入れてください').max(50),
   steps: z.array(recipeStepInputSchema).max(50).default([]),
