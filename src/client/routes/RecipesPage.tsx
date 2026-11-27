@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { SOURCE_TYPE_LABELS } from '../../shared/schemas/recipe'
+import { type RecipeSort, SOURCE_TYPE_LABELS } from '../../shared/schemas/recipe'
 import { useRecipes } from '../api/recipes'
 import { Icon, type IconName } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
+import { RecipePhoto } from '../components/RecipePhoto'
+import { Segmented } from '../components/Segmented'
 
 function AddLink({ to, icon, label }: { to: string; icon: IconName; label: string }) {
   return (
@@ -17,9 +19,21 @@ function AddLink({ to, icon, label }: { to: string; icon: IconName; label: strin
   )
 }
 
+const SORT_OPTIONS: { value: RecipeSort | ''; label: string }[] = [
+  { value: '', label: '名前順' },
+  { value: 'popular', label: '人気順' },
+  { value: 'cooked', label: 'よく作られる順' },
+]
+
+/** 1万以上は「1.2万」のように縮める */
+function compactCount(n: number): string {
+  return n >= 10_000 ? `${Math.round(n / 1_000) / 10}万` : n.toLocaleString('ja-JP')
+}
+
 export function RecipesPage() {
   const [q, setQ] = useState('')
-  const { data, isPending, isError } = useRecipes({ q: q.trim() || undefined })
+  const [sort, setSort] = useState<RecipeSort | ''>('')
+  const { data, isPending, isError } = useRecipes({ q: q.trim() || undefined, sort: sort || undefined })
 
   return (
     <>
@@ -37,6 +51,8 @@ export function RecipesPage() {
             className="min-w-0 flex-1 bg-transparent py-2.5 text-base placeholder:text-ink-muted focus:outline-none"
           />
         </label>
+
+        <Segmented value={sort} options={SORT_OPTIONS} onChange={setSort} label="並べ替え" />
 
         <div className="flex gap-2.5">
           <AddLink to="/recipes/new" icon="pencil" label="手で登録" />
@@ -57,8 +73,9 @@ export function RecipesPage() {
               <li key={r.id}>
                 <Link
                   to={`/recipes/${r.id}`}
-                  className="flex items-center gap-3 rounded-item border border-line bg-surface px-4 py-3.5"
+                  className="flex items-center gap-3 rounded-item border border-line bg-surface py-3 pr-4 pl-3"
                 >
+                  <RecipePhoto imageKey={r.imageKey} className="size-16 rounded-[12px]" />
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="truncate text-base font-bold">{r.title}</span>
                     <span className="truncate text-[13px] text-ink-muted">
@@ -70,13 +87,23 @@ export function RecipesPage() {
                         .join(' ・ ') || ' '}
                     </span>
                     <span className="truncate text-xs text-ink-muted">{r.ingredientNames.join('、')}</span>
-                    <span className="mt-0.5 flex gap-1.5">
+                    <span className="mt-0.5 flex flex-wrap gap-1.5 whitespace-nowrap">
                       <span className="rounded-md bg-sunken px-2 py-0.5 text-[11px] font-medium text-ink-soft">
                         {r.servings}人前
                       </span>
                       <span className="rounded-md bg-sunken px-2 py-0.5 text-[11px] font-medium text-ink-soft">
                         {SOURCE_TYPE_LABELS[r.sourceType]}
                       </span>
+                      {sort === 'popular' && r.favoriteCount !== null && (
+                        <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-strong">
+                          お気に入り {compactCount(r.favoriteCount)}
+                        </span>
+                      )}
+                      {sort === 'cooked' && r.cookCount !== null && (
+                        <span className="rounded-md bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-strong">
+                          {compactCount(r.cookCount)}回
+                        </span>
+                      )}
                     </span>
                   </span>
                   <Icon name="chevronRight" strokeWidth={2.2} className="text-ink-muted" />

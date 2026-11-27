@@ -117,3 +117,75 @@ describe('POST /api/recipes/estimate-calories', () => {
     expect((await api.call('POST', '/recipes/estimate-calories', { servings: 2, ingredients: [] })).status).toBe(400)
   })
 })
+
+// 公式レシピの本文は使わない。形だけ合わせた架空のデータ
+const cocoroJson = {
+  name: 'テスト用の玉ねぎ煮',
+  quantity: '2人分',
+  cookingTime: '約30分',
+  calorie: '100kcal',
+  menuNum: '0063',
+  imageUrl: 'https://example.com/photo.jpg',
+  favoriteCount: 1234,
+  cookCount: 56789,
+  score: 5,
+  materials: [{ name: '玉ねぎ', quantity: '300 g', group: null, orderNumber: 1 }],
+  material_appendices: [],
+  methods: [{ text: '内鍋に入れる', renderedHtml: '<p>内鍋に入れる</p>', orderNumber: 1 }],
+  unusedField: { nested: true },
+}
+
+describe('POST /api/recipes/import-url（COCORO KITCHEN）', () => {
+  it('レシピの JSON API を取り、件数・メニュー番号・写真のキーを下書きに入れる', async () => {
+    const spy = vi.fn(async () => Response.json(cocoroJson))
+    globalThis.fetch = spy as unknown as typeof fetch
+    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', {
+      url: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW24G/R9001',
+    })
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledOnce()
+    expect((spy.mock.calls[0] as unknown[])[0]).toBe(
+      'https://cocoroplus.jp.sharp/kitchen/recipe/api/recipe/R9001/KN-HW24G',
+    )
+    expect(res.body.official).toEqual({
+      officialMenuNo: '063',
+      imageKey: 'img/R9001.jpg',
+      favoriteCount: 1234,
+      cookCount: 56789,
+      score: 5,
+    })
+    // 本文は JSON から組み立てて AI に渡す（fake は 1 行目をタイトル、「- 」の行を材料にする）
+    expect(res.body.title).toBe('テスト用の玉ねぎ煮')
+    expect(res.body.ingredients.map((i) => [i.suggestedName, i.ingredientId !== null, i.quantity])).toEqual([
+      ['玉ねぎ', true, 1.5],
+    ])
+    expect(res.body.sourceUrl).toBe('https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW24G/R9001')
+  })
+
+  it('URL に機種がなければ KN-HW16G で取る。写真がなければ imageKey は null', async () => {
+    const spy = vi.fn(async () => Response.json({ ...cocoroJson, imageUrl: '' }))
+    globalThis.fetch = spy as unknown as typeof fetch
+    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', {
+      url: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/R9002',
+    })
+    expect((spy.mock.calls[0] as unknown[])[0]).toBe(
+      'https://cocoroplus.jp.sharp/kitchen/recipe/api/recipe/R9002/KN-HW16G',
+    )
+    expect(res.body.official?.imageKey).toBeNull()
+  })
+
+  it('JSON が取れなければ 502', async () => {
+    servePage('not found', { status: 404 })
+    const res = await api.call<{ error: { code: string } }>('POST', '/recipes/import-url', {
+      url: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW16G/R9003',
+    })
+    expect(res.status).toBe(502)
+    expect(res.body.error.code).toBe('FETCH_FAILED')
+  })
+
+  it('COCORO 以外の URL では official は null', async () => {
+    servePage(page)
+    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', { url: 'https://example.com/soup' })
+    expect(res.body.official).toBeNull()
+  })
+})

@@ -3,6 +3,8 @@
 interface Env {
   DB: D1Database
   ASSETS: Fetcher
+  /** レシピ写真の R2 バケット（cooking-app-images）。キーは img/R4063.jpg の形。GET /api/images/* で返す */
+  IMAGES: R2Bucket
   /** 例: example.cloudflareaccess.com（https:// は付けない） */
   ACCESS_TEAM_DOMAIN: string
   /** Cloudflare Access アプリケーションの AUD タグ */

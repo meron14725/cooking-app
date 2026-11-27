@@ -22,6 +22,7 @@ Cloudflare ダッシュボード → 右上のアカウント → **My Profile �
 | Token name | `cooking-app GitHub Actions` |
 | Permissions | Account / **Workers Scripts** / Edit |
 | | Account / **D1** / Edit |
+| | Account / **Workers R2 Storage** / Edit（レシピ写真のバケット。既存のトークンに無ければ足す） |
 | | Account / **Account Settings** / Read |
 | Account Resources | Include / 自分のアカウント |
 
@@ -83,6 +84,36 @@ npx wrangler secret put CURSOR_API_KEY
 - スマホで `https://cooking-app.<サブドメイン>.workers.dev` を開く → メールのコードでログイン → ホームに「API: OK」と出る
 - シークレットウィンドウで開くと、ログイン画面が出る（自分のメール以外ではコードが届かない）
 
+## レシピ写真（R2）
+
+レシピの完成写真は R2 バケット `cooking-app-images` に置き、Worker の `GET /api/images/<キー>` からだけ返します（`/api` の下なので Access の内側。未ログインでは見えません）。写真も公式レシピのデータもリポジトリには入れません。
+
+### 1. バケットを作る（一度だけ。デプロイより先に）
+
+```sh
+npx wrangler r2 bucket create cooking-app-images
+```
+
+`wrangler.jsonc` の `r2_buckets` がこのバケットを指しているので、バケットが無いと `wrangler deploy` が失敗することがあります。デプロイ（GitHub Actions）より先、遅くともデプロイの直前に作ってください。Actions のトークンに R2 の権限が無ければ、上の「2.」の表のとおり **Workers R2 Storage / Edit** を足します。
+
+### 2. 写真を上げる
+
+キーは `img/<レシピコード>.jpg`（例: `img/R4063.jpg`）です。手元のファイルを 1 枚ずつ上げます（上げるスクリプトはリポジトリに入れません）。
+
+```sh
+npx wrangler r2 object put cooking-app-images/img/R4063.jpg --file=./R4063.jpg --remote --content-type image/jpeg
+```
+
+### 3. レシピに写真と件数を付ける
+
+`recipes` の `image_key`（上のキー）、`official_menu_no`（3 桁）、`favorite_count`、`cook_count`、`score` を D1 で UPDATE します。COCORO KITCHEN の URL から取り込んだレシピは、取り込みのときにこれらが下書きに入ります（写真のキーは決まりますが、写真そのものは 2. で上げます）。
+
+### 補足
+
+- 並べ替えは「人気順」= `favorite_count`、「よく作られる順」= `cook_count` の多い順です。`score` では並べません
+- 画像の応答は `Cache-Control: private, max-age=86400`（ブラウザにだけ 1 日）。認証の後ろなので CDN の共有キャッシュや別の配信サービスは使いません
+- 写真のキーがあってもまだ上がっていないときは、画面ではプレースホルダが出ます
+
 ## 初期データについて
 
 - マイグレーション `0001_seed_ingredients.sql`（食材）と `0002_seed_recipes.sql`（レシピ）は、本番に最初に流したときだけ入ります（同じ名前・同じ id は何もしない）
@@ -103,3 +134,4 @@ npm run dev
 
 - `npm run dev`（vite）では Container を動かしません（`wrangler.jsonc` の `dev.enable_containers: false`）。AI は `.dev.vars` の `AI_PROVIDER=fake` で固定の下書きを返します
 - 本物の Cursor で試すときは `.dev.vars` を `AI_PROVIDER=cursor` と `CURSOR_API_KEY=...` にして、Docker を起動した状態で `npm run build && npx wrangler dev`（`dev.enable_containers` を一時的に外す）
+- ローカルの写真はローカルの R2 に上げます（`--local`）: `npx wrangler r2 object put cooking-app-images/img/R0001.jpg --file=./手元の画像.jpg --local --content-type image/jpeg`

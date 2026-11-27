@@ -39,7 +39,7 @@ export function assertPublicUrl(raw: string): URL {
 
 // ---------- ページの取得 ----------
 
-async function readLimited(res: Response): Promise<Uint8Array> {
+export async function readLimited(res: Response): Promise<Uint8Array> {
   const reader = res.body?.getReader()
   if (!reader) return new Uint8Array()
   const chunks: Uint8Array[] = []
@@ -287,5 +287,6 @@ export function normalizeDraft(raw: RecipeDraftRaw, masters: Ingredient[], sourc
     steps: raw.steps,
     maxServings1_6l: raw.maxServings1_6l,
     warnings,
+    official: null,
   }
 }

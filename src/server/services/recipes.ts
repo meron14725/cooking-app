@@ -1,8 +1,9 @@
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 import type {
   Recipe,
   RecipeIngredient,
   RecipeInputParsed,
+  RecipeSort,
   RecipeStep,
   RecipeSummary,
 } from '../../shared/schemas/recipe'
@@ -50,7 +51,22 @@ function childInserts(db: Db, recipeId: string, input: RecipeInputParsed) {
   ]
 }
 
-export async function listRecipes(db: Db, opts: { q?: string; ingredientId?: string } = {}): Promise<RecipeSummary[]> {
+/** 並べ替え。件数で並べるときは件数のないレシピを後ろに、同じ件数は料理名順 */
+function orderFor(sort: RecipeSort | undefined) {
+  const byCount = (col: typeof recipes.favoriteCount | typeof recipes.cookCount) => [
+    sql`${col} IS NULL`,
+    desc(col),
+    asc(recipes.title),
+  ]
+  if (sort === 'popular') return byCount(recipes.favoriteCount)
+  if (sort === 'cooked') return byCount(recipes.cookCount)
+  return [asc(recipes.title)]
+}
+
+export async function listRecipes(
+  db: Db,
+  opts: { q?: string; ingredientId?: string; sort?: RecipeSort } = {},
+): Promise<RecipeSummary[]> {
   const conditions = [isNull(recipes.archivedAt)]
   if (opts.q) conditions.push(sql`${recipes.title} LIKE ${`%${escapeLike(opts.q)}%`} ESCAPE '\\'`)
   if (opts.ingredientId) {
@@ -62,7 +78,7 @@ export async function listRecipes(db: Db, opts: { q?: string; ingredientId?: str
     .select()
     .from(recipes)
     .where(and(...conditions))
-    .orderBy(asc(recipes.title))
+    .orderBy(...orderFor(opts.sort))
   if (rows.length === 0) return []
 
   const names = await db
@@ -85,6 +101,10 @@ export async function listRecipes(db: Db, opts: { q?: string; ingredientId?: str
     caloriesEstimated: r.caloriesEstimated,
     hotcookMode: r.hotcookMode,
     sourceType: r.sourceType,
+    officialMenuNo: r.officialMenuNo,
+    imageKey: r.imageKey,
+    favoriteCount: r.favoriteCount,
+    cookCount: r.cookCount,
     ingredientNames: [...new Set(names.filter((n) => n.recipeId === r.id).map((n) => n.name))],
   }))
 }
@@ -102,6 +122,11 @@ function toRecipe(row: RecipeRow, items: RecipeIngredient[], steps: RecipeStep[]
     sourceType: row.sourceType,
     sourceUrl: row.sourceUrl,
     notes: row.notes,
+    officialMenuNo: row.officialMenuNo,
+    imageKey: row.imageKey,
+    favoriteCount: row.favoriteCount,
+    cookCount: row.cookCount,
+    score: row.score,
     ingredients: items,
     steps,
     updatedAt: row.updatedAt,
@@ -143,7 +168,10 @@ export async function createRecipe(db: Db, input: RecipeInputParsed): Promise<Re
   return getRecipe(db, id)
 }
 
-/** レシピを丸ごと更新する。材料と手順は全部入れ替える。作成元（sourceType）は変えない */
+/**
+ * レシピを丸ごと更新する。材料と手順は全部入れ替える。作成元（sourceType）は変えない。
+ * 公式レシピの情報（imageKey・件数など）は入力で省略されたら今の値を残す（drizzle は undefined を set しない）
+ */
 export async function updateRecipe(db: Db, id: string, input: RecipeInputParsed): Promise<Recipe> {
   await getRecipe(db, id)
   await assertIngredientsExist(db, input, id)

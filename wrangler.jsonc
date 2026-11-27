@@ -27,6 +27,13 @@
       "migrations_dir": "migrations"
     }
   ],
+  // レシピ写真（docs/deploy.md「レシピ写真（R2）」）。バケットはデプロイより先に利用者が作る
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "cooking-app-images"
+    }
+  ],
   // AI（Cursor SDK）を動かす Container（docs/design/08-agent.md）
   "containers": [
     {

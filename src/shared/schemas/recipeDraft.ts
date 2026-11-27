@@ -62,6 +62,17 @@ export type RecipeDraft = {
   steps: { phase: 'prep' | 'cook'; text: string }[]
   maxServings1_6l: number | null
   warnings: string[]
+  /** 公式レシピ（COCORO KITCHEN）から取り込んだときだけ入る。ほかは null */
+  official: RecipeDraftOfficial | null
+}
+
+/** 公式レシピの API から取った情報。保存時に Recipe の同名の欄に入る */
+export type RecipeDraftOfficial = {
+  officialMenuNo: string | null
+  imageKey: string | null
+  favoriteCount: number | null
+  cookCount: number | null
+  score: number | null
 }
 
 export const importUrlInputSchema = z.object({

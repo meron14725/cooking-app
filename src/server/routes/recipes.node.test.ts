@@ -148,6 +148,55 @@ describe('レシピ API', () => {
     expect((await api.call<{ items: RecipeSummary[] }>('GET', '/recipes')).body.items).toEqual([])
   })
 
+  it('公式レシピの情報を保存できる。更新で省略したら残り、null なら消える', async () => {
+    const official = {
+      officialMenuNo: '063',
+      imageKey: 'img/R0001.jpg',
+      favoriteCount: 120,
+      cookCount: 3400,
+      score: 5,
+    }
+    const { body: created } = await api.call<Recipe>('POST', '/recipes', curry({ ...official, sourceType: 'url' }))
+    expect(created).toMatchObject(official)
+
+    const kept = await api.call<Recipe>('PUT', `/recipes/${created.id}`, curry({ title: '名前だけ変える' }))
+    expect(kept.body).toMatchObject({ ...official, title: '名前だけ変える' })
+
+    const cleared = await api.call<Recipe>('PUT', `/recipes/${created.id}`, curry({ imageKey: null }))
+    expect(cleared.body.imageKey).toBeNull()
+    expect(cleared.body.favoriteCount).toBe(120)
+
+    const list = await api.call<{ items: RecipeSummary[] }>('GET', '/recipes')
+    expect(list.body.items[0]).toMatchObject({
+      officialMenuNo: '063',
+      imageKey: null,
+      favoriteCount: 120,
+      cookCount: 3400,
+    })
+  })
+
+  it.each([
+    ['img/ 以外の画像キー', { imageKey: 'other/a.jpg' }],
+    ['.. を含む画像キー', { imageKey: 'img/../a.jpg' }],
+    ['3 桁でないメニュー番号', { officialMenuNo: '63' }],
+    ['負の件数', { favoriteCount: -1 }],
+  ])('%s は 400', async (_, overrides) => {
+    expect((await api.call('POST', '/recipes', curry(overrides as Partial<RecipeInput>))).status).toBe(400)
+  })
+
+  it('一覧は人気順・よく作られている順に並べ替えられる。件数のないレシピは後ろ、省略なら料理名順', async () => {
+    await api.call('POST', '/recipes', curry({ title: 'あ', favoriteCount: 10, cookCount: 500 }))
+    await api.call('POST', '/recipes', curry({ title: 'い', favoriteCount: 300, cookCount: 20 }))
+    await api.call('POST', '/recipes', curry({ title: 'う' }))
+    await api.call('POST', '/recipes', curry({ title: 'え', favoriteCount: 300, cookCount: null }))
+    const titles = async (qs: string) =>
+      (await api.call<{ items: RecipeSummary[] }>('GET', `/recipes${qs}`)).body.items.map((r) => r.title)
+    expect(await titles('?sort=popular')).toEqual(['い', 'え', 'あ', 'う'])
+    expect(await titles('?sort=cooked')).toEqual(['あ', 'い', 'う', 'え'])
+    expect(await titles('')).toEqual(['あ', 'い', 'う', 'え'])
+    expect((await api.call('GET', '/recipes?sort=score')).status).toBe(400)
+  })
+
   it('存在しないレシピは 404', async () => {
     expect((await api.call('GET', '/recipes/nope')).status).toBe(404)
     expect((await api.call('PUT', '/recipes/nope', curry())).status).toBe(404)

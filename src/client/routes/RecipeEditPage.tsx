@@ -11,7 +11,7 @@ import {
   STEP_PHASES,
   type StepPhase,
 } from '../../shared/schemas/recipe'
-import type { RecipeDraft } from '../../shared/schemas/recipeDraft'
+import type { RecipeDraft, RecipeDraftOfficial } from '../../shared/schemas/recipeDraft'
 import { ApiRequestError } from '../api/client'
 import { useIngredients } from '../api/ingredients'
 import { aiErrorMessage, useDeleteRecipe, useEstimateCalories, useRecipe, useSaveRecipe } from '../api/recipes'
@@ -20,6 +20,7 @@ import { Icon } from '../components/Icon'
 import { IngredientSelect, unitChoices } from '../components/ingredientInputs'
 import { PageHeader } from '../components/PageHeader'
 import { QuickAddIngredient } from '../components/QuickAddIngredient'
+import { RecipePhoto } from '../components/RecipePhoto'
 
 type IngredientRow = {
   key: string
@@ -51,6 +52,8 @@ type FormState = {
   notes: string
   /** 作成時だけ使う（更新では変わらない） */
   sourceType: 'manual' | 'url' | 'ai'
+  /** 公式レシピから取り込んだ下書きの情報（作成時だけ送る。編集では送らず、サーバの値を残す） */
+  official: RecipeDraftOfficial | null
   ingredients: IngredientRow[]
   steps: StepRow[]
 }
@@ -79,6 +82,7 @@ const emptyForm = (): FormState => ({
   sourceUrl: '',
   notes: '',
   sourceType: 'manual',
+  official: null,
   ingredients: [newIngredientRow()],
   steps: [],
 })
@@ -97,6 +101,7 @@ function toForm(r: Recipe): FormState {
     sourceUrl: r.sourceUrl ?? '',
     notes: r.notes ?? '',
     sourceType: 'manual',
+    official: null,
     ingredients: r.ingredients.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId,
@@ -121,6 +126,7 @@ function fromDraft(d: RecipeDraft, masters: Map<string, UnitMaster>): FormState 
     maxServings1_6l: str(d.maxServings1_6l),
     sourceUrl: d.sourceUrl ?? '',
     sourceType: d.sourceType,
+    official: d.official,
     ingredients: d.ingredients.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId ?? '',
@@ -205,6 +211,7 @@ function toInput(f: FormState, masters: Map<string, UnitMaster>): Converted {
       sourceUrl: f.sourceUrl.trim() || null,
       notes: f.notes,
       sourceType: f.sourceType,
+      ...f.official,
       ingredients,
       steps: f.steps.map((s) => ({ phase: s.phase, text: s.text })),
     },
@@ -218,6 +225,23 @@ function move<T>(list: T[], index: number, delta: number): T[] {
   const [item] = next.splice(index, 1)
   if (item !== undefined) next.splice(to, 0, item)
   return next
+}
+
+/** 公式レシピの写真と件数。写真のキーも件数もないレシピでは出さない */
+function OfficialInfo({ info }: { info: RecipeDraftOfficial | null }) {
+  if (!info) return null
+  const facts = [
+    info.officialMenuNo && `メニュー No.${info.officialMenuNo}`,
+    info.favoriteCount !== null && `お気に入り ${info.favoriteCount.toLocaleString('ja-JP')}`,
+    info.cookCount !== null && `作られた回数 ${info.cookCount.toLocaleString('ja-JP')}`,
+  ].filter(Boolean)
+  if (!info.imageKey && facts.length === 0) return null
+  return (
+    <div className="flex flex-col gap-2">
+      {info.imageKey && <RecipePhoto imageKey={info.imageKey} className="aspect-[4/3] w-full rounded-card" />}
+      {facts.length > 0 && <p className="text-[13px] text-ink-muted">{facts.join(' ・ ')}</p>}
+    </div>
+  )
 }
 
 export function RecipeEditPage() {
@@ -335,6 +359,7 @@ export function RecipeEditPage() {
       {existing.data && (
         <p className="-mt-3 text-xs text-ink-muted">作成元: {SOURCE_TYPE_LABELS[existing.data.sourceType]}</p>
       )}
+      <OfficialInfo info={existing.data ?? draft?.official ?? null} />
       {draft && (
         <div className="-mt-1 space-y-1 rounded-card border border-warn/30 bg-warn-wash p-3 text-sm">
           <p className="font-bold text-warn">AI が作った下書きです。確認してから保存してください</p>
