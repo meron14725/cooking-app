@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, isNull, sql } from 'drizzle-orm'
 import { type ZodType, z } from 'zod'
 import type {
   AgentApplyInput,
@@ -38,6 +38,8 @@ type OpDef = {
   description: string
   /** 変える行の種類。add / create は null */
   target: Target | null
+  /** 反映すると対象の updated_at が変わるか（shopping.add は献立を対象にするが献立の行は変えない） */
+  keepsTarget?: boolean
   /** 入力のスキーマ。use_up / delete / check は入力なし */
   input: ZodType | null
   summarize: (snap: Snapshot, targetId: string | null, input: never) => string
@@ -51,6 +53,7 @@ function def<I>(d: {
   tool: string
   description: string
   target: Target | null
+  keepsTarget?: boolean
   input: ZodType<I> | null
   summarize: (snap: Snapshot, targetId: string | null, input: I) => string
   apply: (db: Db, targetId: string | null, input: I, today: string) => Promise<unknown>
@@ -140,6 +143,7 @@ const OPS: Record<AgentOp, OpDef> = {
     tool: 'propose_shopping_add',
     description: '買い物リストに行を足す案。targetId は進行中の献立の id（献立が買い物中のときだけ）',
     target: 'plan',
+    keepsTarget: true,
     input: shoppingAddSchema,
     summarize: (snap, _, i) => {
       const m = snap.ingredientsById.get(i.ingredientId)
@@ -220,6 +224,9 @@ const OP_BY_TOOL = new Map(Object.entries(OPS).map(([op, d]) => [d.tool, op as A
 
 /** エージェントに見せるデータ。購入日・袋・利用履歴は入れない（08「プライバシー」） */
 async function buildSnapshot(db: Db, today: string) {
+  // 各行の updated_at を先に読む（変更案の baseUpdatedAt に使う）。中身はこの後に読むので、
+  // 間に変わった行は summary が新しく base が古くなり、反映のときに安全側（変わりました）で止まる
+  const updatedAt = await readUpdatedAt(db)
   const [inventory, masters, recipeList, plan] = await Promise.all([
     listInventory(db, today),
     listIngredients(db),
@@ -241,7 +248,33 @@ async function buildSnapshot(db: Db, today: string) {
     recipesById: new Map(recipeDetails.map((r) => [r.id, r])),
     shoppingById: new Map(shopping.map((s) => [s.id, s])),
     recipeTitle: (id: string) => titles.get(id) ?? '?',
+    updatedAt,
   }
+}
+
+const key = (target: Target, id: string) => `${target}:${id}`
+
+/** スナップショットを作る時点の updated_at（在庫は使い切っていない行、買い物は買い物中の献立の行だけ） */
+async function readUpdatedAt(db: Db): Promise<Map<string, string>> {
+  const pick = { id: inventoryItems.id, updatedAt: inventoryItems.updatedAt }
+  const [inv, shop, rec, pl] = await Promise.all([
+    db.select(pick).from(inventoryItems).where(isNull(inventoryItems.usedUpAt)),
+    db
+      .select({ id: shoppingItems.id, updatedAt: shoppingItems.updatedAt })
+      .from(shoppingItems)
+      .where(sql`${shoppingItems.planId} IN (SELECT ${plans.id} FROM ${plans} WHERE ${plans.status} = 'shopping')`),
+    db.select({ id: recipes.id, updatedAt: recipes.updatedAt }).from(recipes).where(isNull(recipes.archivedAt)),
+    db
+      .select({ id: plans.id, updatedAt: plans.updatedAt })
+      .from(plans)
+      .where(sql`${plans.status} IN ('draft', 'shopping', 'prepping')`),
+  ])
+  const map = new Map<string, string>()
+  for (const r of inv) map.set(key('inventory', r.id), r.updatedAt)
+  for (const r of shop) map.set(key('shopping', r.id), r.updatedAt)
+  for (const r of rec) map.set(key('recipe', r.id), r.updatedAt)
+  for (const r of pl) map.set(key('plan', r.id), r.updatedAt)
+  return map
 }
 
 function readTools(snap: Snapshot): AgentReadTool[] {
@@ -404,6 +437,8 @@ export async function requestAgent(
 
   const operations: AgentOperation[] = []
   const warnings: string[] = []
+  /** 反映で updated_at が変わる対象。同じ対象への 2 つ目の案は反映で必ず失敗するので、ここで捨てる */
+  const touched = new Set<string>()
   for (const call of calls.slice(0, 20)) {
     const op = OP_BY_TOOL.get(call.tool)
     const d = op && OPS[op]
@@ -416,30 +451,30 @@ export async function requestAgent(
       warnings.push(`対象が見つからない変更案を捨てました（${op}）`)
       continue
     }
-    let input: unknown = null
+    let parsedInput: unknown
     if (d.input) {
       const parsed = d.input.safeParse(call.args.input)
       if (!parsed.success) {
         warnings.push(`形が正しくない変更案を捨てました（${op}: ${parsed.error.issues[0]?.message ?? ''}）`)
         continue
       }
-      // 画面に返して反映のときにもう一度検証するので、検証前の形（AI の入力そのまま）を持たせる
-      input = call.args.input
-      operations.push({
-        op,
-        targetId,
-        input,
-        summary: d.summarize(snap, targetId, parsed.data as never),
-        baseUpdatedAt: d.target && targetId ? await targetUpdatedAt(db, d.target, targetId) : null,
-      })
-      continue
+      parsedInput = parsed.data
+    }
+    if (d.target && targetId && !d.keepsTarget) {
+      if (touched.has(key(d.target, targetId))) {
+        warnings.push(`同じ対象への 2 つ目の変更案を捨てました（${op}。1 つにまとめてもう一度頼んでください）`)
+        continue
+      }
+      touched.add(key(d.target, targetId))
     }
     operations.push({
       op,
       targetId,
-      input,
-      summary: d.summarize(snap, targetId, undefined as never),
-      baseUpdatedAt: d.target && targetId ? await targetUpdatedAt(db, d.target, targetId) : null,
+      // 画面に返して反映のときにもう一度検証するので、検証前の形（AI の入力そのまま）を持たせる
+      input: d.input ? call.args.input : null,
+      summary: d.summarize(snap, targetId, parsedInput as never),
+      // スナップショットを作った時点の値（エージェントの実行後に読み直さない）
+      baseUpdatedAt: d.target && targetId ? (snap.updatedAt.get(key(d.target, targetId)) ?? null) : null,
     })
   }
   return { reply, operations, warnings }
