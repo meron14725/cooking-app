@@ -102,7 +102,13 @@ function TodayKitCard({ kit, day }: { kit: MealKit; day: number | null }) {
       </div>
       <div className="relative flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-[32px] leading-tight font-bold">{kit.title}</p>
+          <Link
+            to={`/recipes/${kit.recipeId}`}
+            className="inline-flex items-center gap-1 font-display text-[32px] leading-tight font-bold text-ink"
+          >
+            {kit.title}
+            <Icon name="chevronRight" size={22} strokeWidth={2.2} className="shrink-0 opacity-60" />
+          </Link>
           <p className="mt-1 text-sm text-ink-soft">
             {kit.servings}食分
             {recipe?.caloriesKcal != null && ` ・ ${recipe.caloriesEstimated ? '約' : ''}${recipe.caloriesKcal}kcal`}

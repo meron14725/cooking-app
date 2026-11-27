@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { diffDays, shortDate } from '../../shared/domain/date'
 import type { KitDraft, KitLocation } from '../../shared/domain/prep'
 import { ApiRequestError } from '../api/client'
@@ -187,7 +187,12 @@ function KitCard({
         </div>
         <div className="flex items-center gap-3">
           <DishPhotoButton recipeId={kit.recipeId} title={kit.title} className="size-12 rounded-[14px]" />
-          <h3 className="line-clamp-2 min-w-0 text-[19px] font-bold">{kit.title}</h3>
+          <h3 className="min-w-0 font-display text-[19px] font-bold">
+            <Link to={`/recipes/${kit.recipeId}`} className="inline-flex min-h-8 items-center gap-1 text-ink">
+              <span className="line-clamp-2">{kit.title}</span>
+              <Icon name="chevronRight" size={18} strokeWidth={2.2} className="shrink-0 opacity-60" />
+            </Link>
+          </h3>
         </div>
         <fieldset className="grid grid-cols-2 gap-1 rounded-[18px] bg-sunken p-1">
           <legend className="sr-only">{kit.title}の保存場所</legend>

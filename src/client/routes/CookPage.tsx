@@ -232,7 +232,13 @@ export function CookPage() {
           >
             <Icon name="close" size={20} strokeWidth={2} />
           </Link>
-          <p className="min-w-0 truncate font-display text-base font-bold">{kit.title}</p>
+          <Link
+            to={`/recipes/${kit.recipeId}`}
+            className="flex min-h-11 min-w-0 items-center gap-1 font-display text-base font-bold text-ink"
+          >
+            <span className="truncate">{kit.title}</span>
+            <Icon name="chevronRight" size={16} strokeWidth={2.2} className="shrink-0 opacity-60" />
+          </Link>
           <button
             type="button"
             aria-label="袋の操作"
