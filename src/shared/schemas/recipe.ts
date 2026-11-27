@@ -136,7 +136,7 @@ export const recipeInputSchema = z.object({
   usesMixingUnit: z.boolean().nullish(),
   cookMinutes: z.number().int().min(1).max(600).nullish(),
   /**
-   * true = 上の 4 つを本人が直した（送った値を保存し、以後は推定で上書きしない。省いた欄はルールで決める）。
+   * true = 上の 4 つを本人が直した（送った値を保存し、以後は推定で上書きしない。省いた区分・系統はルールで決め、まぜ技・調理時間は今の値を残す）。
    * false = 手で直した値を捨てて自動に戻す。省略 = 手で直したレシピならその値を残す
    */
   attributesManual: z.boolean().optional(),
