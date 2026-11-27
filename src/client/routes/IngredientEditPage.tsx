@@ -12,6 +12,7 @@ import {
 import { ApiRequestError } from '../api/client'
 import { useDeleteIngredient, useIngredient, useSaveIngredient } from '../api/ingredients'
 import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
+import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 
 type UnitForm = { key: string; id?: string; label: string; quantity: string; isDefault: boolean }
@@ -180,8 +181,8 @@ export function IngredientEditPage() {
     }
   }
 
-  if (id && existing.isPending) return <p className="text-stone-500">読み込み中…</p>
-  if (id && existing.isError) return <p className="text-red-600">食材が見つかりませんでした</p>
+  if (id && existing.isPending) return <p className="text-ink-muted">読み込み中…</p>
+  if (id && existing.isError) return <p className="text-danger">食材が見つかりませんでした</p>
 
   const numberField = (key: keyof FormState, label: string, opts: { hint?: string; disabled?: boolean } = {}) => (
     <Field label={label} hint={opts.hint} error={errors[key]}>
@@ -200,7 +201,7 @@ export function IngredientEditPage() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
-      <PageHeader title={id ? '食材を編集' : '食材を追加'} />
+      <PageHeader title={id ? '食材を編集' : '食材を追加'} backTo="/ingredients" />
 
       <Field label="名前" error={errors.name}>
         <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} required />
@@ -242,8 +243,8 @@ export function IngredientEditPage() {
           hint: 'レシピの「100g」をこの単位に直すときに使います',
         })}
 
-      <fieldset className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
-        <legend className="px-1 text-sm font-bold text-stone-700">保存と日持ち（目安）</legend>
+      <fieldset className="space-y-3 rounded-card border border-line bg-surface p-4">
+        <legend className="px-1 text-sm font-bold text-ink-soft">保存と日持ち（目安）</legend>
         <Field label="買ったときの保存場所" error={errors.defaultLocation}>
           <select
             value={form.defaultLocation}
@@ -263,15 +264,15 @@ export function IngredientEditPage() {
           {numberField('freezerDays', '冷凍（日）', { disabled: !form.canFreeze })}
           {numberField('pantryDays', '常温（日）', { hint: '空 = 常温不可' })}
         </div>
-        <p className="text-xs text-stone-500">切った後の日持ち（空なら冷蔵 2日・冷凍 21日）</p>
+        <p className="text-xs text-ink-muted">切った後の日持ち（空なら冷蔵 2日・冷凍 21日）</p>
         <div className="grid grid-cols-2 gap-3">
           {numberField('preppedFridgeDays', '切った後・冷蔵（日）')}
           {numberField('preppedFreezerDays', '切った後・冷凍（日）', { disabled: !form.canFreeze })}
         </div>
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
-        <legend className="px-1 text-sm font-bold text-stone-700">調理のときの注意</legend>
+      <fieldset className="space-y-3 rounded-card border border-line bg-surface p-4">
+        <legend className="px-1 text-sm font-bold text-ink-soft">調理のときの注意</legend>
         <Field
           label="入れる直前の作業"
           hint="例: 入れる直前に切る、水で戻す。空なら直前作業なし"
@@ -297,10 +298,10 @@ export function IngredientEditPage() {
         />
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
-        <legend className="px-1 text-sm font-bold text-stone-700">販売単位</legend>
-        {errors.packageUnits && <p className="text-xs text-red-600">{errors.packageUnits}</p>}
-        {form.packageUnits.length === 0 && <p className="text-sm text-stone-500">なし（量り売り扱い）</p>}
+      <fieldset className="space-y-3 rounded-card border border-line bg-surface p-4">
+        <legend className="px-1 text-sm font-bold text-ink-soft">販売単位</legend>
+        {errors.packageUnits && <p className="text-xs text-danger">{errors.packageUnits}</p>}
+        {form.packageUnits.length === 0 && <p className="text-sm text-ink-muted">なし（量り売り扱い）</p>}
         {form.packageUnits.map((u) => (
           <div key={u.key} className="flex items-end gap-2">
             <Field label="名前">
@@ -328,7 +329,7 @@ export function IngredientEditPage() {
                 name="default-unit"
                 checked={u.isDefault}
                 onChange={() => setUnit(u.key, { isDefault: true })}
-                className="size-4 accent-orange-600"
+                className="size-4 accent-accent"
               />
               代表
             </label>
@@ -341,14 +342,14 @@ export function IngredientEditPage() {
                   form.packageUnits.filter((x) => x.key !== u.key),
                 )
               }
-              className="min-h-11 shrink-0 px-2 text-stone-400"
+              className="min-h-11 shrink-0 px-2 text-ink-muted"
             >
-              ✕
+              <Icon name="close" size={18} />
             </button>
           </div>
         ))}
         <Button
-          variant="secondary"
+          variant="add"
           onClick={() =>
             set('packageUnits', [
               ...form.packageUnits,
@@ -356,13 +357,14 @@ export function IngredientEditPage() {
             ])
           }
         >
-          ＋ 販売単位を追加
+          <Icon name="plus" size={18} strokeWidth={2} />
+          販売単位を追加
         </Button>
       </fieldset>
 
-      {errors.form && <p className="text-sm text-red-600">{errors.form}</p>}
+      {errors.form && <p className="text-sm text-danger">{errors.form}</p>}
       {Object.keys(errors).length > 0 && !errors.form && (
-        <p className="text-sm text-red-600">入力内容を確認してください</p>
+        <p className="text-sm text-danger">入力内容を確認してください</p>
       )}
 
       <div className="flex gap-3">
@@ -375,7 +377,7 @@ export function IngredientEditPage() {
       </div>
 
       {id && (
-        <div className="border-t border-stone-200 pt-5">
+        <div className="border-t border-line pt-5">
           {confirmDelete ? (
             <div className="flex items-center gap-3">
               <span className="flex-1 text-sm">一覧から消します。よいですか？</span>
@@ -391,7 +393,7 @@ export function IngredientEditPage() {
               この食材を削除
             </Button>
           )}
-          {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
+          {deleteError && <p className="mt-2 text-sm text-danger">{deleteError}</p>}
         </div>
       )}
     </form>
