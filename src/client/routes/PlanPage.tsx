@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { MAX_SERVINGS_PER_DISH } from '../../shared/domain/constants'
+import {
+  DEFAULT_SERVINGS,
+  DEFAULT_TARGET_MEALS,
+  MAX_SERVINGS_PER_DISH,
+  SERVINGS_STEP,
+} from '../../shared/domain/constants'
 import { addDays, shortDate, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
 import { favoriteTotal, type RecipeSort } from '../../shared/schemas/recipe'
@@ -10,10 +15,12 @@ import {
   useCreatePlan,
   useCurrentPlan,
   useDeletePlan,
+  usePlanDefaults,
   usePlanEvaluation,
   useProposalEvaluations,
   useRecommendations,
   useReplacePlanRecipes,
+  useUpdatePlan,
 } from '../api/plans'
 import { aiErrorMessage, useRecipes, useSuggestRecipe } from '../api/recipes'
 import { ProposalCost } from '../components/CostSummary'
@@ -33,6 +40,7 @@ import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
 import { type PlanStep, parentOf, stepView, usePlanStepNav } from './planSteps'
 import {
   anchorsKey,
+  canMealsUp,
   canStepDown,
   canStepUp,
   currentRounds,
@@ -41,12 +49,17 @@ import {
   isProposalServings,
   locksKey,
   locksStorageKey,
+  mealsDown,
+  mealsUp,
   nextRound,
   noServings,
+  proposalKey,
   roundsStorageKey,
   servingsStorageKey,
+  shownOf,
   stepDown,
   stepUp,
+  uniqueByRecipes,
 } from './proposalRounds'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
@@ -81,15 +94,58 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
 
 // ---------- 1. 食べたい料理を選ぶ ----------
 
-/** 選んだ料理の食数。− で 1 から減らすと選択を外す（案D D-PlanPick） */
+/** 合計◯食の ＋－（献立を作るときと、提案の画面）。変えると、その合計に合わせて料理ごとの食数を配り直す */
+function TargetMeals({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: number
+  onChange: (v: number) => void
+  disabled?: boolean
+}) {
+  const btn =
+    'flex size-9 items-center justify-center rounded-full bg-surface text-ink disabled:text-line-strong disabled:cursor-default'
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-[24px] bg-surface px-4 py-2.5 shadow-card">
+      <span className="flex min-w-0 flex-col">
+        <span className="text-[15px] font-bold">合計</span>
+        <span className="text-xs text-ink-muted">この食数になるよう、料理ごとの食数を配ります</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-sunken p-0.5">
+        <button
+          type="button"
+          onClick={() => onChange(mealsDown(value))}
+          disabled={disabled || value <= SERVINGS_STEP}
+          aria-label="合計の食数を減らす"
+          className={btn}
+        >
+          <Icon name="minus" size={16} strokeWidth={2.2} />
+        </button>
+        <span className="min-w-12 text-center text-sm font-bold tabular-nums">{value}食</span>
+        <button
+          type="button"
+          onClick={() => onChange(mealsUp(value))}
+          disabled={disabled || !canMealsUp(value)}
+          aria-label="合計の食数を増やす"
+          className={btn}
+        >
+          <Icon name="plus" size={16} strokeWidth={2.2} />
+        </button>
+      </span>
+    </div>
+  )
+}
+
+/** 選んだ料理の食数。刻み（SERVINGS_STEP）で動かし、いちばん少ない食数から − で選択を外す（案D D-PlanPick） */
 function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => void }) {
   const btn = 'flex size-9 items-center justify-center rounded-full bg-surface text-ink'
   return (
     <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-sunken p-0.5">
       <button
         type="button"
-        onClick={() => onChange(p.servings - 1)}
-        aria-label={`${p.title} を1食減らす`}
+        onClick={() => onChange(p.servings <= SERVINGS_STEP ? 0 : stepDown(p.servings))}
+        aria-label={`${p.title} の食数を減らす`}
         className={btn}
       >
         <Icon name="minus" size={16} strokeWidth={2.2} />
@@ -97,9 +153,9 @@ function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => voi
       <span className="min-w-11 text-center text-sm font-bold tabular-nums">{p.servings}食分</span>
       <button
         type="button"
-        onClick={() => onChange(p.servings + 1)}
+        onClick={() => onChange(stepUp(p.servings))}
         disabled={p.servings >= MAX_SERVINGS_PER_DISH}
-        aria-label={`${p.title} を1食増やす`}
+        aria-label={`${p.title} の食数を増やす`}
         className={`${btn} disabled:text-line-strong`}
       >
         <Icon name="plus" size={16} strokeWidth={2.2} />
@@ -137,12 +193,16 @@ function AnchorPicker() {
   }, [all.data])
   const create = useCreatePlan()
   const [error, setError] = useState<string | null>(null)
+  // 合計◯食: 前回の献立の値から始める（変えたら、その値を使う）
+  const defaults = usePlanDefaults()
+  const [targetMeals, setTargetMeals] = useState<number | null>(null)
+  const meals = targetMeals ?? defaults.data?.targetMeals ?? DEFAULT_TARGET_MEALS
 
   const toggle = (id: string, title: string) =>
     setPicked((cur) =>
       cur.some((p) => p.recipeId === id)
         ? cur.filter((p) => p.recipeId !== id)
-        : [...cur, { recipeId: id, title, servings: 1 }],
+        : [...cur, { recipeId: id, title, servings: DEFAULT_SERVINGS }],
     )
   const setServings = (id: string, v: number) =>
     setPicked((cur) =>
@@ -158,6 +218,7 @@ function AnchorPicker() {
           recipeId,
           servings: Math.min(servings, MAX_SERVINGS_PER_DISH),
         })),
+        targetMeals: meals,
       })
       savePicked([])
     } catch (err) {
@@ -171,7 +232,7 @@ function AnchorPicker() {
         <h2 className="font-display text-[15px] font-bold">食べたい料理</h2>
         {picked.length === 0 ? (
           <p className="flex min-h-12 items-center rounded-[24px] border-2 border-dashed border-line-dashed px-4 text-sm text-ink-muted">
-            下の一覧から選んでください（全部で 3 品になるよう提案します）
+            下の一覧から選んでください（合計{meals}食になるよう、ほかの料理を足して提案します）
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -184,6 +245,7 @@ function AnchorPicker() {
             ))}
           </ul>
         )}
+        <TargetMeals value={meals} onChange={setTargetMeals} />
       </section>
 
       <div className="flex flex-col gap-3.5">
@@ -445,8 +507,6 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
   )
 }
 
-const proposalKey = (p: ProposalView) => p.recipes.map((r) => r.recipeId).join()
-
 /**
  * 提案カードの料理ごとの「− ○食分 ＋」（案D D-PlanNew）。
  * カード全体が案を選ぶラベルなので、押しても案は切り替えない（ボタンはラベルを働かせないが、念のため止める）
@@ -509,8 +569,8 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   }, [savedLocks.anchors, anchors, setSavedLocks])
   const locked = savedLocks.anchors === anchors ? savedLocks.servings : {}
   const fixed = Object.entries(locked).map(([recipeId, servings]) => ({ recipeId, servings }))
-  // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理か固定が変わったら 1 回目に戻る）
-  const roundsKey = `${anchors}|${locksKey(locked)}`
+  // 何回目の案か・出した案は、レシピを見に行って戻っても残す（食べたい料理・固定・合計◯食が変わったら 1 回目に戻る）
+  const roundsKey = `${anchors}|${locksKey(locked)}|${plan.targetMeals ?? ''}`
   const [savedRounds, setRounds] = useSessionState(roundsStorageKey(plan.id), firstRound(roundsKey), isProposalRounds)
   const rounds = currentRounds(savedRounds, roundsKey)
   // 変わったら保存値も 1 回目で上書きする（元に戻したときに古い回が復活しないように）
@@ -522,7 +582,9 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const proposals = recs.data?.proposals ?? []
+  // 届いた案。同じ料理の組み合わせで食数だけ違う案は 1 つだけカードに出す（出した案としては全部覚える）
+  const fetched = recs.data?.proposals ?? []
+  const proposals = uniqueByRecipes(fetched)
   const hasMore = recs.data?.hasMore ?? false
 
   // カードで変えた食分（料理ごと）。食べたい料理が変わったら捨てる
@@ -578,12 +640,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   )
 
   function showOthers() {
-    setRounds(
-      nextRound(
-        rounds,
-        proposals.map((p) => p.recipes.map((r) => r.recipeId)),
-      ),
-    )
+    setRounds(nextRound(rounds, fetched.map(shownOf)))
     // 選択は新しい 1 番目に戻す
     setPickedKey(null)
     setError(null)
@@ -977,6 +1034,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
 function DraftPlan({ plan, step }: { plan: Plan; step: 'proposals' | 'order' }) {
   const nav = usePlanStepNav()
   const replace = useReplacePlanRecipes(plan.id)
+  const update = useUpdatePlan(plan.id)
   // 最後の 1 品を外して献立ごと消すのと、「この献立をやめる」は失敗の出し方を分ける
   const removeLast = useDeletePlan()
   const discard = useDeletePlan()
@@ -1029,6 +1087,14 @@ function DraftPlan({ plan, step }: { plan: Plan; step: 'proposals' | 'order' }) 
               <p className="text-sm text-danger">
                 {errorMessage(replace.error ?? removeLast.error, '外せませんでした')}
               </p>
+            )}
+            <TargetMeals
+              value={plan.targetMeals ?? DEFAULT_TARGET_MEALS}
+              onChange={(targetMeals) => update.mutate({ targetMeals })}
+              disabled={update.isPending}
+            />
+            {update.isError && (
+              <p className="text-sm text-danger">{errorMessage(update.error, '合計の食数を変えられませんでした')}</p>
             )}
           </section>
           <Proposals plan={plan} onChosen={() => nav.goTo('order')} />
