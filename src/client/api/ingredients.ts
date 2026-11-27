@@ -1,17 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Category, Ingredient, IngredientInput } from '../../shared/schemas/ingredient'
+import type { Category, Ingredient, IngredientInput, PriceFilter } from '../../shared/schemas/ingredient'
 import { apiFetch } from './client'
+
+type ListParams = { q?: string; category?: Category; price?: PriceFilter }
 
 const keys = {
   all: ['ingredients'] as const,
-  list: (params: { q?: string; category?: Category }) => ['ingredients', 'list', params] as const,
+  list: (params: ListParams) => ['ingredients', 'list', params] as const,
   detail: (id: string) => ['ingredients', 'detail', id] as const,
 }
 
-export function useIngredients(params: { q?: string; category?: Category } = {}) {
+export function useIngredients(params: ListParams = {}) {
   const search = new URLSearchParams()
   if (params.q) search.set('q', params.q)
   if (params.category) search.set('category', params.category)
+  if (params.price) search.set('price', params.price)
   const qs = search.toString()
   return useQuery({
     queryKey: keys.list(params),
