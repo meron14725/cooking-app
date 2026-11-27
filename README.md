@@ -17,7 +17,8 @@ Node.js 22 を使います。
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173 （画面と /api の両方）
+cp .dev.vars.example .dev.vars   # ローカルでは認証をスキップ
+npm run dev                      # http://localhost:5173 （画面と /api の両方）
 ```
 
 | コマンド | 内容 |
@@ -26,4 +27,8 @@ npm run dev        # http://localhost:5173 （画面と /api の両方）
 | `npm run typecheck` | TypeScript の型チェック |
 | `npm test` | Vitest |
 | `npm run build` | 本番ビルド |
-| `npm run cf-typegen` | `wrangler.jsonc` を変えたあとに Worker の型（`Env`）を作り直す |
+| `npm run cf-typegen` | Workers ランタイムの型を作り直す（`Env` は `src/server/env.d.ts` に手で書く） |
+
+## デプロイ
+
+main にマージすると GitHub Actions が本番 D1 の書き出し → マイグレーション → デプロイを行います。初回の設定は [docs/deploy.md](./docs/deploy.md) を見てください。

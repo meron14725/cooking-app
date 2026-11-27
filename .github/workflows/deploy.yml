@@ -1,0 +1,88 @@
+name: Deploy
+
+# main にマージされたら本番にデプロイする（docs/design/01-architecture.md「デプロイとマイグレーション」）
+# 1. チェック → 2. 本番 D1 を書き出して artifact に保存 → 3. マイグレーション → 4. デプロイ
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# デプロイが重ならないようにする（途中のものは止めずに順番待ち）
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DB_NAME: cooking-app
+    steps:
+      - name: Cloudflare の設定があるか確認
+        id: config
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID が未設定のためデプロイをスキップします（docs/deploy.md）"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - if: steps.config.outputs.enabled == 'true'
+        run: npm ci
+
+      - name: チェック
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          npm run lint
+          npm run typecheck
+          npm test
+
+      - name: 本番 D1 を書き出す
+        if: steps.config.outputs.enabled == 'true'
+        # 書き出しに失敗したらマイグレーションに進まない（pipefail を効かせる）
+        shell: bash
+        run: |
+          set -euo pipefail
+          # テーブルがまだない（最初のデプロイ）ときは書き出すものがないのでスキップ
+          tables=$(npx wrangler d1 execute "$DB_NAME" --remote --json \
+            --command "SELECT count(*) AS n FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations'" \
+            | jq -e '.[0].results[0].n')
+          echo "tables=$tables"
+          if ! [[ "$tables" =~ ^[0-9]+$ ]]; then
+            echo "::error::テーブル数を取得できませんでした: $tables"
+            exit 1
+          fi
+          mkdir -p backup
+          if [ "$tables" -gt 0 ]; then
+            npx wrangler d1 export "$DB_NAME" --remote --output "backup/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ).sql"
+          else
+            echo "テーブルがないため書き出しをスキップ" > backup/SKIPPED.txt
+          fi
+
+      - name: 書き出した SQL を保存
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ github.sha }}
+          path: backup/
+          retention-days: 30
+
+      - name: マイグレーション
+        if: steps.config.outputs.enabled == 'true'
+        run: npx wrangler d1 migrations apply "$DB_NAME" --remote
+
+      - name: デプロイ
+        if: steps.config.outputs.enabled == 'true'
+        run: npm run deploy
