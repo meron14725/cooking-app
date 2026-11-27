@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { normalizeUnit, toBaseQuantity, toGrams, type UnitMaster } from '../../shared/domain/units'
-import { CATEGORY_OPTIONS, type Ingredient } from '../../shared/schemas/ingredient'
+import type { Ingredient } from '../../shared/schemas/ingredient'
 import {
   type Recipe,
   type RecipeInput,
@@ -16,6 +16,7 @@ import { ApiRequestError } from '../api/client'
 import { useIngredients } from '../api/ingredients'
 import { aiErrorMessage, useDeleteRecipe, useEstimateCalories, useRecipe, useSaveRecipe } from '../api/recipes'
 import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
+import { IngredientSelect, unitChoices } from '../components/ingredientInputs'
 import { PageHeader } from '../components/PageHeader'
 import { QuickAddIngredient } from '../components/QuickAddIngredient'
 
@@ -159,16 +160,6 @@ function adoptAddedIngredient(row: IngredientRow, added: UnitMaster & { id: stri
     quantity: '',
     notice: `元の量は ${amount}${from} です。${added.unit}での量を入れてください`,
   }
-}
-
-/** 入力できる単位: 基準単位、g（重さが分かる食材）、大さじ・小さじ（ml の食材） */
-function unitChoices(m: UnitMaster | undefined): string[] {
-  if (!m) return []
-  const base = normalizeUnit(m.unit)
-  const choices = [m.unit]
-  if (base !== 'g' && m.gramsPerUnit) choices.push('g')
-  if (base === 'ml') choices.push('大さじ', '小さじ')
-  return choices
 }
 
 /** 表示文字列を空にしたときに使う文字列（例: 玉ねぎ 150g） */
@@ -437,31 +428,16 @@ export function RecipeEditPage() {
           return (
             <div key={row.key} className="space-y-2 rounded-lg border border-stone-200 p-3">
               <div className="flex gap-2">
-                <select
+                <IngredientSelect
                   value={row.ingredientId}
-                  onChange={(e) => {
-                    const m = masters.get(e.target.value)
-                    setRow(row.key, { ingredientId: e.target.value, unit: m?.unit ?? '', displayText: '' })
+                  onChange={(value) => {
+                    const m = masters.get(value)
+                    setRow(row.key, { ingredientId: value, unit: m?.unit ?? '', displayText: '' })
                   }}
-                  aria-label="食材"
-                  className={`${inputBaseClass} min-w-0 flex-1`}
-                >
-                  <option value="">食材を選ぶ</option>
-                  {master?.archived && <option value={row.ingredientId}>{master.name}（削除済み）</option>}
-                  {CATEGORY_OPTIONS.map((cat) => {
-                    const items = activeMasters.filter((i) => i.category === cat.value)
-                    if (items.length === 0) return null
-                    return (
-                      <optgroup key={cat.value} label={cat.label}>
-                        {items.map((i) => (
-                          <option key={i.id} value={i.id}>
-                            {i.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )
-                  })}
-                </select>
+                  ingredients={activeMasters}
+                  archivedName={master?.archived ? master.name : undefined}
+                  className="flex-1"
+                />
                 <Button
                   variant="secondary"
                   aria-label="上へ"

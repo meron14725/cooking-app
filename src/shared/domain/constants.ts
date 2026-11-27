@@ -12,3 +12,6 @@ export const DEFAULT_SERVINGS = 1
 /** 切った後の日持ちがマスタにないときの上限（日） */
 export const DEFAULT_PREPPED_FRIDGE_DAYS = 2
 export const DEFAULT_PREPPED_FREEZER_DAYS = 21
+
+/** 冷凍の日持ちがマスタにないとき（冷凍できる食材）の目安（日） */
+export const DEFAULT_FREEZER_DAYS = 30
