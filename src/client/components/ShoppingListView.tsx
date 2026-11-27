@@ -163,6 +163,7 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
           type="button"
           aria-pressed={checked}
           onClick={() => toggle.mutate({ id: item.id, checked: !checked })}
+          disabled={toggle.isPending}
           className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 py-2 text-left"
         >
           <span

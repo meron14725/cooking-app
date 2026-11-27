@@ -119,6 +119,14 @@ describe('買い物リスト', () => {
       expiresOn: addDays(today, 7),
     })
 
+    // 同時に届いても 1 行だけ
+    await api.call('POST', `/shopping-items/${item.id}/uncheck`)
+    await Promise.all([
+      api.call('POST', `/shopping-items/${item.id}/check`),
+      api.call('POST', `/shopping-items/${item.id}/check`),
+    ])
+    expect(await inventory()).toHaveLength(1)
+
     const off = await api.call<ShoppingItem>('POST', `/shopping-items/${item.id}/uncheck`)
     expect(off.body.checkedAt).toBeNull()
     expect(await inventory()).toHaveLength(0)

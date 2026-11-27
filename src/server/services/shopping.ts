@@ -167,15 +167,19 @@ export async function checkShoppingItem(db: Db, id: string, today: string): Prom
       .update(shoppingItems)
       .set({ checkedAt: new Date().toISOString() })
       .where(and(eq(shoppingItems.id, id), isNull(shoppingItems.checkedAt))),
-    db.insert(inventoryItems).values({
-      ingredientId: master.id,
-      quantity: item.buyQuantity,
-      location,
-      purchasedOn: today,
-      expiresOn: computeExpiresOn(today, location, master),
-      source: 'shopping',
-      shoppingItemId: id,
-    }),
+    db
+      .insert(inventoryItems)
+      .values({
+        ingredientId: master.id,
+        quantity: item.buyQuantity,
+        location,
+        purchasedOn: today,
+        expiresOn: computeExpiresOn(today, location, master),
+        source: 'shopping',
+        shoppingItemId: id,
+      })
+      // 同時に 2 本届いても、部分ユニークインデックスで 2 行目は入らない
+      .onConflictDoNothing(),
   ])
   return getShoppingItem(db, id)
 }

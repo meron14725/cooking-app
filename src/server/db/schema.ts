@@ -204,7 +204,8 @@ export const inventoryItems = sqliteTable(
   },
   (t) => [
     index('inventory_items_ingredient_idx').on(t.ingredientId, t.expiresOn),
-    index('inventory_items_shopping_item_idx').on(t.shoppingItemId),
+    // 買い物リストの 1 行から作る在庫は 1 行だけ（check の同時送信でも二重にならない）
+    uniqueIndex('inventory_items_shopping_item_unique').on(t.shoppingItemId).where(sql`shopping_item_id IS NOT NULL`),
     check('inventory_items_quantity_check', sql`${t.quantity} >= 0`),
     check('inventory_items_location_check', inList('location', STORAGE_LOCATIONS)),
     check('inventory_items_source_check', inList('source', INVENTORY_SOURCES)),
