@@ -443,72 +443,77 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
       </div>
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
-      <ol aria-label="提案" className="flex flex-col gap-3">
-        {proposals.map((p, i) => {
-          const on = i === picked
-          const total = p.recipes.reduce((sum, r) => sum + r.servings, 0)
-          return (
-            <li key={proposalKey(p)}>
-              {/* カード全体がラジオボタンのラベル。中の写真や「買うものを見る」を押しても案は切り替わらない */}
-              <label
-                className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent ${
-                  on
-                    ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]'
-                    : 'cursor-pointer border-2 border-transparent'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="proposal"
-                  checked={on}
-                  onChange={() => setPickedKey(proposalKey(p))}
-                  aria-label={`案${i + 1}を選ぶ`}
-                  className="sr-only"
-                />
-                <span className="flex items-center gap-2">
-                  <span className="text-[15px] font-bold">案{i + 1}</span>
-                  {i === 0 && (
-                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
-                      おすすめ
-                    </span>
-                  )}
-                  {on ? (
-                    <span
-                      aria-hidden="true"
-                      className="ml-auto flex size-6 items-center justify-center rounded-full bg-accent text-white"
-                    >
-                      <Icon name="check" size={14} strokeWidth={2.8} />
-                    </span>
-                  ) : (
-                    <span aria-hidden="true" className="ml-auto size-6 rounded-full border-2 border-line-strong" />
-                  )}
-                </span>
-                <ul className="flex flex-col gap-2.5">
-                  {p.recipes.map((r) => (
-                    <li key={r.recipeId} className="flex items-center gap-3">
-                      <DishPhotoButton recipeId={r.recipeId} title={r.title} />
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-[15px] font-bold">{r.title}</span>
-                        <span className="text-xs text-ink-muted">
-                          {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
-                          {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+      {/* ol に radiogroup は付けられない（a11y の lint）ので、外側の div をラジオのまとまりにする */}
+      <div role="radiogroup" aria-label="提案">
+        <ol className="flex flex-col gap-3">
+          {proposals.map((p, i) => {
+            const on = i === picked
+            const total = p.recipes.reduce((sum, r) => sum + r.servings, 0)
+            // 日数は食べる日（dayIndex）の重なりを除いた数。1 日に 2 品入る提案でもずれない
+            const days = new Set(p.recipes.map((r) => r.dayIndex)).size
+            return (
+              <li key={proposalKey(p)}>
+                {/* カード全体がラジオボタンのラベル。中の写真や「買うものを見る」を押しても案は切り替わらない */}
+                <label
+                  className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent ${
+                    on
+                      ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]'
+                      : 'cursor-pointer border-2 border-transparent'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="proposal"
+                    checked={on}
+                    onChange={() => setPickedKey(proposalKey(p))}
+                    aria-label={`案${i + 1}を選ぶ`}
+                    className="sr-only"
+                  />
+                  <span className="flex items-center gap-2">
+                    <span className="text-[15px] font-bold">案{i + 1}</span>
+                    {i === 0 && (
+                      <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
+                        おすすめ
+                      </span>
+                    )}
+                    {on ? (
+                      <span
+                        aria-hidden="true"
+                        className="ml-auto flex size-6 items-center justify-center rounded-full bg-accent text-white"
+                      >
+                        <Icon name="check" size={14} strokeWidth={2.8} />
+                      </span>
+                    ) : (
+                      <span aria-hidden="true" className="ml-auto size-6 rounded-full border-2 border-line-strong" />
+                    )}
+                  </span>
+                  <ul className="flex flex-col gap-2.5">
+                    {p.recipes.map((r) => (
+                      <li key={r.recipeId} className="flex items-center gap-3">
+                        <DishPhotoButton recipeId={r.recipeId} title={r.title} />
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate text-[15px] font-bold">{r.title}</span>
+                          <span className="text-xs text-ink-muted">
+                            {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
+                            {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                          </span>
                         </span>
-                      </span>
-                      <span className="shrink-0 rounded-full bg-sunken px-3 py-1 text-sm font-bold text-ink-soft">
-                        {fmtServings(r.servings)}食分
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <span className="-mt-1 text-right text-[13px] text-ink-soft">
-                  合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{p.recipes.length}日分）
-                </span>
-                <EvaluationDetails p={p} />
-              </label>
-            </li>
-          )
-        })}
-      </ol>
+                        <span className="shrink-0 rounded-full bg-sunken px-3 py-1 text-sm font-bold text-ink-soft">
+                          {fmtServings(r.servings)}食分
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="-mt-1 text-right text-[13px] text-ink-soft">
+                    合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
+                  </span>
+                  <EvaluationDetails p={p} />
+                </label>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
       {recs.data?.aiSuggestionRecommended && <AiSuggest proposal={recs.data.proposals[0]} />}
       {chosen && (
         <StickyAction hint="次に、食べる順と食数を決めます">
