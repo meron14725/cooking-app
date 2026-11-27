@@ -1,3 +1,4 @@
+import { MAX_SERVINGS_PER_DISH } from '../../shared/domain/constants'
 import { readSession, writeSession } from '../sessionState'
 
 /** 献立を組むで選んだ「食べたい料理」 */
@@ -15,7 +16,7 @@ export const isPicked = (v: unknown): v is Picked => {
     typeof p.servings === 'number' &&
     Number.isFinite(p.servings) &&
     p.servings > 0 &&
-    p.servings <= 20
+    p.servings <= MAX_SERVINGS_PER_DISH
   )
 }
 export const isPickedList = (v: unknown): v is Picked[] => Array.isArray(v) && v.every(isPicked)

@@ -61,7 +61,7 @@ beforeEach(async () => {
     packageUnits: [{ label: '300gパック', quantity: 300, isDefault: true }],
   })
   carrot = await make({ ...base, name: 'にんじん', category: 'vegetable', unit: '本' })
-  // 起点は 2 人前でキャベツ半玉 + 豚 150g。相方（1 人前で同量）と合わせると 1 玉・1 パックを使い切れる
+  // 起点は 2 人前でキャベツ半玉 + 豚 150g。相方（2 人前で同量）を 2 食ずつ合わせると 1 玉・1 パックを使い切れる
   anchor = await createRecipe(
     recipe('キャベツと豚の蒸し煮', [
       [cabbage, 0.5],
@@ -75,22 +75,24 @@ beforeEach(async () => {
         [cabbage, 0.5],
         [pork, 150],
       ],
-      { servings: 1 },
+      { servings: 2 },
     ),
   )
   other = await createRecipe(recipe('にんじんのグラッセ', [[carrot, 2]]))
 })
 
-const createPlan = (anchors: { recipeId: string; servings?: number }[]) => api.call<Plan>('POST', '/plans', { anchors })
+const createPlan = (anchors: { recipeId: string; servings?: number }[], targetMeals?: number) =>
+  api.call<Plan>('POST', '/plans', { anchors, targetMeals })
 
 describe('献立 API', () => {
   it('食べたい料理を選んで draft を作る。進行中の献立は current で取れる', async () => {
     expect((await api.call<{ plan: Plan | null }>('GET', '/plans/current')).body.plan).toBeNull()
     const res = await createPlan([{ recipeId: anchor.id }])
     expect(res.status).toBe(201)
-    expect(res.body).toMatchObject({ status: 'draft', startsOn: null, confirmedAt: null })
+    // 合計◯食は、前回の献立がなければ既定の 6 食。食数の既定は 2 食（2 人で 1 回分）
+    expect(res.body).toMatchObject({ status: 'draft', startsOn: null, confirmedAt: null, targetMeals: 6 })
     expect(res.body.recipes).toMatchObject([
-      { recipeId: anchor.id, title: anchor.title, role: 'anchor', servings: 1, dayIndex: 1 },
+      { recipeId: anchor.id, title: anchor.title, role: 'anchor', servings: 2, dayIndex: 1 },
     ])
     const current = await api.call<{ plan: Plan | null }>('GET', '/plans/current')
     expect(current.body.plan?.id).toBe(res.body.id)
@@ -120,8 +122,8 @@ describe('献立 API', () => {
   })
 
   it('提案: 選んだ料理を含み、余りが少ない組み合わせが先頭。料理名とカロリーが付く', async () => {
-    // 2 食分ずつなら、相方と合わせてキャベツ 1 玉・豚 300g をちょうど使い切る
-    const plan = (await createPlan([{ recipeId: anchor.id, servings: 2 }])).body
+    // 合計 4 食。2 食分ずつなら、相方と合わせてキャベツ 1 玉・豚 300g をちょうど使い切る
+    const plan = (await createPlan([{ recipeId: anchor.id, servings: 2 }], 4)).body
     const res = await api.call<RecommendationsResponse>('POST', `/plans/${plan.id}/recommendations`, {})
     expect(res.status).toBe(200)
     const best = res.body.proposals[0]
@@ -286,5 +288,41 @@ describe('献立 API', () => {
   it('確定の日付は YYYY-MM-DD', async () => {
     const plan = (await createPlan([{ recipeId: anchor.id }])).body
     expect((await api.call('POST', `/plans/${plan.id}/confirm`, { startsOn: '明日' })).status).toBe(400)
+  })
+
+  it('合計◯食: 作るときに入れられ、次の既定は前回の値。draft のうちは変えられる', async () => {
+    expect((await api.call('GET', '/plans/defaults')).body).toEqual({ targetMeals: 6 })
+    const plan = (await createPlan([{ recipeId: anchor.id }], 8)).body
+    expect(plan.targetMeals).toBe(8)
+    expect((await api.call('GET', '/plans/defaults')).body).toEqual({ targetMeals: 8 })
+
+    const patched = await api.call<Plan>('PATCH', `/plans/${plan.id}`, { targetMeals: 10 })
+    expect(patched.status).toBe(200)
+    expect(patched.body.targetMeals).toBe(10)
+    expect((await api.call<Plan>('GET', `/plans/${plan.id}`)).body.targetMeals).toBe(10)
+    expect((await api.call('GET', '/plans/defaults')).body).toEqual({ targetMeals: 10 })
+
+    // 刻み（2）の倍数で、2〜16
+    for (const targetMeals of [0, 3, 18, 2.5]) {
+      expect((await api.call('PATCH', `/plans/${plan.id}`, { targetMeals })).status).toBe(400)
+    }
+    expect((await api.call('PATCH', '/plans/nope', { targetMeals: 6 })).status).toBe(404)
+
+    await api.call('POST', `/plans/${plan.id}/confirm`, { startsOn: addDays(today, 1) })
+    expect((await api.call('PATCH', `/plans/${plan.id}`, { targetMeals: 6 })).status).toBe(409)
+  })
+
+  it('提案は合計◯食に食数を配り、項目ごとの点数を付ける', async () => {
+    const plan = (await createPlan([{ recipeId: anchor.id }], 6)).body
+    const res = await api.call<RecommendationsResponse>('POST', `/plans/${plan.id}/recommendations`, {})
+    expect(res.status).toBe(200)
+    expect(res.body.proposals.length).toBeGreaterThan(0)
+    for (const p of res.body.proposals) {
+      expect(p.recipes.reduce((n, r) => n + r.servings, 0)).toBe(6)
+      expect(p.recipes.every((r) => r.servings <= 4)).toBe(true)
+      const breakdown: Record<string, number> = p.scoreBreakdown ?? {}
+      const sum = Object.values(breakdown).reduce((a, b) => a + b, 0)
+      expect(sum).toBeCloseTo(p.score, 2)
+    }
   })
 })

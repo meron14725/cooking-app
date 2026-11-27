@@ -61,9 +61,15 @@ export function resolveAttributes(
       attributesSource: 'manual',
     }
   }
+  // ホットクックの設定が変わったら、まぜ技と調理時間は前の値を残さず決め直す
+  const modeChanged =
+    existing !== undefined &&
+    input.hotcookMode !== undefined &&
+    (input.hotcookMode ?? null) !== (existing.hotcookMode ?? null)
+  const fromMode = new Set<string>(modeChanged ? ['usesMixingUnit', 'cookMinutes'] : [])
   // 自動に戻すときは、手で直した値を残さない
   const keep = <K extends 'usesMixingUnit' | 'cookMinutes'>(key: K) =>
-    input[key] !== undefined || reset ? input[key] : existing?.[key]
+    input[key] !== undefined || reset || fromMode.has(key) ? input[key] : existing?.[key]
   const derived = deriveAttributes(
     {
       title: input.title,
@@ -85,7 +91,7 @@ export function resolveAttributes(
   let usedAi = false
   if (existing?.attributesSource === 'ai' && !reset) {
     for (const key of ATTRIBUTE_KEYS) {
-      if (derived[key] === null && existing[key] !== null) {
+      if (derived[key] === null && existing[key] !== null && !fromMode.has(key)) {
         ;(derived as Record<string, unknown>)[key] = existing[key]
         usedAi = true
       }

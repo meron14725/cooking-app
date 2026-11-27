@@ -303,6 +303,46 @@ describe('区分・系統・まぜ技・調理時間', () => {
     expect(edited.body).toMatchObject({ cookMinutes: 45, usesMixingUnit: true, dishType: 'soup' })
   })
 
+  it('ホットクックの設定を変えたら、まぜ技と調理時間はルールで決め直す（手で直したものは残す）', async () => {
+    const created = (
+      await api.call<Recipe>(
+        'POST',
+        '/recipes',
+        curry({ hotcookMode: '手動 > 煮物を作る > まぜない > 20分', cookMinutes: 45, usesMixingUnit: true }),
+      )
+    ).body
+    const changed = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({ hotcookMode: '手動 > 煮物を作る > まぜる > 40分' }),
+    )
+    // 40 分 + 下ごしらえ 10 分
+    expect(changed.body).toMatchObject({ cookMinutes: 50, usesMixingUnit: true, attributesSource: 'rule' })
+    const noMix = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${created.id}`,
+      curry({ hotcookMode: '手動 > 煮物を作る > まぜない > 15分' }),
+    )
+    expect(noMix.body).toMatchObject({ cookMinutes: 25, usesMixingUnit: false })
+    // 設定が分からなくなったら、前の値を残さず null
+    const unknown = await api.call<Recipe>('PUT', `/recipes/${created.id}`, curry({ hotcookMode: null }))
+    expect(unknown.body).toMatchObject({ cookMinutes: null, usesMixingUnit: null })
+
+    const manual = (
+      await api.call<Recipe>(
+        'PUT',
+        `/recipes/${created.id}`,
+        curry({ cookMinutes: 90, usesMixingUnit: true, attributesManual: true }),
+      )
+    ).body
+    const kept = await api.call<Recipe>(
+      'PUT',
+      `/recipes/${manual.id}`,
+      curry({ hotcookMode: '手動 > 煮物を作る > まぜない > 15分' }),
+    )
+    expect(kept.body).toMatchObject({ cookMinutes: 90, usesMixingUnit: true, attributesSource: 'manual' })
+  })
+
   it('手で直すとき、送らなかった欄はルールで決める', async () => {
     const created = (await api.call<Recipe>('POST', '/recipes', curry())).body
     const manual = await api.call<Recipe>(

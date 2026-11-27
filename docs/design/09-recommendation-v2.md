@@ -73,6 +73,7 @@
    - 系統: 名前のキーワード（「中華・麻婆・八宝菜」→ 中、「タイ・ガパオ・グリーンカレー」→ エスニック など）と、材料の調味料（しょうゆ・みりん・だし → 和、コンソメ・トマト缶・バター・チーズ → 洋、豆板醤・オイスターソース・鶏がらスープ → 中、ナンプラー・ココナッツミルク・クミン → エスニック）を数える。いちばん多い系統が 2 位より 2 点以上多いときだけ決める
    - まぜ技: `hotcook_mode` に「まぜる」→ true、「まぜない」→ false。COCORO の `isMixed` があればそれを使う
    - 調理時間: COCORO の `cookingTime`（取り込み時に保存）→ `hotcook_mode` の分数＋下ごしらえの目安 10 分 → NULL
+   - 編集で保存したとき、まぜ技と調理時間は省略されたら今の値を残す（取り込んだ値を消さない）。ただし手で直していない（`manual` でない）レシピで `hotcook_mode` が変わったら、この 2 つはルールで決め直す
 2. **ルールで決まらなかったものだけ AI**: `POST /api/recipes/attributes/estimate`（`{ limit?: number }`、既定 20 件）。未判定のレシピを `limit` 件ずつ、名前と材料の名前だけを 1 回の AI 呼び出しにまとめて渡し、区分と系統を JSON で受け取って保存する（`attributes_source = 'ai'`）。返り値は `{ ingredients: { updated, remaining }, recipes: { updated, remaining } }`。1 回の呼び出しでは食材が残っていれば食材だけ、なくなったらレシピを進める
 3. **画面**: レシピ一覧のメニューに「分類をまとめて推定」を置き、`remaining = 0` になるまで呼び続ける（途中で閉じたら止まる。保存済みの分は残る）
 4. **食材マスタの手直し**: 同じ API・同じ流れで、`attributes_source` が NULL の食材の `category` と `grams_per_unit` も直す。ルールは名前の辞書（魚・砂糖・かつおぶし・香料・果物・ナッツなど、vegetable に混ざっているもの）と、`unit = 'g'` なら `grams_per_unit` は不要、など。決まらなかったものだけ AI に名前を渡す。`manual` は上書きしない。レシピより先に食材を直す（主菜・副菜の判定が肉・魚の量を使うため）。野菜の点数の重みは、この手直しの後に調整する
@@ -259,7 +260,7 @@ exclude?: { recipeId: string; servings: number }[][]
 
 ## 重みを確かめる道具
 
-- **スクリプト** `npm run rec:try -- [--weights weights.json] [--target 6] [--anchor <レシピ名>]`（`scripts/recommend-playground.ts`）: テスト用の献立データ（下記）で `recommend()` を回し、案ごとに料理・食数・点数の内訳を表に出す。`--weights` で一部の重みだけ上書きし、既定の重みとの違い（順位が変わった案）も出す
+- **スクリプト** `npm run rec:try -- --anchor <レシピID>[:食数] [--target 6] [--weights vegetable=0.6,popularity=0] [--synthetic 600]`（`scripts/recommend-playground.ts`）: テスト用の献立データ（下記）で `recommend()` を回し、案ごとに料理・食数・買い物・点数の内訳と、かかった時間・評価した回数を出す。`--weights` で一部の重みだけ上書きし、既定の重みでは何位の案だったかも出す。`--synthetic` は架空のレシピを足して計算量を見る
 - **本番に近いデータで試す**: `--from-local-d1` で `wrangler d1 execute --local` のデータを読む。公式レシピの本文や写真はリポジトリに入れない方針なので、手元の D1 から読むだけにする
 
 ## テストの方針
