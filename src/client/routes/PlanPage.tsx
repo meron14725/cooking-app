@@ -13,10 +13,14 @@ import {
   useReplacePlanRecipes,
 } from '../api/plans'
 import { aiErrorMessage, useRecipes, useSuggestRecipe } from '../api/recipes'
-import { Button, inputBaseClass, inputClass } from '../components/form'
+import { Button, inputClass } from '../components/form'
+import { Icon } from '../components/Icon'
+import { LocationBadge } from '../components/LocationBadge'
 import { PageHeader } from '../components/PageHeader'
+import { PlanProgress } from '../components/PlanProgress'
 import { PrepAndPack } from '../components/PrepAndPack'
 import { ShoppingListView } from '../components/ShoppingListView'
+import { StickyAction } from '../components/StickyAction'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -30,16 +34,16 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
         onClick={() => onChange(Math.max(1, value - 1))}
         disabled={value <= 1}
         aria-label={`${label}を減らす`}
-        className="size-9 rounded-full border border-stone-300 bg-white text-lg disabled:text-stone-300"
+        className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-surface text-lg disabled:text-line-strong"
       >
         −
       </button>
-      <span className="w-12 text-center text-sm">{value}食</span>
+      <span className="w-12 text-center text-sm font-bold tabular-nums">{value}食</span>
       <button
         type="button"
         onClick={() => onChange(Math.min(20, value + 1))}
         aria-label={`${label}を増やす`}
-        className="size-9 rounded-full border border-stone-300 bg-white text-lg"
+        className="flex size-9 items-center justify-center rounded-full border border-line-strong bg-surface text-lg"
       >
         ＋
       </button>
@@ -74,17 +78,29 @@ function AnchorPicker() {
 
   return (
     <>
-      <p className="mb-3 text-sm text-stone-600">
+      <p className="mb-4 text-sm text-ink-soft">
         食べたい料理を選ぶと、食材を使い切れる組み合わせを提案します（全部で 3 品）。
       </p>
 
-      {picked.length > 0 && (
-        <section className="mb-4 rounded-xl border border-orange-200 bg-orange-50 p-3">
-          <h2 className="mb-2 text-sm font-bold text-stone-600">選んだ料理</h2>
-          <ul className="space-y-2">
+      <section className="mb-5 flex flex-col gap-2.5">
+        <h2 className="text-sm font-bold text-ink-muted">食べたい料理</h2>
+        {picked.length === 0 ? (
+          <p className="rounded-control border border-dashed border-line-dashed px-4 py-3 text-sm text-ink-muted">
+            下の一覧から選んでください
+          </p>
+        ) : (
+          <ul className="divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
             {picked.map((p) => (
-              <li key={p.recipeId} className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate font-bold">{p.title}</span>
+              <li key={p.recipeId} className="flex items-center gap-2 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggle(p.recipeId, p.title)}
+                  aria-label={`${p.title}を外す`}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink-muted"
+                >
+                  <Icon name="close" size={14} strokeWidth={2.4} />
+                </button>
+                <span className="min-w-0 flex-1 truncate font-bold">{p.title}</span>
                 <Stepper
                   label={`${p.title}の食数`}
                   value={p.servings}
@@ -95,26 +111,25 @@ function AnchorPicker() {
               </li>
             ))}
           </ul>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          <Button onClick={onSubmit} disabled={create.isPending} className="mt-3 w-full">
-            {create.isPending ? '作っています…' : '提案を見る'}
-          </Button>
-        </section>
-      )}
+        )}
+      </section>
 
-      <input
-        type="search"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="料理名で探す"
-        aria-label="料理名で探す"
-        className={`${inputBaseClass} mb-3 w-full`}
-      />
-      {recipes.isPending && <p className="text-stone-500">読み込み中…</p>}
-      {recipes.isError && <p className="text-red-600">読み込めませんでした</p>}
-      {recipes.data && recipes.data.length === 0 && <p className="text-stone-500">見つかりませんでした</p>}
+      <label className="mb-3 flex min-h-12 items-center gap-2.5 rounded-control border border-line-strong bg-surface px-3.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent-line">
+        <Icon name="search" className="text-ink-muted" />
+        <span className="sr-only">料理名で探す</span>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="料理名で探す"
+          className="min-w-0 flex-1 bg-transparent py-2.5 text-base placeholder:text-ink-muted focus:outline-none"
+        />
+      </label>
+      {recipes.isPending && <p className="text-ink-muted">読み込み中…</p>}
+      {recipes.isError && <p className="text-danger">読み込めませんでした</p>}
+      {recipes.data && recipes.data.length === 0 && <p className="text-ink-muted">見つかりませんでした</p>}
       {recipes.data && recipes.data.length > 0 && (
-        <ul className="divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
+        <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
           {recipes.data.map((r) => {
             const on = picked.some((p) => p.recipeId === r.id)
             return (
@@ -123,18 +138,18 @@ function AnchorPicker() {
                   type="button"
                   onClick={() => toggle(r.id, r.title)}
                   aria-pressed={on}
-                  className={`flex w-full items-center gap-3 px-4 py-3 text-left ${on ? 'bg-orange-50' : ''}`}
+                  className={`flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left ${on ? 'bg-accent-wash' : ''}`}
                 >
                   <span
-                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border text-sm ${
-                      on ? 'border-orange-600 bg-orange-600 text-white' : 'border-stone-300'
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                      on ? 'border-accent bg-accent text-white' : 'border-line-strong'
                     }`}
                   >
-                    {on ? '✓' : ''}
+                    {on && <Icon name="check" size={14} strokeWidth={2.8} />}
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate font-bold">{r.title}</span>
-                    <span className="block truncate text-xs text-stone-500">{r.ingredientNames.join('、')}</span>
+                    <span className="block truncate text-xs text-ink-muted">{r.ingredientNames.join('、')}</span>
                   </span>
                 </button>
               </li>
@@ -142,74 +157,104 @@ function AnchorPicker() {
           })}
         </ul>
       )}
+
+      {picked.length > 0 && (
+        <StickyAction hint="次に、食材を使い切れる組み合わせを提案します">
+          {error && <p className="text-center text-sm text-danger">{error}</p>}
+          <Button onClick={onSubmit} disabled={create.isPending} className="min-h-13 w-full text-base">
+            {create.isPending ? '作っています…' : `${picked.length}品で提案を見る`}
+          </Button>
+        </StickyAction>
+      )}
     </>
   )
 }
 
 // ---------- 提案・評価の中身 ----------
 
-function EvaluationDetails({ p }: { p: ProposalView }) {
+function Stat({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="space-y-2 text-sm">
-      <div>
-        <h4 className="text-xs font-bold text-stone-500">買うもの（{p.shopping.length} 点）</h4>
-        {p.shopping.length === 0 ? (
-          <p className="text-stone-500">なし（在庫で足ります）</p>
-        ) : (
-          <ul className="text-stone-700">
+    <div className="rounded-xl bg-ground p-2.5">
+      <p className="text-[11px] text-ink-muted">{label}</p>
+      <p className="mt-0.5 text-lg font-bold tabular-nums">
+        {value}
+        <span className="text-xs font-medium">{unit}</span>
+      </p>
+    </div>
+  )
+}
+
+/** 提案・評価の中身: 数字 3 つ、使える在庫と余る食材、注意、買うものの内訳 */
+function EvaluationDetails({ p }: { p: ProposalView }) {
+  const expiring = p.usesInventory.filter((u) => u.isExpiringSoon)
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="買い物" value={String(p.shopping.length)} unit="点" />
+        <Stat
+          label="合計"
+          value={p.totalCaloriesKcal === null ? '—' : p.totalCaloriesKcal.toLocaleString()}
+          unit={p.totalCaloriesKcal === null ? '' : 'kcal'}
+        />
+        <Stat label="在庫を使う" value={String(p.usesInventory.length)} unit="品" />
+      </div>
+      <div className="flex flex-col gap-1.5 text-[13px]">
+        <p>
+          <span className="text-ink-muted">使える在庫：</span>
+          {p.usesInventory.length === 0
+            ? 'なし'
+            : p.usesInventory.map((u) => `${u.name} ${fmt(u.quantity)}`).join('、')}
+          {expiring.map((u) => (
+            <span
+              key={u.inventoryItemId}
+              className="ml-1 inline-block rounded-md bg-warn-soft px-1.5 py-px text-[11px] font-bold text-warn"
+            >
+              {u.name} 期限 {shortDate(u.expiresOn)}
+            </span>
+          ))}
+        </p>
+        <p>
+          <span className="text-ink-muted">余る食材：</span>
+          {p.leftovers.length === 0
+            ? 'なし'
+            : p.leftovers.map((l, i) => (
+                <span key={l.ingredientId} className={l.perishable ? 'font-bold text-danger' : ''}>
+                  {i > 0 && '、'}
+                  {l.name} {fmt(l.quantity)}
+                  {l.unit}
+                  {l.perishable && '（早めに使う）'}
+                </span>
+              ))}
+        </p>
+      </div>
+      {p.warnings.length > 0 && (
+        <ul className="flex flex-col gap-1 rounded-[10px] bg-warn-wash px-3 py-2.5 text-[13px] text-warn">
+          {p.warnings.map((w) => (
+            <li key={w} className="flex items-start gap-2">
+              <Icon name="warning" size={16} strokeWidth={2} className="mt-0.5" />
+              {w}
+            </li>
+          ))}
+        </ul>
+      )}
+      {p.shopping.length > 0 && (
+        <details className="text-[13px]">
+          <summary className="min-h-8 cursor-pointer text-ink-muted">買うものを見る（{p.shopping.length} 点）</summary>
+          <ul className="mt-1 flex flex-col gap-0.5 pl-1">
             {p.shopping.map((s) => (
               <li key={s.ingredientId}>
                 {s.name} {s.packageLabel ? `${s.packageLabel} × ${s.packageCount}` : fmt(s.buyQuantity)}
               </li>
             ))}
           </ul>
-        )}
-      </div>
-      {p.usesInventory.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-stone-500">使う在庫</h4>
-          <ul>
-            {p.usesInventory.map((u) => (
-              <li key={u.inventoryItemId} className={u.isExpiringSoon ? 'font-bold text-amber-700' : 'text-stone-700'}>
-                {u.name} {fmt(u.quantity)}（期限 {shortDate(u.expiresOn)}
-                {u.isExpiringSoon ? '・間近' : ''}）
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <div>
-        <h4 className="text-xs font-bold text-stone-500">余るもの</h4>
-        {p.leftovers.length === 0 ? (
-          <p className="text-stone-500">なし</p>
-        ) : (
-          <ul>
-            {p.leftovers.map((l) => (
-              <li key={l.ingredientId} className={l.perishable ? 'text-red-700' : 'text-stone-500'}>
-                {l.name} {fmt(l.quantity)}
-                {l.unit}
-                {l.perishable ? '（早めに使う）' : ''}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <p className="text-stone-600">
-        合計カロリー: {p.totalCaloriesKcal === null ? '不明なレシピあり' : `${p.totalCaloriesKcal}kcal`}
-      </p>
-      {p.warnings.length > 0 && (
-        <ul className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          {p.warnings.map((w) => (
-            <li key={w}>⚠️ {w}</li>
-          ))}
-        </ul>
+        </details>
       )}
     </div>
   )
 }
 
-const kitLabel = (p: ProposalView, recipeId: string) =>
-  p.kitLocations.find((k) => k.recipeId === recipeId)?.location === 'freezer' ? '🧊 冷凍' : '❄️ 冷蔵'
+const kitLocation = (p: ProposalView, recipeId: string) =>
+  p.kitLocations.find((k) => k.recipeId === recipeId)?.location ?? 'fridge'
 
 // ---------- 2. 提案から選ぶ ----------
 
@@ -234,22 +279,28 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-sky-50 px-3 py-3 text-sm text-sky-800">
+    <div className="flex flex-col gap-2 rounded-card border border-accent-line bg-accent-wash p-4 text-sm text-ink-soft">
       {leftovers.length === 0 ? (
         <p>登録レシピが少ないため、組み合わせの提案が出せませんでした。レシピを増やすと案が出ます。</p>
       ) : (
         <>
-          <p className="mb-2">
+          <p>
             登録レシピだけでは余りが出やすい組み合わせです。余る食材（
             {leftovers.map((l) => l.name).join('、')}）で AI に 1 品提案してもらえます。
           </p>
-          <Button variant="secondary" onClick={onSuggest} disabled={suggest.isPending} className="w-full">
+          <button
+            type="button"
+            onClick={onSuggest}
+            disabled={suggest.isPending}
+            className="flex min-h-13 items-center justify-center gap-2 rounded-control border border-accent-line bg-surface font-bold text-accent-strong disabled:opacity-60"
+          >
+            <Icon name="sparkle" size={18} />
             {suggest.isPending ? 'AI が考えています…（1 分ほど）' : '余る食材で AI に 1 品提案してもらう'}
-          </Button>
-          <p className="mt-1 text-xs text-sky-700">下書きを確認して保存すると、提案を計算し直します</p>
+          </button>
+          <p className="text-xs text-ink-muted">下書きを確認して保存すると、提案を計算し直します</p>
         </>
       )}
-      {error && <p className="mt-2 text-red-600">{error}</p>}
+      {error && <p className="text-danger">{error}</p>}
     </div>
   )
 }
@@ -257,7 +308,10 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
 function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   const recs = useRecommendations(plan.id)
   const replace = useReplacePlanRecipes(plan.id)
+  const [picked, setPicked] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const proposals = recs.data?.proposals ?? []
+  const chosen = proposals[picked]
 
   async function choose(p: ProposalView) {
     setError(null)
@@ -272,35 +326,75 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   }
 
   return (
-    <section>
-      <h2 className="mb-2 text-sm font-bold text-stone-500">提案</h2>
-      {recs.isPending && <p className="text-stone-500">計算中…</p>}
-      {recs.isError && <p className="text-red-600">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
-      {recs.data?.aiSuggestionRecommended && <AiSuggest proposal={recs.data.proposals[0]} />}
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-      <ol className="space-y-3">
-        {recs.data?.proposals.map((p, i) => (
-          <li key={p.recipes.map((r) => r.recipeId).join()} className="rounded-xl border border-stone-200 bg-white p-4">
-            <h3 className="mb-2 font-bold">案 {i + 1}</h3>
-            <ul className="mb-3 space-y-1">
-              {p.recipes.map((r) => (
-                <li key={r.recipeId} className="flex items-baseline justify-between gap-2">
-                  <span className="min-w-0">
-                    <span className="mr-1 text-xs text-stone-500">{r.dayIndex}日目</span>
-                    <span className="font-bold">{r.title}</span>
-                    {r.role === 'added' && <span className="ml-1 text-xs text-orange-700">追加</span>}
+    <section className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-bold text-ink-muted">提案{proposals.length > 0 && `（${proposals.length}案）`}</h2>
+        <p className="text-xs text-ink-muted">在庫と期限から計算</p>
+      </div>
+      {recs.isPending && <p className="text-ink-muted">計算中…</p>}
+      {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
+      <ol className="flex flex-col gap-3">
+        {proposals.map((p, i) => {
+          const on = i === picked
+          return (
+            <li
+              key={p.recipes.map((r) => r.recipeId).join()}
+              className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 ${
+                on ? 'border-2 border-accent shadow-[0_6px_20px_rgba(194,65,12,0.10)]' : 'border border-line'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <h3 className="text-[15px] font-bold">案{i + 1}</h3>
+                {i === 0 && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
+                    おすすめ
                   </span>
-                  <span className="shrink-0 text-xs text-stone-500">{kitLabel(p, r.recipeId)}</span>
-                </li>
-              ))}
-            </ul>
-            <EvaluationDetails p={p} />
-            <Button onClick={() => choose(p)} disabled={replace.isPending} className="mt-3 w-full">
-              この案にする
-            </Button>
-          </li>
-        ))}
+                )}
+                {on && (
+                  <span className="ml-auto flex size-6 items-center justify-center rounded-full bg-accent text-white">
+                    <Icon name="check" size={14} strokeWidth={2.8} />
+                    <span className="sr-only">選択中</span>
+                  </span>
+                )}
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {p.recipes.map((r) => (
+                  <li key={r.recipeId} className="flex items-center gap-2 text-[15px]">
+                    <span
+                      className={`size-1.5 shrink-0 rounded-full ${r.role === 'anchor' ? 'bg-ink' : 'bg-accent'}`}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 truncate font-medium">{r.title}</span>
+                    <span className="shrink-0 text-xs text-ink-muted">
+                      {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
+                      {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <EvaluationDetails p={p} />
+              {!on && (
+                <button
+                  type="button"
+                  onClick={() => setPicked(i)}
+                  className="min-h-11 rounded-xl border border-line-strong bg-surface text-sm font-bold"
+                >
+                  この案を選ぶ
+                </button>
+              )}
+            </li>
+          )
+        })}
       </ol>
+      {recs.data?.aiSuggestionRecommended && <AiSuggest proposal={recs.data.proposals[0]} />}
+      {chosen && (
+        <StickyAction hint="次に、食べる順と食数を決めます">
+          {error && <p className="text-center text-sm text-danger">{error}</p>}
+          <Button onClick={() => choose(chosen)} disabled={replace.isPending} className="min-h-13 w-full text-base">
+            案{picked + 1}にする
+          </Button>
+        </StickyAction>
+      )}
     </section>
   )
 }
@@ -369,14 +463,14 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
   const ev = evaluation.data
 
   return (
-    <section>
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-stone-500">食べる順と食数</h2>
-        <button type="button" onClick={onBack} disabled={busy} className="text-sm text-orange-700">
+    <section className="flex flex-col gap-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-bold text-ink-muted">食べる順と食数</h2>
+        <button type="button" onClick={onBack} disabled={busy} className="min-h-8 text-sm text-accent">
           提案を選び直す
         </button>
       </div>
-      <ol className="mb-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
+      <ol className="divide-y divide-line-soft rounded-card border border-line bg-surface">
         {rows.map((r, i) => (
           <li key={r.recipeId} className="px-3 py-3">
             <div className="flex items-center gap-2">
@@ -386,23 +480,24 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
                   onClick={() => move(i, i - 1)}
                   disabled={busy || i === 0}
                   aria-label={`${r.title}を前の日へ`}
-                  className="h-7 w-8 text-stone-600 disabled:text-stone-300"
+                  className="flex h-7 w-8 items-center justify-center text-ink-soft disabled:text-line-strong"
                 >
-                  ▲
+                  <Icon name="chevronLeft" size={18} strokeWidth={2} className="rotate-90" />
                 </button>
                 <button
                   type="button"
                   onClick={() => move(i, i + 1)}
                   disabled={busy || i === rows.length - 1}
                   aria-label={`${r.title}を後の日へ`}
-                  className="h-7 w-8 text-stone-600 disabled:text-stone-300"
+                  className="flex h-7 w-8 items-center justify-center text-ink-soft disabled:text-line-strong"
                 >
-                  ▼
+                  <Icon name="chevronLeft" size={18} strokeWidth={2} className="-rotate-90" />
                 </button>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs text-stone-500">
-                  {i + 1}日目（{shortDate(addDays(startsOn, i))}）{ev && ` ・ ${kitLabel(ev, r.recipeId)}`}
+                <div className="flex items-center gap-1.5 text-xs text-ink-muted">
+                  {i + 1}日目（{shortDate(addDays(startsOn, i))}）
+                  {ev && <LocationBadge location={kitLocation(ev, r.recipeId)} />}
                 </div>
                 <div className="truncate font-bold">{r.title}</div>
                 {rows.length > 1 && (
@@ -410,7 +505,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
                     type="button"
                     onClick={() => save(rows.filter((x) => x.recipeId !== r.recipeId))}
                     disabled={busy}
-                    className="text-xs text-red-600"
+                    className="min-h-7 text-xs text-danger"
                   >
                     外す
                   </button>
@@ -431,7 +526,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
         onChange={(e) => onAdd(e.target.value)}
         disabled={busy}
         aria-label="料理を足す"
-        className={`${inputClass} mb-4`}
+        className={inputClass}
       >
         <option value="">＋ 料理を足す・入れ替える</option>
         {catalog.data
@@ -443,13 +538,13 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
           ))}
       </select>
 
-      <div className="mb-4 rounded-xl border border-stone-200 bg-white p-4">
-        {evaluation.isPending && <p className="text-sm text-stone-500">計算中…</p>}
-        {evaluation.isError && <p className="text-sm text-red-600">計算できませんでした</p>}
+      <div className="rounded-card border border-line bg-surface p-4">
+        {evaluation.isPending && <p className="text-sm text-ink-muted">計算中…</p>}
+        {evaluation.isError && <p className="text-sm text-danger">計算できませんでした</p>}
         {ev && <EvaluationDetails p={ev} />}
       </div>
 
-      <label className="mb-3 block text-sm font-bold text-stone-700">
+      <label className="block text-sm font-bold text-ink-soft">
         1日目
         <input
           type="date"
@@ -459,10 +554,12 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
           className={inputClass}
         />
       </label>
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
-      <Button onClick={onConfirm} disabled={busy || !startsOn} className="w-full">
-        {confirm.isPending ? '確定しています…' : 'この献立で確定'}
-      </Button>
+      <StickyAction hint="確定すると買い物リストを作ります">
+        {error && <p className="text-center text-sm text-danger">{error}</p>}
+        <Button onClick={onConfirm} disabled={busy || !startsOn} className="min-h-13 w-full text-base">
+          {confirm.isPending ? '確定しています…' : 'この献立で確定'}
+        </Button>
+      </StickyAction>
     </section>
   )
 }
@@ -487,9 +584,18 @@ function DraftPlan({ plan }: { plan: Plan }) {
     <>
       {step === 'proposals' ? (
         <>
-          <section className="mb-4">
-            <h2 className="mb-1 text-sm font-bold text-stone-500">食べたい料理</h2>
-            <p className="font-bold">{anchors.map((r) => `${r.title}（${r.servings}食）`).join('、') || 'なし'}</p>
+          <section className="mb-5 flex flex-col gap-2.5">
+            <h2 className="text-sm font-bold text-ink-muted">食べたい料理</h2>
+            <ul className="flex flex-wrap gap-2">
+              {anchors.map((r) => (
+                <li
+                  key={r.recipeId}
+                  className="flex min-h-10 items-center rounded-full bg-ink px-3.5 text-sm font-bold text-white"
+                >
+                  {r.title}（{r.servings}食）
+                </li>
+              ))}
+            </ul>
           </section>
           <Proposals plan={plan} onChosen={() => setStep('order')} />
         </>
@@ -513,17 +619,14 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
   const rows = [...plan.recipes].sort((a, b) => a.dayIndex - b.dayIndex)
   return (
     <section>
-      <p className="mb-3 inline-block rounded-full bg-orange-100 px-3 py-1 text-sm font-bold text-orange-800">
-        {PLAN_STATUS_LABELS[plan.status]}
-      </p>
-      <ol className="mb-4 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-white">
+      <ol className="mb-5 divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
         {rows.map((r) => (
-          <li key={r.recipeId} className="px-4 py-3">
-            <div className="text-xs text-stone-500">
+          <li key={r.recipeId} className="py-3">
+            <div className="text-xs text-ink-muted">
               {r.dayIndex}日目{plan.startsOn && `（${shortDate(addDays(plan.startsOn, r.dayIndex - 1))}）`}
             </div>
             <div className="font-bold">
-              {r.title} <span className="text-sm font-normal text-stone-500">{r.servings}食</span>
+              {r.title} <span className="text-sm font-normal text-ink-muted">{r.servings}食</span>
             </div>
           </li>
         ))}
@@ -544,20 +647,29 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
   )
 }
 
+const TITLES = { draft: '献立を組む', shopping: '買い物リスト', prepping: '下ごしらえと袋詰め' } as const
+
 export function PlanPage() {
   const current = useCurrentPlan()
+  const plan = current.data
+  const status = plan?.status
+  const title = status === 'shopping' || status === 'prepping' ? TITLES[status] : TITLES.draft
   return (
     <>
-      <PageHeader title="献立" />
-      {current.isPending && <p className="text-stone-500">読み込み中…</p>}
-      {current.isError && <p className="text-red-600">読み込めませんでした</p>}
+      <PageHeader title={title} meta={status && PLAN_STATUS_LABELS[status]} />
+      {/* 下ごしらえ中は下ごしらえ → 袋詰めの中で進み具合を出す */}
+      {current.isSuccess && status !== 'prepping' && (
+        <PlanProgress current={status === 'shopping' ? 'shopping' : 'plan'} />
+      )}
+      {current.isPending && <p className="text-ink-muted">読み込み中…</p>}
+      {current.isError && <p className="text-danger">読み込めませんでした</p>}
       {current.isSuccess &&
-        (current.data === null ? (
+        (plan === null || plan === undefined ? (
           <AnchorPicker />
-        ) : current.data.status === 'draft' ? (
-          <DraftPlan key={current.data.id} plan={current.data} />
+        ) : plan.status === 'draft' ? (
+          <DraftPlan key={plan.id} plan={plan} />
         ) : (
-          <ConfirmedPlan plan={current.data} />
+          <ConfirmedPlan plan={plan} />
         ))}
     </>
   )
