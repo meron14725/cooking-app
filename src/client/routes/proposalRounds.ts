@@ -1,3 +1,4 @@
+import { MAX_SERVINGS_PER_DISH, SERVINGS_STEP } from '../../shared/domain/constants'
 import type { Plan } from '../../shared/schemas/plan'
 
 /**
@@ -58,11 +59,32 @@ export const isProposalServings = (v: unknown): v is ProposalServings => {
     typeof r.servings === 'object' &&
     r.servings !== null &&
     !Array.isArray(r.servings) &&
-    Object.values(r.servings).every((n) => typeof n === 'number' && n > 0 && n <= MAX_SERVINGS)
+    Object.values(r.servings).every((n) => typeof n === 'number' && n > 0 && n <= MAX_SERVINGS_PER_DISH)
   )
 }
 
 export const servingsStorageKey = (planId: string) => `plan-servings:${planId}`
 
-/** 食数の上限（API の食数の制約と同じ） */
-export const MAX_SERVINGS = 20
+/** 鍵で固定した料理と食数（形は食分と同じ）。食べたい料理が変わったら捨てる */
+export const locksStorageKey = (planId: string) => `plan-locks:${planId}`
+
+/** 固定のキー。固定を変えたら「別の案を出す」の回を 1 回目に戻すのに使う */
+export function locksKey(locked: Record<string, number>): string {
+  return Object.entries(locked)
+    .map(([id, sv]) => `${id}:${sv}`)
+    .sort()
+    .join(',')
+}
+
+/**
+ * 提案カードの ＋－: SERVINGS_STEP の倍数に合わせて動かす。上限は MAX_SERVINGS_PER_DISH、下限は SERVINGS_STEP
+ * （刻み 2 なら 1 → 2 → 4、4 → 2。刻み 1 なら 1 ずつ）
+ */
+export function stepUp(v: number, step = SERVINGS_STEP, max = MAX_SERVINGS_PER_DISH): number {
+  return Math.min(max, (Math.floor(v / step) + 1) * step)
+}
+export function stepDown(v: number, step = SERVINGS_STEP): number {
+  return Math.max(step, (Math.ceil(v / step) - 1) * step)
+}
+export const canStepUp = (v: number, max = MAX_SERVINGS_PER_DISH) => v < max
+export const canStepDown = (v: number, step = SERVINGS_STEP) => v > step

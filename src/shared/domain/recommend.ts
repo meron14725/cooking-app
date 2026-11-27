@@ -57,6 +57,11 @@ export type RecommendInput = {
    * anchor を含めても含めなくてもよく、順番も問わない
    */
   exclude?: string[][]
+  /**
+   * 鍵で固定した料理と食数。必ず含め、残りの品数分だけ選び直す。
+   * anchor を固定したときはその食数を使い、追加料理を固定したときは追加料理（added）のまま入れる
+   */
+  fixed?: { recipe: RecRecipe; servings: number }[]
   options?: { targetCount?: number; maxProposals?: number; defaultServings?: number }
 }
 
@@ -416,10 +421,10 @@ export function evaluatePlan(input: {
   return buildProposal(input.items, evaluate(input.items, ctx), input.ingredients, days)
 }
 
-/** 追加料理の組み合わせを比べるためのキー（anchor を除き、順番によらない） */
-function comboKey(recipeIds: string[], anchorIds: Set<string>): string {
+/** 選び直した追加料理の組み合わせを比べるためのキー（anchor と固定した料理を除き、順番によらない） */
+function comboKey(recipeIds: string[], baseIds: Set<string>): string {
   return recipeIds
-    .filter((id) => !anchorIds.has(id))
+    .filter((id) => !baseIds.has(id))
     .sort()
     .join('\n')
 }
@@ -429,27 +434,38 @@ export function recommend(input: RecommendInput): RecommendResult {
   const maxProposals = input.options?.maxProposals ?? MAX_PROPOSALS
   const defaultServings = input.options?.defaultServings ?? DEFAULT_SERVINGS
   const ctx: Ctx = { available: input.available, ingredients: input.ingredients, today: input.today }
-  const anchors = input.anchors.map((a) => ({ ...a, role: 'anchor' as const }))
-  const addCount = targetCount - anchors.length
+  // 必ず入る料理: anchor（固定していればその食数）と、固定した追加料理
+  const fixedServings = new Map((input.fixed ?? []).map((f) => [f.recipe.id, f.servings]))
+  const anchors = input.anchors.map((a) => ({
+    ...a,
+    servings: fixedServings.get(a.recipe.id) ?? a.servings,
+    role: 'anchor' as const,
+  }))
   const anchorIds = new Set(anchors.map((a) => a.recipe.id))
-  const excluded = new Set((input.exclude ?? []).map((ids) => comboKey(ids, anchorIds)))
+  const fixedAdded = (input.fixed ?? [])
+    .filter((f) => !anchorIds.has(f.recipe.id))
+    .map((f) => ({ ...f, role: 'added' as const }))
+  const base = [...anchors, ...fixedAdded]
+  const baseIds = new Set(base.map((b) => b.recipe.id))
+  const addCount = targetCount - base.length
+  const excluded = new Set((input.exclude ?? []).map((ids) => comboKey(ids, baseIds)))
 
-  // anchor だけの 1 案（目標の品数に届いている、または足せる候補がない）
+  // 必ず入る料理だけの 1 案（目標の品数に届いている、または足せる候補がない）
   const anchorsOnly = (aiSuggestionRecommended: boolean): RecommendResult => {
-    const proposals = excluded.has('') ? [] : [buildProposal(anchors, evaluate(anchors, ctx), input.ingredients)]
+    const proposals = excluded.has('') ? [] : [buildProposal(base, evaluate(base, ctx), input.ingredients)]
     return { proposals, aiSuggestionRecommended, hasMore: false }
   }
 
-  // anchor だけで目標の品数に届いていれば探索しない
+  // 必ず入る料理だけで目標の品数に届いていれば探索しない
   if (addCount <= 0) return anchorsOnly(false)
 
-  const candidates = input.catalog.filter((r) => !anchorIds.has(r.id) && fitsPot(r, defaultServings))
+  const candidates = input.catalog.filter((r) => !baseIds.has(r.id) && fitsPot(r, defaultServings))
   if (candidates.length === 0) return anchorsOnly(true)
 
   const k = Math.min(addCount, candidates.length)
   const scored: { added: RecRecipe[]; evaluation: Evaluation }[] = []
   for (const added of combinations(candidates, k)) {
-    const items = [...anchors, ...added.map((recipe) => ({ recipe, servings: defaultServings }))]
+    const items = [...base, ...added.map((recipe) => ({ recipe, servings: defaultServings }))]
     scored.push({ added, evaluation: evaluate(items, ctx) })
   }
   scored.sort(
@@ -468,7 +484,7 @@ export function recommend(input: RecommendInput): RecommendResult {
     !excluded.has(
       comboKey(
         s.added.map((r) => r.id),
-        anchorIds,
+        baseIds,
       ),
     )
   const remaining = scored.filter(isNew)
@@ -494,7 +510,7 @@ export function recommend(input: RecommendInput): RecommendResult {
 
   const proposals = picked.map((s) =>
     buildProposal(
-      [...anchors, ...s.added.map((recipe) => ({ recipe, servings: defaultServings, role: 'added' as const }))],
+      [...base, ...s.added.map((recipe) => ({ recipe, servings: defaultServings, role: 'added' as const }))],
       s.evaluation,
       input.ingredients,
     ),

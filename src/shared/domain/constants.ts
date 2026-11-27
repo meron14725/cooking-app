@@ -9,6 +9,12 @@ export const EXPIRING_SOON_DAYS = 2
 /** 献立に入れる料理の既定の食数 */
 export const DEFAULT_SERVINGS = 1
 
+/** 食数を ＋－ で変えるときの刻み（2 人で食べる前提で 2。1 にも戻せる） */
+export const SERVINGS_STEP = 2
+
+/** 1 品あたりの食数の上限（1.6L で作れる量。KN-HW16G は 2〜4 人用） */
+export const MAX_SERVINGS_PER_DISH = 4
+
 /** 切った後の日持ちがマスタにないときの上限（日） */
 export const DEFAULT_PREPPED_FRIDGE_DAYS = 2
 export const DEFAULT_PREPPED_FREEZER_DAYS = 21
