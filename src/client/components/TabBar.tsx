@@ -15,6 +15,7 @@ export function TabBar() {
     tab.to === '/' ? pathname === '/' : tab.paths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
   return (
+    // 高さを変えたら index.css の --tabbar-h も直す
     <nav
       aria-label="メインメニュー"
       className="fixed inset-x-0 bottom-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]"

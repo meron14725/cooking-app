@@ -90,7 +90,8 @@ export function AgentPage() {
       <PageHeader title="AI に頼む" backTo="/more" />
 
       {/* 下の入力欄の分だけ空ける */}
-      <div className="flex flex-col gap-4 pb-24">
+      {/* Layout の下余白（タブバー分）に、下に固定した入力欄の分を足す */}
+      <div className="flex flex-col gap-4 pb-16">
         {!asked && (
           <AiBubble>
             <p>在庫・レシピ・買い物リスト・献立の変更を頼めます。変更案を出すので、確認してから反映してください。</p>
@@ -202,7 +203,7 @@ export function AgentPage() {
       <form
         onSubmit={onAsk}
         noValidate
-        className="fixed inset-x-0 bottom-[calc(65px+env(safe-area-inset-bottom))] mx-auto flex max-w-md items-end gap-2 border-t border-line bg-surface px-4 pt-3 pb-3.5"
+        className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+env(safe-area-inset-bottom))] mx-auto flex max-w-md items-end gap-2 border-t border-line bg-surface px-4 pt-3 pb-3.5"
       >
         <label className="min-w-0 flex-1">
           <span className="sr-only">頼みたいこと</span>
