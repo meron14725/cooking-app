@@ -285,14 +285,17 @@ function Stat({ label, value, unit }: { label: string; value: string; unit: stri
   )
 }
 
-/** これより少ない余り（代表量の 1 割未満）は数えない */
+/** これより少ない余り（代表量の 1 割未満）は数えない。冷蔵のみの食材は傷みやすいので、ごく少しでなければ出す */
 const NEGLIGIBLE_PACKS = 0.1
+const NEGLIGIBLE_PERISHABLE_PACKS = 0.03
 /** 代表量の半分以上余るものは目立たせる */
 const BIG_LEFTOVER_PACKS = 0.5
 
 /** 余る食材をラベルで並べる。多いものを先に、多めに余るものは目立たせる。なければ「ほぼ使い切れます」 */
 function Leftovers({ p }: { p: ProposalView }) {
-  const list = p.leftovers.filter((l) => l.packs >= NEGLIGIBLE_PACKS).sort((a, b) => b.packs - a.packs)
+  const list = p.leftovers
+    .filter((l) => l.packs >= (l.perishable ? NEGLIGIBLE_PERISHABLE_PACKS : NEGLIGIBLE_PACKS))
+    .sort((a, b) => b.packs - a.packs)
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-ink-muted">余る食材</span>
