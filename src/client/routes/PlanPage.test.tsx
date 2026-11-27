@@ -68,12 +68,19 @@ describe('献立の提案: 別の案を出す', () => {
     expect(await screen.findByRole('heading', { name: '提案（2回目の1案）' })).toBeTruthy()
     expect(screen.getByText('料理e')).toBeTruthy()
     expect(screen.queryByText('料理b')).toBeNull()
-    expect((screen.getByRole('radio', { name: '案1を選ぶ' }) as HTMLInputElement).checked).toBe(true)
+    // 番号は回をまたいで続き、おすすめは 1 回目だけ
+    expect((screen.getByRole('radio', { name: '案4を選ぶ' }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.queryByText('おすすめ')).toBeNull()
+    expect(screen.getByRole('button', { name: '案4にする' })).toBeTruthy()
     expect(screen.getByText('これ以上の案はありません')).toBeTruthy()
     expect(screen.queryByRole('button', { name: '別の案を出す' })).toBeNull()
 
-    const last = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations')).at(-1)
-    expect(JSON.parse(String(last?.[1]?.body))).toEqual({
+    fireEvent.click(screen.getByRole('button', { name: '最初の案に戻る' }))
+    expect(await screen.findByRole('heading', { name: '提案（3案）' })).toBeTruthy()
+    expect(screen.getByText('料理b')).toBeTruthy()
+
+    const second = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations'))[1]
+    expect(JSON.parse(String(second?.[1]?.body))).toEqual({
       exclude: [
         ['a', 'b'],
         ['a', 'c'],

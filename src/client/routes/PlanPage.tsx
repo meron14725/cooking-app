@@ -425,6 +425,13 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
     setPickedKey(null)
     setError(null)
   }
+  function backToFirst() {
+    setRounds(firstRound(anchors))
+    setPickedKey(null)
+    setError(null)
+  }
+  // 案の番号は回をまたいで続ける（2 回目の 1 番目は「案4」）
+  const offset = rounds.shown.length
   const found = proposals.findIndex((p) => proposalKey(p) === pickedKey)
   const picked = found === -1 ? 0 : found
   const chosen = proposals[picked]
@@ -452,9 +459,6 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
           </h2>
           <p className="text-xs text-ink-muted">在庫と期限から計算</p>
         </div>
-        {recs.isSuccess && !hasMore && proposals.length > 0 && (
-          <p className="shrink-0 text-xs text-ink-muted">これ以上の案はありません</p>
-        )}
         {recs.isSuccess && hasMore && (
           <button
             type="button"
@@ -468,8 +472,19 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
       </div>
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
-      {recs.isSuccess && proposals.length === 0 && (
-        <p className="rounded-item bg-sunken px-4 py-3 text-sm text-ink-soft">これ以上の案はありません</p>
+      {recs.isSuccess && !hasMore && (rounds.round > 1 || proposals.length === 0) && (
+        <div className="flex items-center justify-between gap-3 rounded-item bg-sunken px-4 py-3">
+          <p className="text-sm text-ink-soft">これ以上の案はありません</p>
+          {rounds.round > 1 && (
+            <button
+              type="button"
+              onClick={backToFirst}
+              className="flex min-h-10 shrink-0 items-center rounded-full bg-surface px-3.5 text-[13px] font-bold text-accent-strong shadow-card"
+            >
+              最初の案に戻る
+            </button>
+          )}
+        </div>
       )}
       {/* ol に radiogroup は付けられない（a11y の lint）ので、外側の div をラジオのまとまりにする */}
       <div role="radiogroup" aria-label="提案">
@@ -494,12 +509,12 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                     name="proposal"
                     checked={on}
                     onChange={() => setPickedKey(proposalKey(p))}
-                    aria-label={`案${i + 1}を選ぶ`}
+                    aria-label={`案${offset + i + 1}を選ぶ`}
                     className="sr-only"
                   />
                   <span className="flex items-center gap-2">
-                    <span className="text-[15px] font-bold">案{i + 1}</span>
-                    {i === 0 && (
+                    <span className="text-[15px] font-bold">案{offset + i + 1}</span>
+                    {rounds.round === 1 && i === 0 && (
                       <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
                         おすすめ
                       </span>
@@ -547,7 +562,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
         <StickyAction hint="次に、食べる順と食数を決めます">
           {error && <p className="text-center text-sm text-danger">{error}</p>}
           <Button onClick={() => choose(chosen)} disabled={replace.isPending} className="min-h-13 w-full text-base">
-            案{picked + 1}にする
+            案{offset + picked + 1}にする
           </Button>
         </StickyAction>
       )}
