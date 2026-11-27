@@ -3,7 +3,7 @@
 AI を Cursor SDK（`@cursor/sdk`）に移し、Cloudflare Containers の中で動かします。あわせて、言葉で頼むとアプリのデータ（在庫・レシピ・買い物リスト・献立）を変える「AI に頼む」を足します。
 
 - 決定（2026-11-27、本人）: Cursor のサブスク（User API key）と Workers Paid を使う。エージェントが変えてよい範囲は在庫・レシピ・買い物リスト・献立
-- 変更は「エージェントが変更案を出す → 画面で差分を見て確認 → 反映」にする（本人に確認中。下の「確認してから反映する理由」）
+- 変更は「エージェントが変更案を出す → 画面で差分を見て確認 → 反映」にする（2026-11-27 本人が PR #14 のレビューで了承。下の「確認してから反映する理由」）
 - Gemini は予備として残す（`AI_PROVIDER=gemini` で戻せる）
 
 ## 調べたこと
@@ -103,7 +103,7 @@ AI を Cursor SDK（`@cursor/sdk`）に移し、Cloudflare Containers の中で�
 | `recipe.update` | `updateRecipe` | 丸ごと置き換え。今の内容を `get_recipe` で読んでから |
 | `shopping.add` / `shopping.update` / `shopping.delete` / `shopping.check` | 同名の関数 | 献立が shopping のとき |
 | `plan.create` | `createPlan` | 進行中の献立がないとき。食べたい料理（anchor）を決める |
-| `plan.set_recipes` | `replacePlanRecipes` | 献立が draft のとき |
+| `plan.set_recipes` | `replacePlanRecipes` | 献立が draft のとき。#14 で `replacePlanRecipes` の batch に `plans.updated_at` の更新を足す（今は `plan_recipes` を入れ替えるだけで `plans` の行が変わらず、下の競合検出が効かないため） |
 
 - 袋（meal_kits）と献立の確定・削除、食材マスタの変更、レシピの削除は道具にしない（取り返しがつきにくい、または画面で行う方が早い）
 - 各 op の入力は既存の zod スキーマ（`inventoryCreateSchema`、`inventoryPatchSchema`、`recipeInputSchema`、`shoppingAddSchema`、`planCreateSchema`、`planRecipesInputSchema` など）をそのまま JSON スキーマにして `inputSchema` に使う。Worker は反映の前にもう一度 zod で検証する
@@ -117,13 +117,19 @@ type AgentOperation = {
   targetId: string | null       // 変える行。add / create は null
   input: unknown                // 各サービスの入力（zod で検証する）
   summary: string               // 「玉ねぎ 1個 → 0.5個」など、画面に出す 1 行（Worker が作る）
-  baseUpdatedAt: string | null  // スナップショットを作った時点の updated_at
+  baseUpdatedAt: string | null  // スナップショットを作った時点の updated_at（Worker が入れる）
 }
 type AgentResult = { reply: string; operations: AgentOperation[] }
 ```
 
 - `summary` はエージェントの文ではなく、Worker が「変更前」（D1 の今の値）と `input` から作る。AI の言い分ではなく実際の差分を見て確認できるように
+- エージェントの道具の `inputSchema` に入るのは `op` ごとの `targetId` と `input` だけ。`summary` と `baseUpdatedAt` は道具の引数にしない。Worker が `/api/agent/requests` の応答を作るときに、スナップショットから `targetId` で引いて入れる（AI の写し間違いを入れないため）
+- `summary` には副作用も出す。例: `shopping.check` は `checkShoppingItem` で在庫も 1 行作るので「買い物リストの牛乳をチェック ＋ 在庫に牛乳 1本を追加」
 - 反映のとき、対象の `updated_at` が `baseUpdatedAt` と違えば、その op は「画面を開いた後に変わりました」で失敗にする（ほかの op は続ける）
+  - 比べる行: 在庫・買い物は `inventory_items` / `shopping_items` の行、レシピは `recipes` の行、献立は `plans` の行
+  - レシピ: `updateRecipe` は材料・手順だけ変えるときも `recipes` の行を `set(values)` で更新するので、`$onUpdateFn` で `updated_at` が必ず変わる（#14 のテストで確かめる）
+  - 献立: 上の表のとおり `replacePlanRecipes` で `plans.updated_at` も変える
+  - 比べてから反映するまでの間に変わる競合は防がない（自分専用で、同時に 2 か所から操作することはほぼないため）
 - 1 回の頼みで op は 20 件まで
 
 ### API
@@ -151,7 +157,8 @@ type AgentResult = { reply: string; operations: AgentOperation[] }
 
 - テストは `AI_PROVIDER=fake`。「AI に頼む」も fake のエージェント（決まった op を返す）で API の流れをテストする
 - Container のサーバは `container/` で単体テスト（道具が op を記録すること、`submit_result` の扱い）。SDK は差し替え可能にして、本物は呼ばない
-- ローカル: `vite dev` では Container を動かさない（`AGENT` binding がなければ fake にする）。本物で試すときは `wrangler dev`（Docker が要る）
+- fake になるのは `AI_PROVIDER=fake` のときだけ。`AI_PROVIDER=cursor`（既定）なのに `AGENT` binding がなければ 503 `AI_NOT_CONFIGURED` にする（本番の設定漏れで、黙って偽の結果を返さないため。今の Gemini のキーがないときと同じ扱い）
+- ローカル: `vite dev` では Container を動かさない。`.dev.vars` で `AI_PROVIDER=fake` を指定する（`.dev.vars.example` は今もそうなっている）。本物で試すときは `wrangler dev`（Docker が要る）
 - デプロイ: `wrangler deploy` がイメージを作って上げるので、デプロイする場所（GitHub Actions）で Docker が使える必要がある（ubuntu の runner には入っている）
 
 ## 実装の順番
@@ -159,6 +166,6 @@ type AgentResult = { reply: string; operations: AgentOperation[] }
 | # | PR | 内容 |
 |---|---|---|
 | 13 | Cursor プロバイダ | `container/`（Node + SDK、`/structured`、`/health`）、`AgentContainer`、`CursorProvider`、wrangler の設定、画面のタイムアウト 90 秒。コールドスタートと 1 回の時間・トークンを実測して、この設計書に書く |
-| 14 | AI に頼む | 道具、`/agent`、`/api/agent/*`、S13 |
+| 14 | AI に頼む | 道具、`/agent`、`/api/agent/*`、S13、`replacePlanRecipes` で `plans.updated_at` を更新 |
 
 本人にお願いすること: Cursor の User API key を作り、本番の Worker のシークレット `CURSOR_API_KEY` に入れる（手順は #13 の deploy 手順に書く）。

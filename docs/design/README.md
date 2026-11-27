@@ -18,12 +18,11 @@
 - スマホ向けWebアプリ、自分専用（1ユーザー）
 - ホスティング/DB: Cloudflare Workers + D1
 - 認証: Cloudflare Access（自分のメールアドレスだけ許可）
-- AI: Cursor SDK（User API key、本人のサブスクの枠）を Cloudflare Containers で動かす。Gemini は予備（[08](./08-agent.md)、2026-11-27 決定）
+- AI: Cursor SDK（User API key、本人のサブスクの枠）を Cloudflare Containers で動かす。Gemini は予備。エージェントの変更は「変更案 → 確認 → 反映」（[08](./08-agent.md)、2026-11-27 決定）
 - ホットクックのメニュー番号: 初期は手順文のみ。必要になったら列を足す
 
 ## 未決事項
 
 | 項目 | 現状 |
 |---|---|
-| AI エージェントの変更の反映方法 | 「変更案を出して確認してから反映」を推奨し、本人に確認中（[08](./08-agent.md)） |
 | 食材マスタの初期データ | よく使う食材 50 件程度を目安値で投入し、画面で直す想定 |
