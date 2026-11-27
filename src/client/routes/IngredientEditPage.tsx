@@ -95,7 +95,8 @@ function toInput(f: FormState): IngredientInput {
       .filter(Boolean),
     category: f.category,
     unit: f.unit,
-    gramsPerUnit: parseNumber(f.gramsPerUnit),
+    // 基準単位が g なら換算は不要（入力欄も隠れるので、残っていた値は送らない）
+    gramsPerUnit: f.unit.trim() === 'g' ? null : parseNumber(f.gramsPerUnit),
     canFreeze: f.canFreeze,
     fridgeDays: parseNumber(f.fridgeDays) ?? Number.NaN,
     freezerDays: f.canFreeze ? parseNumber(f.freezerDays) : null,
@@ -127,6 +128,7 @@ export function IngredientEditPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (existing.data) setForm(toForm(existing.data))
@@ -169,8 +171,13 @@ export function IngredientEditPage() {
 
   async function onDelete() {
     if (!id) return
-    await remove.mutateAsync(id)
-    navigate('/ingredients')
+    setDeleteError(null)
+    try {
+      await remove.mutateAsync(id)
+      navigate('/ingredients')
+    } catch (err) {
+      setDeleteError(err instanceof ApiRequestError ? err.message : '削除できませんでした')
+    }
   }
 
   if (id && existing.isPending) return <p className="text-stone-500">読み込み中…</p>
@@ -230,7 +237,7 @@ export function IngredientEditPage() {
           </datalist>
         </Field>
       </div>
-      {form.unit !== 'g' &&
+      {form.unit.trim() !== 'g' &&
         numberField('gramsPerUnit', `1${form.unit}あたりの重さ（g）`, {
           hint: 'レシピの「100g」をこの単位に直すときに使います',
         })}
@@ -384,6 +391,7 @@ export function IngredientEditPage() {
               この食材を削除
             </Button>
           )}
+          {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
         </div>
       )}
     </form>

@@ -49,8 +49,12 @@ function ingredientValues(input: IngredientInputParsed) {
   return rest
 }
 
+function findByName(db: Db, name: string) {
+  return db.query.ingredients.findFirst({ where: eq(ingredients.name, name) })
+}
+
 async function assertNameAvailable(db: Db, name: string, exceptId?: string) {
-  const existing = await db.query.ingredients.findFirst({ where: eq(ingredients.name, name) })
+  const existing = await findByName(db, name)
   if (existing && existing.id !== exceptId) {
     throw new ApiError(
       409,
@@ -60,12 +64,19 @@ async function assertNameAvailable(db: Db, name: string, exceptId?: string) {
   }
 }
 
+/** LIKE の % と _ をそのままの文字として扱う（ESCAPE '\\' と組で使う） */
+function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`)
+}
+
 export async function listIngredients(db: Db, opts: { q?: string; category?: string } = {}): Promise<Ingredient[]> {
   const conditions = [isNull(ingredients.archivedAt)]
   if (opts.category) conditions.push(eq(ingredients.category, opts.category as IngredientRow['category']))
   if (opts.q) {
-    const like = `%${opts.q}%`
-    conditions.push(sql`(${ingredients.name} LIKE ${like} OR ${ingredients.aliases} LIKE ${like})`)
+    const like = `%${escapeLike(opts.q)}%`
+    conditions.push(
+      sql`(${ingredients.name} LIKE ${like} ESCAPE '\\' OR ${ingredients.aliases} LIKE ${like} ESCAPE '\\')`,
+    )
   }
   const rows = await db
     .select()
@@ -104,8 +115,27 @@ export async function getIngredient(db: Db, id: string): Promise<Ingredient> {
   return toIngredient(row, units)
 }
 
+/**
+ * 食材を登録する。同じ名前の削除済み食材があれば、その行を復活させて入力値で上書きする
+ * （レシピや在庫からの参照を保ったまま使い直せるようにするため。販売単位は入力どおりに置き換える）
+ */
 export async function createIngredient(db: Db, input: IngredientInputParsed): Promise<Ingredient> {
-  await assertNameAvailable(db, input.name)
+  const existing = await findByName(db, input.name)
+  if (existing && !existing.archivedAt) {
+    throw new ApiError(409, 'DUPLICATE_NAME', `「${input.name}」はすでに登録されています`)
+  }
+  if (existing) {
+    const units = normalizeDefaultUnit(input.packageUnits)
+    await db.batch([
+      db
+        .update(ingredients)
+        .set({ ...ingredientValues(input), archivedAt: null })
+        .where(eq(ingredients.id, existing.id)),
+      db.delete(packageUnits).where(eq(packageUnits.ingredientId, existing.id)),
+      ...units.map(({ id: _, ...u }) => db.insert(packageUnits).values({ ingredientId: existing.id, ...u })),
+    ])
+    return getIngredient(db, existing.id)
+  }
   const id = ulid()
   const units = normalizeDefaultUnit(input.packageUnits)
   await db.batch([

@@ -123,15 +123,44 @@ describe('食材マスタ API', () => {
     expect(res.body.packageUnits).toEqual([])
   })
 
-  it('削除は論理削除。一覧と取得から消え、同じ名前では作れない', async () => {
+  it('削除は論理削除。一覧と取得から消える', async () => {
     const { body: created } = await api.call<Ingredient>('POST', '/ingredients', onion)
     const del = await api.call('DELETE', `/ingredients/${created.id}`)
     expect(del.status).toBe(204)
     expect((await api.call('GET', `/ingredients/${created.id}`)).status).toBe(404)
     expect((await api.call<{ items: Ingredient[] }>('GET', '/ingredients')).body.items).toEqual([])
-    const again = await api.call<{ error: { message: string } }>('POST', '/ingredients', onion)
-    expect(again.status).toBe(409)
-    expect(again.body.error.message).toContain('削除済み')
+  })
+
+  it('削除 → 同名で作成すると、同じ id で復活して一覧に出る。中身と販売単位は入力どおり', async () => {
+    const { body: created } = await api.call<Ingredient>('POST', '/ingredients', onion)
+    await api.call('DELETE', `/ingredients/${created.id}`)
+
+    const again = await api.call<Ingredient>('POST', '/ingredients', {
+      ...onion,
+      fridgeDays: 40,
+      packageUnits: [{ label: '2個入り', quantity: 2 }],
+    })
+    expect(again.status).toBe(201)
+    expect(again.body.id).toBe(created.id)
+    expect(again.body.fridgeDays).toBe(40)
+    expect(again.body.packageUnits.map((u) => [u.label, u.isDefault])).toEqual([['2個入り', true]])
+    const list = await api.call<{ items: Ingredient[] }>('GET', '/ingredients')
+    expect(list.body.items.map((i) => i.id)).toEqual([created.id])
+  })
+
+  it('削除済みの食材と同じ名前には変更できない', async () => {
+    const { body: archived } = await api.call<Ingredient>('POST', '/ingredients', onion)
+    await api.call('DELETE', `/ingredients/${archived.id}`)
+    const { body: other } = await api.call<Ingredient>('POST', '/ingredients', { ...onion, name: '新玉ねぎ' })
+    const res = await api.call<{ error: { message: string } }>('PUT', `/ingredients/${other.id}`, onion)
+    expect(res.status).toBe(409)
+    expect(res.body.error.message).toContain('削除済み')
+  })
+
+  it('検索語の % と _ はそのままの文字として扱う', async () => {
+    await api.call('POST', '/ingredients', onion)
+    const res = await api.call<{ items: Ingredient[] }>('GET', `/ingredients?q=${encodeURIComponent('%')}`)
+    expect(res.body.items).toEqual([])
   })
 
   it('存在しない食材は 404', async () => {
