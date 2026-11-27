@@ -35,6 +35,8 @@ export type RecRecipe = {
   caloriesKcal: number | null
   maxServings1_6l: number | null
   ingredients: { ingredientId: string; quantity: number | null }[]
+  /** 削除済み（献立には残っているが、提案の候補にはしない） */
+  archived?: boolean
 }
 
 /** 使える在庫（袋用の確保分を引いた量）。行ごと */

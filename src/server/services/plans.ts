@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm'
 import { DEFAULT_SERVINGS } from '../../shared/domain/constants'
 import {
   type AvailableStock,
@@ -17,9 +17,10 @@ import type {
   RecommendationsResponse,
 } from '../../shared/schemas/plan'
 import type { Db } from '../db/client'
-import { ingredients, packageUnits, planRecipes, plans, recipeIngredients, recipes } from '../db/schema'
+import { ingredients, packageUnits, planRecipes, plans, recipeIngredients, recipes, shoppingItems } from '../db/schema'
 import { ApiError } from '../errors'
 import { listInventory } from './inventory'
+import { shoppingRowsFromLines } from './shopping'
 
 const IN_PROGRESS: PlanStatus[] = ['draft', 'shopping', 'prepping']
 
@@ -51,9 +52,17 @@ async function loadRecIngredients(db: Db): Promise<Map<string, RecIngredient>> {
 }
 
 /** 登録レシピ（削除済みを除く）と材料 */
-async function loadRecRecipes(db: Db): Promise<RecRecipe[]> {
+async function loadRecRecipes(db: Db, includeIds: string[] = []): Promise<RecRecipe[]> {
   const [rows, parts] = await Promise.all([
-    db.select().from(recipes).where(isNull(recipes.archivedAt)).orderBy(asc(recipes.title)),
+    db
+      .select()
+      .from(recipes)
+      .where(
+        includeIds.length > 0
+          ? or(isNull(recipes.archivedAt), inArray(recipes.id, includeIds))
+          : isNull(recipes.archivedAt),
+      )
+      .orderBy(asc(recipes.title)),
     db
       .select({
         recipeId: recipeIngredients.recipeId,
@@ -65,6 +74,7 @@ async function loadRecRecipes(db: Db): Promise<RecRecipe[]> {
   ])
   return rows.map((r) => ({
     id: r.id,
+    archived: r.archivedAt !== null,
     title: r.title,
     servings: r.servings,
     caloriesKcal: r.caloriesKcal,
@@ -168,7 +178,10 @@ export async function recommendForPlan(
   assertDraft(plan.status)
   const [ingredientMap, catalog, available] = await Promise.all([
     loadRecIngredients(db),
-    loadRecRecipes(db),
+    loadRecRecipes(
+      db,
+      plan.recipes.map((r) => r.recipeId),
+    ),
     loadAvailable(db, today),
   ])
   const byId = new Map(catalog.map((r) => [r.id, r]))
@@ -181,7 +194,7 @@ export async function recommendForPlan(
   if (anchors.length === 0) throw new ApiError(409, 'INVALID_STATE', '食べたい料理が選ばれていません')
   const result = recommend({
     anchors,
-    catalog,
+    catalog: catalog.filter((r) => !r.archived),
     available,
     ingredients: ingredientMap,
     today,
@@ -204,13 +217,14 @@ function toView(p: Proposal, byId: Map<string, RecRecipe>): ProposalView {
   }
 }
 
-/** いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。確定前の見直し用 */
-export async function evaluatePlanById(db: Db, id: string, today: string): Promise<ProposalView> {
-  const plan = await getPlan(db, id)
-  assertDraft(plan.status)
+/** 保存済みの献立を、食べる順・食数そのままで評価する。削除済みのレシピも材料は残っているので含める */
+async function evaluateSaved(db: Db, plan: Plan, today: string): Promise<ProposalView> {
   const [ingredientMap, catalog, available] = await Promise.all([
     loadRecIngredients(db),
-    loadRecRecipes(db),
+    loadRecRecipes(
+      db,
+      plan.recipes.map((r) => r.recipeId),
+    ),
     loadAvailable(db, today),
   ])
   const byId = new Map(catalog.map((r) => [r.id, r]))
@@ -218,7 +232,16 @@ export async function evaluatePlanById(db: Db, id: string, today: string): Promi
     const recipe = byId.get(r.recipeId)
     return recipe ? [{ recipe, servings: r.servings, role: r.role, dayIndex: r.dayIndex }] : []
   })
-  return toView(evaluatePlan({ items, available, ingredients: ingredientMap, today }), byId)
+  const view = toView(evaluatePlan({ items, available, ingredients: ingredientMap, today }), byId)
+  const archived = items.filter((i) => i.recipe.archived).map((i) => `${i.recipe.title}: 削除済みのレシピです`)
+  return { ...view, warnings: [...archived, ...view.warnings] }
+}
+
+/** いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。確定前の見直し用 */
+export async function evaluatePlanById(db: Db, id: string, today: string): Promise<ProposalView> {
+  const plan = await getPlan(db, id)
+  assertDraft(plan.status)
+  return evaluateSaved(db, plan, today)
 }
 
 /** 確定前に献立のレシピを置き換える（提案を選んだとき、入れ替え・食べる順・食数を変えたとき） */
@@ -236,15 +259,25 @@ export async function replacePlanRecipes(db: Db, id: string, input: PlanRecipesI
   return getPlan(db, id)
 }
 
-/** 確定: draft → shopping。1 日目の日付を決める（買い物リストの生成は計画 #9 で足す） */
-export async function confirmPlan(db: Db, id: string, startsOn: string): Promise<Plan> {
+/** 確定: draft → shopping。1 日目の日付を決め、その時点の在庫で買い物リストを作る（同じ batch） */
+export async function confirmPlan(db: Db, id: string, startsOn: string, today: string): Promise<Plan> {
   const plan = await getPlan(db, id)
   assertDraft(plan.status)
   if (plan.recipes.length === 0) throw new ApiError(409, 'INVALID_STATE', '料理が入っていません')
-  await db
-    .update(plans)
-    .set({ status: 'shopping', startsOn, confirmedAt: new Date().toISOString() })
-    .where(and(eq(plans.id, id), eq(plans.status, 'draft')))
+  if (startsOn < today) {
+    throw new ApiError(400, 'VALIDATION_ERROR', '1日目は今日以降にしてください', [
+      { path: 'startsOn', message: '1日目は今日以降にしてください' },
+    ])
+  }
+  const evaluation = await evaluateSaved(db, plan, today)
+  const rows = shoppingRowsFromLines(id, evaluation.shopping)
+  await db.batch([
+    db
+      .update(plans)
+      .set({ status: 'shopping', startsOn, confirmedAt: new Date().toISOString() })
+      .where(and(eq(plans.id, id), eq(plans.status, 'draft'))),
+    ...(rows.length > 0 ? [db.insert(shoppingItems).values(rows)] : []),
+  ])
   return getPlan(db, id)
 }
 

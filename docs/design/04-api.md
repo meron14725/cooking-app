@@ -111,9 +111,9 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | GET | `/api/plans/:id` | 詳細（レシピ、状態） |
 | POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals? }` |
 | GET | `/api/plans/:id/evaluation` | いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。形は提案 1 件と同じ。draft のみ |
-| PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える。`{ recipes: [{ recipeId, role, servings, dayIndex }] }` |
-| POST | `/api/plans/:id/confirm` | 確定。`{ startsOn }`。買い物リストを生成。draft → shopping |
-| POST | `/api/plans/:id/shopping/complete` | 買い物完了。shopping → prepping |
+| PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える。`{ recipes: [{ recipeId, role, servings, dayIndex }] }`。料理と dayIndex はそれぞれ重複不可（1 日 1 品） |
+| POST | `/api/plans/:id/confirm` | 確定。`{ startsOn }`（今日以降）。その時点の在庫で買い物リストを生成（同じ batch）。draft → shopping |
+| POST | `/api/plans/:id/shopping/complete` | 買い物完了。shopping → prepping。チェックしていない行は残す（買わなかったもの） |
 | DELETE | `/api/plans/:id` | draft / shopping のときだけ破棄できる（下ごしらえを始めたら不可） |
 
 ```ts
@@ -139,12 +139,17 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | `/api/plans/:id/shopping` | 売り場順に並べて返す |
-| POST | `/api/plans/:id/shopping` | 手で行を追加 |
+| POST | `/api/plans/:id/shopping` | 手で行を追加。`{ ingredientId, packageUnitId?, packageCount?, quantity? }`（販売単位か量のどちらか） |
 | POST | `/api/shopping-items/:id/check` | チェック → 在庫を作る（冪等） |
 | POST | `/api/shopping-items/:id/uncheck` | チェックを外す → 作った在庫を消す |
-| PATCH | `/api/shopping-items/:id` | 個数・販売単位の変更（実際に違うパックを買ったとき）。チェック済みなら、まだ減っていない在庫行の量も同じ batch で更新 |
+| PATCH | `/api/shopping-items/:id` | 個数・販売単位の変更（実際に違うパックを買ったとき）。`packageUnitId: null` + `quantity` で量り売り。チェック済みなら、まだ使い切っていない在庫行の量も同じ batch で更新 |
+| DELETE | `/api/shopping-items/:id` | 行を消す（チェックしていない行だけ） |
 
 check / uncheck を冪等にしておくと、通信が不安定な店内で再送しても在庫が二重にならない。
+
+- check で作る在庫: 量 = buy_quantity、場所 = 食材マスタの既定の保存場所、購入日 = 今日、期限 = 日持ちから計算、source = shopping
+- 買い物の操作は献立が shopping のときだけ（それ以外は 409）
+- 買い物中に献立を取り消すと、買い物リストは消え、チェックで作った在庫は残る
 
 ## 下ごしらえ・袋詰め
 

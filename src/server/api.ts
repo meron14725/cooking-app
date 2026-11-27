@@ -5,6 +5,7 @@ import { ingredientRoutes } from './routes/ingredients'
 import { fridgeRoutes, inventoryRoutes } from './routes/inventory'
 import { planRoutes } from './routes/plans'
 import { recipeRoutes } from './routes/recipes'
+import { shoppingItemRoutes } from './routes/shopping'
 
 /** /api 以下のルート。エンドポイントはここに足していく */
 export const api = new Hono<AppEnv>()
@@ -15,3 +16,4 @@ api.route('/recipes', recipeRoutes)
 api.route('/inventory', inventoryRoutes)
 api.route('/fridge', fridgeRoutes)
 api.route('/plans', planRoutes)
+api.route('/shopping-items', shoppingItemRoutes)
