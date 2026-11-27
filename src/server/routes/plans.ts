@@ -15,6 +15,7 @@ import {
   confirmPlan,
   createPlan,
   deletePlan,
+  evaluateDraftRecipes,
   evaluatePlanById,
   getCurrentPlan,
   getPlan,
@@ -36,6 +37,9 @@ export const planRoutes = new Hono<AppEnv>()
   })
   .get('/:id/evaluation', async (c) =>
     c.json(await evaluatePlanById(createDb(c.env.DB), c.req.param('id'), todayJst())),
+  )
+  .post('/:id/evaluation', validate('json', planRecipesInputSchema), async (c) =>
+    c.json(await evaluateDraftRecipes(createDb(c.env.DB), c.req.param('id'), c.req.valid('json'), todayJst())),
   )
   .put('/:id/recipes', validate('json', planRecipesInputSchema), async (c) => {
     return c.json(await replacePlanRecipes(createDb(c.env.DB), c.req.param('id'), c.req.valid('json')))
