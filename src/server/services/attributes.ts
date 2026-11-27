@@ -55,7 +55,8 @@ async function ingredientStage(db: Db, ai: () => AiProvider, limit: number, useA
     if (fixed.category !== row.category) row.category = fixed.category
     pending.push({
       row,
-      categoryFromAi: row.category === 'vegetable' && fixed.category === 'vegetable',
+      // 名前で分類が決まった食材（玉ねぎなど）は、重さだけ聞き、分類は AI の答えで変えない
+      categoryFromAi: fixed.needsCategory,
       needsGrams: row.unit !== 'g' && row.unit !== 'ml' && row.gramsPerUnit === null,
     })
   }

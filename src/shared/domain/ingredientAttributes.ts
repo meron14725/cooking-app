@@ -63,6 +63,8 @@ export type IngredientAttributeResult = {
   gramsPerUnit: number | null
   /** ルールで決めきれず、AI に聞く必要があるか */
   needsAi: boolean
+  /** 分類を AI に聞く必要があるか（false なら、AI には重さだけを聞く） */
+  needsCategory: boolean
 }
 
 /**
@@ -72,12 +74,12 @@ export type IngredientAttributeResult = {
  */
 export function fixIngredientByRule(i: IngredientAttributeInput): IngredientAttributeResult {
   let category = i.category
-  let needsAi = false
+  let needsCategory = false
   if (i.category === 'vegetable') {
     const byName = categoryByName(i.name)
     if (byName) category = byName
-    else needsAi = true
+    else needsCategory = true
   }
   const needsGrams = i.unit !== 'g' && i.unit !== 'ml' && i.gramsPerUnit === null
-  return { category, gramsPerUnit: i.gramsPerUnit, needsAi: needsAi || needsGrams }
+  return { category, gramsPerUnit: i.gramsPerUnit, needsAi: needsCategory || needsGrams, needsCategory }
 }

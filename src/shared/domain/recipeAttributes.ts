@@ -49,6 +49,17 @@ export function toGrams(quantity: number | null, unit: string, gramsPerUnit: num
 
 /** 「約30分」「1時間10分」「30〜40分」などから分を読む。幅があれば大きいほう。読めなければ null */
 export function parseCookMinutes(text: string | null | undefined): number | null {
+  return inCookRange(readMinutes(text))
+}
+
+/** 調理時間として保存できる範囲（1〜600 分）。外なら null */
+export const COOK_MINUTES_RANGE = { min: 1, max: 600 } as const
+function inCookRange(minutes: number | null): number | null {
+  if (minutes === null) return null
+  return minutes >= COOK_MINUTES_RANGE.min && minutes <= COOK_MINUTES_RANGE.max ? minutes : null
+}
+
+function readMinutes(text: string | null | undefined): number | null {
   if (!text) return null
   const t = norm(text)
   const hm = t.match(/(\d+(?:\.\d+)?)\s*時間(?:\s*(\d+)\s*分)?/)
@@ -71,24 +82,28 @@ export function mixingFromHotcookMode(mode: string | null): boolean | null {
 /** 調理時間の目安: ホットクックの加熱時間 + 下ごしらえ。加熱時間が読めなければ null */
 export function cookMinutesFromHotcookMode(mode: string | null): number | null {
   const { minutes } = splitHotcookMode(mode)
-  return minutes === null ? null : minutes + PREP_MINUTES_ESTIMATE
+  return minutes === null ? null : inCookRange(minutes + PREP_MINUTES_ESTIMATE)
 }
 
 const SWEETS =
   /ケーキ|プリン|ジャム|蒸しパン|コンポート|ようかん|羊羹|クッキー|ゼリー|甘酒|ぜんざい|しるこ|おやつ|スイーツ|甘露煮|マフィン|ブラウニー/
 const SOUP = /汁|スープ|ポタージュ|ミネストローネ|チャウダー|ボルシチ|ガンボ|吸い物|豚汁|けんちん/
 const RICE_NOODLE =
-  /丼|ごはん|ご飯|炊き込み|炊込み|ピラフ|リゾット|パエリア|パスタ|スパゲ|うどん|そば|蕎麦|ラーメン|焼きそば|粥|おかゆ|雑炊|おこわ|ビリヤニ|ジャンバラヤ|チャーハン/
+  /カレー|ハヤシ|丼|ごはん|ご飯|炊き込み|炊込み|ピラフ|リゾット|パエリア|パスタ|スパゲ|うどん|そば|蕎麦|ラーメン|焼きそば|粥|おかゆ|雑炊|おこわ|ビリヤニ|ジャンバラヤ|チャーハン/
 const PROTEIN_CATEGORIES = new Set(['meat', 'fish', 'tofu_egg_dairy'])
 /** 乳製品は主菜の判定に数えない（牛乳・チーズで主菜にならないように） */
 const NOT_PROTEIN = /牛乳|ミルク|チーズ|バター|生クリーム|ヨーグルト|豆乳/
 
-/** 区分: 名前のキーワード → 1 人前の肉・魚・大豆製品・卵の量。量が読めなければ null */
+/**
+ * 区分: 名前のキーワード（おやつ → その他、汁物 → 汁物、ご飯もの・麺 → 主菜）→ 1 人前の肉・魚・大豆製品・卵の量。
+ * 量が読めなければ null
+ */
 export function inferDishType(input: AttributeInput): DishType | null {
   const title = norm(input.title)
   if (SWEETS.test(title)) return 'other'
   if (SOUP.test(title)) return 'soup'
-  if (RICE_NOODLE.test(title)) return 'other'
+  // ご飯もの・麺（カレー・丼など）は、1 品で主菜を兼ねるので主菜にする（#59 のレビュー）
+  if (RICE_NOODLE.test(title)) return 'main'
 
   let proteinGrams = 0
   let anyGrams = false
@@ -111,7 +126,7 @@ const CUISINE_RULES: CuisineRule[] = [
     cuisine: 'japanese',
     title:
       /煮物|煮付け|筑前煮|肉じゃが|おでん|照り焼き|みそ煮|味噌煮|甘辛|和風|すき焼き|きんぴら|白和え|おひたし|角煮|炊き合わせ|ぶり大根|茶碗蒸し|みそ汁|味噌汁|豚汁|けんちん/,
-    ingredient: /しょうゆ|醤油|みりん|だし|かつお|昆布|味噌|みそ|白だし|めんつゆ|酒$|料理酒|和風/,
+    ingredient: /しょうゆ|醤油|みりん|(?<!中華)だし|かつお|昆布|味噌|みそ|白だし|めんつゆ|酒$|料理酒|和風/,
   },
   {
     cuisine: 'western',
@@ -124,7 +139,7 @@ const CUISINE_RULES: CuisineRule[] = [
     cuisine: 'chinese',
     title:
       /中華|麻婆|マーボー|八宝菜|酢豚|回鍋肉|ホイコーロー|青椒|チンジャオ|棒棒鶏|バンバンジー|チャーシュー|焼売|シュウマイ|餃子|春雨|担々|坦々|エビチリ|油淋鶏/,
-    ingredient: /豆板醤|甜麺醤|オイスター|鶏がら|ガラスープ|中華だし|紹興酒|オイスターソース|花椒|XO|コチュジャン/,
+    ingredient: /豆板醤|甜麺醤|オイスター|鶏がら|ガラスープ|中華だし|紹興酒|オイスターソース|花椒|XO/,
   },
   {
     cuisine: 'ethnic',

@@ -168,3 +168,48 @@ describe('食材マスタ API', () => {
     expect((await api.call('PUT', '/ingredients/nope', onion)).status).toBe(404)
   })
 })
+
+describe('食材の価格', () => {
+  const put = (id: string, body: Partial<IngredientInput>) =>
+    api.call<Ingredient>('PUT', `/ingredients/${id}`, { ...onion, ...body })
+
+  it('価格なしで作ると未設定。価格を入れて作ると手入力', async () => {
+    const plain = (await api.call<Ingredient>('POST', '/ingredients', onion)).body
+    expect(plain).toMatchObject({ priceYen: null, priceSource: null, priceUpdatedAt: null })
+    const priced = (await api.call<Ingredient>('POST', '/ingredients', { ...onion, name: '紫玉ねぎ', priceYen: 198 }))
+      .body
+    expect(priced).toMatchObject({ priceYen: 198, priceSource: 'manual' })
+    expect(priced.priceUpdatedAt).not.toBeNull()
+  })
+
+  it('更新で価格を省略すると今の値のまま、変えると手入力、null で未設定に戻す', async () => {
+    const created = (await api.call<Ingredient>('POST', '/ingredients', { ...onion, priceYen: 198 })).body
+    const kept = (await put(created.id, { fridgeDays: 30 })).body
+    expect(kept).toMatchObject({ priceYen: 198, priceSource: 'manual', priceUpdatedAt: created.priceUpdatedAt })
+    const changed = (await put(created.id, { priceYen: 150 })).body
+    expect(changed).toMatchObject({ priceYen: 150, priceSource: 'manual' })
+    const cleared = (await put(created.id, { priceYen: null })).body
+    expect(cleared).toMatchObject({ priceYen: null, priceSource: null, priceUpdatedAt: null })
+  })
+
+  it('代表の販売単位を変えると、単価が変わらないように換算する', async () => {
+    const created = (await api.call<Ingredient>('POST', '/ingredients', { ...onion, priceYen: 198 })).body
+    const units = created.packageUnits.map((u) => ({ ...u, isDefault: u.label === '1個' }))
+    const res = await put(created.id, { priceYen: 198, packageUnits: units })
+    expect(res.body.priceYen).toBe(66)
+  })
+
+  it('負の値や小数は入れられない', async () => {
+    expect((await api.call('POST', '/ingredients', { ...onion, priceYen: -1 })).status).toBe(400)
+    expect((await api.call('POST', '/ingredients', { ...onion, priceYen: 1.5 })).status).toBe(400)
+  })
+
+  it('「価格未設定」は常備品を除く。「価格が古い」は 1 年より前に入れた価格', async () => {
+    await api.call('POST', '/ingredients', onion)
+    await api.call('POST', '/ingredients', { ...onion, name: '塩', isStaple: true })
+    await api.call('POST', '/ingredients', { ...onion, name: '人参', priceYen: 120 })
+    const missing = (await api.call<{ items: Ingredient[] }>('GET', '/ingredients?price=missing')).body.items
+    expect(missing.map((i) => i.name)).toEqual(['玉ねぎ'])
+    expect((await api.call<{ items: Ingredient[] }>('GET', '/ingredients?price=stale')).body.items).toEqual([])
+  })
+})

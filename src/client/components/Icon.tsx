@@ -101,6 +101,18 @@ const ICONS = {
   chevronDown: <path d="m6 9 6 6 6-6" strokeLinejoin="round" />,
   sort: <path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M17 20V4M13.5 7.5 17 4l3.5 3.5" strokeLinejoin="round" />,
   filter: <path d="M4 6h16M7 12h10M10 18h4" />,
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2.5" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </>
+  ),
+  unlock: (
+    <>
+      <rect x="5" y="11" width="14" height="10" rx="2.5" />
+      <path d="M8 11V8a4 4 0 0 1 7.5-2" />
+    </>
+  ),
   refresh: <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4.5h-4.5" strokeLinejoin="round" />,
   heart: (
     <path

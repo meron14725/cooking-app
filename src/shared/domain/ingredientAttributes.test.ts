@@ -39,6 +39,7 @@ describe('fixIngredientByRule', () => {
       category: 'seasoning',
       gramsPerUnit: null,
       needsAi: false,
+      needsCategory: false,
     })
     expect(fixIngredientByRule({ name: '砂糖', category: 'other', unit: 'g', gramsPerUnit: null }).category).toBe(
       'other',
@@ -51,6 +52,7 @@ describe('fixIngredientByRule', () => {
       category: 'tofu_egg_dairy',
       gramsPerUnit: null,
       needsAi: true,
+      needsCategory: false,
     })
     expect(
       fixIngredientByRule({ name: '牛乳', category: 'tofu_egg_dairy', unit: 'ml', gramsPerUnit: null }).needsAi,
