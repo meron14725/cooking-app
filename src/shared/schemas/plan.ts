@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { MAX_SERVINGS_PER_DISH } from '../domain/constants'
+import type { Cost } from '../domain/cost'
 import type { Proposal } from '../domain/recommend'
 
 export const PLAN_STATUSES = ['draft', 'shopping', 'prepping', 'stored', 'done'] as const
@@ -92,6 +93,8 @@ export type Plan = {
 /** 画面向けに料理名などを足した提案 */
 export type ProposalView = Omit<Proposal, 'recipes'> & {
   recipes: (Proposal['recipes'][number] & { title: string; caloriesKcal: number | null })[]
+  /** 推定金額（docs/design/10-cost.md） */
+  cost: Cost
 }
 
 export type RecommendationsResponse = {

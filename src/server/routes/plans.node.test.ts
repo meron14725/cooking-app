@@ -139,6 +139,10 @@ describe('献立 API', () => {
         ['豚こま切れ肉', '300gパック', 1],
       ]),
     )
+    // 価格は未設定なので 0 円で、未設定の食材として数える（docs/design/10-cost.md）
+    const meals = best?.recipes.reduce((n, r) => n + r.servings, 0)
+    expect(best?.cost).toMatchObject({ buyYen: 0, totalMeals: meals, hasUnpriced: true })
+    expect(best?.cost.unpriced.map((u) => u.name)).toEqual(expect.arrayContaining(['キャベツ', '豚こま切れ肉']))
     expect(best?.leftovers.filter((l) => l.perishable)).toEqual([])
     expect(best?.totalCaloriesKcal).not.toBeNull()
   })

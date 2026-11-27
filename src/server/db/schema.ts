@@ -39,6 +39,7 @@ export const STORAGE_LOCATIONS = ['fridge', 'freezer', 'pantry'] as const
 export const KIT_LOCATIONS = ['fridge', 'freezer'] as const
 export const INVENTORY_SOURCES = ['shopping', 'leftover', 'manual'] as const
 export const KIT_STATUSES = ['stored', 'cooked', 'discarded'] as const
+export const PRICE_SOURCES = ['default', 'manual'] as const
 export const KIT_ITEM_STATES = ['packed', 'before_cook', 'seasoning_packed'] as const
 
 const inList = (column: string, values: readonly string[]) =>
@@ -77,6 +78,13 @@ export const ingredients = sqliteTable(
      * manual は「まとめて推定」で上書きしない
      */
     attributesSource: text('attributes_source', { enum: ATTRIBUTE_SOURCES }),
+    // 価格の列は CHECK を付けない（CHECK を足すと SQLite はテーブルを作り直すため。値は zod で確かめる）
+    /** 代表量（代表の販売単位 → 最初の販売単位 → 基準単位 1 つ。g なら 100g）あたりの価格（円）。NULL = 未設定 */
+    priceYen: integer('price_yen'),
+    /** default = まとめて推定の目安 / manual = 手で入れた。price_yen が NULL なら NULL */
+    priceSource: text('price_source', { enum: PRICE_SOURCES }),
+    /** 価格を入れた日時（ISO） */
+    priceUpdatedAt: text('price_updated_at'),
     archivedAt: text('archived_at'),
     ...timestamps,
   },

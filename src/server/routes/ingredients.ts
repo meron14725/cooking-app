@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { categorySchema, ingredientInputSchema } from '../../shared/schemas/ingredient'
+import { categorySchema, ingredientInputSchema, PRICE_FILTERS } from '../../shared/schemas/ingredient'
 import type { AppEnv } from '../app'
 import { createDb } from '../db/client'
 import {
@@ -15,6 +15,8 @@ import { validate } from '../validation'
 const listQuerySchema = z.object({
   q: z.string().trim().max(50).optional(),
   category: categorySchema.optional(),
+  /** missing = 価格未設定（常備品を除く） / stale = 価格が古い */
+  price: z.enum(PRICE_FILTERS).optional(),
 })
 
 export const ingredientRoutes = new Hono<AppEnv>()
