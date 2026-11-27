@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_EVALUATIONS, RECOMMEND_WEIGHTS } from './constants'
+import { MAX_EVALUATIONS, MAX_EVALUATIONS_PER_CALL, RECOMMEND_WEIGHTS } from './constants'
 import { allocations, allowedServings, type RecommendInput, type RecRecipe, recommend } from './recommend'
 import { recipeFeatures } from './recommendScore'
 import { fixtureCatalog, fixtureIngredients, syntheticCatalog } from './testing/catalog'
@@ -311,4 +311,52 @@ describe('多様性と別の案（食数付きの exclude）', () => {
     expect(r.evaluations ?? 0).toBeLessThanOrEqual(MAX_EVALUATIONS * 5)
     expect(Date.now() - started).toBeLessThan(3000)
   })
+})
+
+describe('探し直しの上限と、押すたびに変わらないもの', () => {
+  const anchors = [{ recipe: get('curry'), servings: 2 }]
+  type Shown = { recipeId: string; servings: number }[]
+  /** 「別の案を出す」を出し尽くすまで（または n 回）押し続け、1 回ごとの結果と時間を返す */
+  function pressAll(input: Partial<RecommendInput>, n: number) {
+    const exclude: Shown[] = []
+    const calls: { result: ReturnType<typeof run>; ms: number }[] = []
+    for (let i = 0; i < n; i++) {
+      const started = performance.now()
+      const result = run({ anchors, ...input, exclude: [...exclude] })
+      calls.push({ result, ms: performance.now() - started })
+      for (const p of result.proposals)
+        exclude.push(p.recipes.map((x) => ({ recipeId: x.recipeId, servings: x.servings })))
+      if (!result.hasMore) break
+    }
+    return calls
+  }
+
+  it('案が 0 件なら hasMore は false。hasMore が false になったら、次に押しても何も出ない', () => {
+    const catalog = [...fixtureCatalog.slice(0, 8), ...syntheticCatalog(12)]
+    const calls = pressAll({ catalog, targetMeals: 6 }, 200)
+    const last = calls.at(-1)?.result
+    expect(last?.hasMore).toBe(false)
+    for (const { result } of calls) if (result.proposals.length === 0) expect(result.hasMore).toBe(false)
+  })
+
+  it('AI 補完のすすめは、別の案を出しても 1 回目と同じ', () => {
+    const catalog = [...fixtureCatalog, ...syntheticCatalog(80)]
+    for (const a of [get('curry'), get('mapo'), get('spinachOhitashi')]) {
+      const calls = pressAll({ anchors: [{ recipe: a, servings: 2 }], catalog }, 5)
+      const flags = new Set(calls.map((c) => c.result.aiSuggestionRecommended))
+      expect(flags.size).toBe(1)
+    }
+    // 何度も recommend を呼ぶので、CI が遅いときのために長めに待つ
+  }, 30_000)
+
+  it(`最悪のときも、1 回の評価は ${MAX_EVALUATIONS_PER_CALL} 回まで（時間もゆるく確かめる）`, () => {
+    // 刻み 1・合計 8 食・600 件で、出し尽くしに近づくまで押す（探し直しがいちばん多くなる）
+    const catalog = [...fixtureCatalog, ...syntheticCatalog(600)]
+    const calls = pressAll({ catalog, targetMeals: 8, options: { servingsStep: 1 } }, 12)
+    for (const { result, ms } of calls) {
+      expect(result.evaluations ?? 0).toBeLessThanOrEqual(MAX_EVALUATIONS_PER_CALL)
+      // 時間は CI の速さで揺れるので、大きく外れていないかだけを見る
+      expect(ms).toBeLessThan(5000)
+    }
+  }, 60_000)
 })

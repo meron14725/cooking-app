@@ -4,6 +4,8 @@
 //   npm run rec:try -- --anchor curry --anchor mapo:4 --target 8 --weights vegetable=0.6,popularity=0
 //   npm run rec:try -- --synthetic 600 --anchor syn0      # 件数を増やして計算量を見る
 //   npm run rec:try -- --anchor curry --lambda 0           # 多様性を切って点数順そのままにする
+//   npm run rec:try -- --synthetic 600 --anchor syn0 --step 1 --target 8 --rounds 15
+//                                                          # 「別の案を出す」を続けて押し、1 回ごとの時間と評価回数（最悪のとき）を見る
 //   npm run rec:try -- --from-local-d1 --anchor <レシピID>  # ローカルの D1（wrangler dev の .wrangler/state）を使う
 // 既定は架空のレシピ（src/shared/domain/testing/catalog.ts）。在庫は --from-local-d1 のときだけ、確保分を引かずに使う
 import { spawnSync } from 'node:child_process'
@@ -21,6 +23,8 @@ type Args = {
   fromLocalD1: boolean
   proposals: number
   lambda: number | undefined
+  rounds: number
+  step: number | undefined
 }
 
 function parseArgs(argv: string[]): Args {
@@ -32,6 +36,8 @@ function parseArgs(argv: string[]): Args {
     fromLocalD1: false,
     proposals: 3,
     lambda: undefined,
+    rounds: 0,
+    step: undefined,
   }
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i]
@@ -46,6 +52,8 @@ function parseArgs(argv: string[]): Args {
     } else if (key === '--target') args.target = Number(value())
     else if (key === '--proposals') args.proposals = Number(value())
     else if (key === '--lambda') args.lambda = Number(value())
+    else if (key === '--rounds') args.rounds = Number(value())
+    else if (key === '--step') args.step = Number(value())
     else if (key === '--synthetic') args.synthetic = Number(value())
     else if (key === '--from-local-d1') args.fromLocalD1 = true
     else if (key === '--weights') {
@@ -162,7 +170,7 @@ const anchors = args.anchors.map((a) => {
 })
 
 const weights = { ...RECOMMEND_WEIGHTS, ...args.weights }
-const run = (w: typeof RECOMMEND_WEIGHTS) =>
+const run = (w: typeof RECOMMEND_WEIGHTS, exclude: { recipeId: string; servings: number }[][] = []) =>
   recommend({
     anchors,
     catalog: source.catalog,
@@ -171,7 +179,8 @@ const run = (w: typeof RECOMMEND_WEIGHTS) =>
     today: todayJst(),
     targetMeals: args.target,
     weights: w,
-    options: { maxProposals: args.proposals, diversityLambda: args.lambda },
+    exclude,
+    options: { maxProposals: args.proposals, diversityLambda: args.lambda, servingsStep: args.step },
   })
 const started = performance.now()
 const result = run(weights)
@@ -215,3 +224,22 @@ result.proposals.forEach((p, i) => {
   console.log(`  内訳: ${terms.join(' / ')}`)
 })
 if (result.proposals.length === 0) console.log('\n案がありません')
+
+if (args.rounds > 0) {
+  // 「別の案を出す」を続けて押す
+  const exclude: { recipeId: string; servings: number }[][] = []
+  let worst = { ms: 0, evaluations: 0 }
+  console.log(`\n別の案を ${args.rounds} 回まで続けて押す`)
+  for (let i = 1; i <= args.rounds; i++) {
+    const t = performance.now()
+    const r = run(weights, exclude)
+    const took = performance.now() - t
+    worst = { ms: Math.max(worst.ms, took), evaluations: Math.max(worst.evaluations, r.evaluations ?? 0) }
+    console.log(
+      `  ${i} 回目: ${took.toFixed(0)} ms / 評価 ${r.evaluations ?? 0} 回 / ${r.proposals.length} 案 / hasMore ${r.hasMore}`,
+    )
+    for (const p of r.proposals) exclude.push(p.recipes.map((x) => ({ recipeId: x.recipeId, servings: x.servings })))
+    if (!r.hasMore) break
+  }
+  console.log(`  最悪: ${worst.ms.toFixed(0)} ms / 評価 ${worst.evaluations} 回`)
+}

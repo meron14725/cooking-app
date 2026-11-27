@@ -15,6 +15,8 @@ import {
   FALLBACK_PRICE_PER_PACK_YEN,
   MAX_DISHES,
   MAX_EVALUATIONS,
+  MAX_EVALUATIONS_PER_CALL,
+  MAX_EXTRA_ROUNDS,
   MAX_PROPOSALS,
   PACK_YEN,
   RECOMMEND_WEIGHTS,
@@ -792,7 +794,9 @@ export function recommend(input: RecommendInput): RecommendResult {
     return pool
   }
 
-  const search = (round: number) => {
+  const search = (round: number, limit = MAX_EVALUATIONS) => {
+    // 1 回の呼び出し全体の上限（探し直しを重ねても Workers の CPU 時間に収める）
+    const maxEvaluations = Math.min(limit, MAX_EVALUATIONS_PER_CALL - evaluations)
     const pool = poolOf(round)
     const grow = CANDIDATE_POOL.growth ** round
     const results: MealScored[] = []
@@ -806,7 +810,7 @@ export function recommend(input: RecommendInput): RecommendResult {
         const list = addCount === 0 ? [] : pool.slice(0, size)
         if (addCount > 0 && list.length < addCount) break
         // 品数ごとに評価の回数を分ける（多い品数の組み合わせまで届くように）
-        const budget = evals + Math.floor((MAX_EVALUATIONS - evals) / (maxAdd - addCount + 1))
+        const budget = evals + Math.floor((maxEvaluations - evals) / (maxAdd - addCount + 1))
         outer: for (const added of addCount === 0 ? [[] as RecRecipe[]] : combinations(list, addCount)) {
           const options = [...anchorOptions, ...added.map((r) => allowedServings(featureOf(r), step))]
           for (const alloc of allocations(options, goal)) {
@@ -843,18 +847,26 @@ export function recommend(input: RecommendInput): RecommendResult {
   // 「別の案を出す」の回は、出した案の数から出す。残りがなければ枠を広げて探し直す
   let round = Math.ceil(exclude.length / maxProposals)
   let found = search(round)
-  if (found.results.length === 0 && round === 0) return baseOnly(candidates.length === 0)
-  const best = found.results[0]
+  // AI 補完をすすめるかは、1 回目と同じ探索のいちばん良い案で決める（「別の案を出す」で変わらないように）
+  const first = round === 0 ? found : search(0)
+  if (first.results.length === 0) return baseOnly(candidates.length === 0)
+  const best = first.results[0]
   const aiSuggestionRecommended =
     candidates.length === 0 ||
     (best?.evaluation.maxPerishableLeftoverPacks ?? 0) >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS
   let remaining = found.results.filter((s) => !isExcluded(s))
-  for (let extra = 0; remaining.length === 0 && found.canGrow && extra < MAX_EXTRA_ROUNDS; extra++) {
+  // 探し直しは評価の回数を減らし、呼び出し全体の上限に達したらやめる
+  for (
+    let extra = 0;
+    remaining.length === 0 && found.canGrow && extra < MAX_EXTRA_ROUNDS && evaluations < MAX_EVALUATIONS_PER_CALL;
+    extra++
+  ) {
     round++
-    found = search(round)
+    found = search(round, MAX_EVALUATIONS / 2)
     remaining = found.results.filter((s) => !isExcluded(s))
   }
-  if (found.results.length === 0) return baseOnly(candidates.length === 0)
+  // 広げても出していない案が残らなければ、出し尽くした（次も同じ結果なので hasMore は false）
+  if (remaining.length === 0) return { proposals: [], aiSuggestionRecommended, hasMore: false, evaluations }
 
   // ---- 多様性を見ながら選ぶ（MMR）----
   const pool = remaining.slice(0, DIVERSITY_CANDIDATES).map((s) => ({ s, profile: profileOf(s.items) }))
@@ -887,6 +899,3 @@ export function recommend(input: RecommendInput): RecommendResult {
     evaluations,
   }
 }
-
-/** 残りがないときに枠を広げて探し直す回数の上限 */
-const MAX_EXTRA_ROUNDS = 4
