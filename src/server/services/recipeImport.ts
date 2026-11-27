@@ -282,6 +282,7 @@ export function normalizeDraft(raw: RecipeDraftRaw, masters: Ingredient[], sourc
     caloriesKcal: raw.caloriesKcal,
     hotcookMode: raw.hotcookMode,
     sourceUrl,
+    sourceType: sourceUrl ? 'url' : 'ai',
     ingredients,
     steps: raw.steps,
     maxServings1_6l: raw.maxServings1_6l,

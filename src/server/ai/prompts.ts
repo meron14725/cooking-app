@@ -1,5 +1,5 @@
 import type { EstimateCaloriesInput } from '../../shared/schemas/recipeDraft'
-import type { MasterRef } from './provider'
+import type { MasterRef, SuggestPromptInput } from './provider'
 
 export const EXTRACT_SYSTEM = `あなたはホットクック（シャープの自動調理鍋、内鍋 1.6L）向けにレシピを整理するアシスタントです。
 与えられたレシピページの内容から、指定の JSON 形式で 1 品分の下書きを作ってください。
@@ -14,12 +14,12 @@ export const EXTRACT_SYSTEM = `あなたはホットクック（シャープの�
 - 揚げ物・焼き目が必要なものなどホットクックに向かない場合も、近い作り方にして warnings に書く
 - 元のページにない情報を作り話で足さない。分からない値は null`
 
+const masterList = (ingredients: MasterRef[]) =>
+  ingredients.map((m) => `${m.name}（${m.unit}${m.gramsPerUnit ? `、1${m.unit}≒${m.gramsPerUnit}g` : ''}）`).join('、')
+
 export function extractPrompt(input: { url: string; text: string; ingredients: MasterRef[] }): string {
-  const masters = input.ingredients
-    .map((m) => `${m.name}（${m.unit}${m.gramsPerUnit ? `、1${m.unit}≒${m.gramsPerUnit}g` : ''}）`)
-    .join('、')
   return `## 食材マスタ（名前と基準単位）
-${masters}
+${masterList(input.ingredients)}
 
 ## レシピページ（${input.url}）
 ${input.text}`
@@ -31,4 +31,30 @@ export const CALORIE_SYSTEM = `あなたは管理栄養士です。材料と人�
 export function caloriePrompt(input: EstimateCaloriesInput): string {
   return `${input.servings} 人前の材料:
 ${input.ingredients.map((i) => `- ${i.displayText}`).join('\n')}`
+}
+
+export const SUGGEST_SYSTEM = `あなたはホットクック（シャープの自動調理鍋、内鍋 1.6L）向けのレシピを考えるアシスタントです。
+「余りそうな食材」をなるべく多く使い切る料理を 1 品考え、指定の JSON 形式で下書きを作ってください。
+
+- ホットクック 1.6L で作れる料理にする。hotcookMode にホットクックの設定（例: 手動 > 煮物を作る > まぜる > 20分）を書く
+- servings は 1（成人男性 1 人前）。1 人前 600kcal 前後を目安にし、caloriesKcal に 1 人前の推定を入れる
+- 余りそうな食材は、先に書いてあるものほど優先して使う（傷みやすいものが先）。量は余りの量を超えない範囲で
+- 余り以外の食材は少なめにし、調味料や一般的な常備品（しょうゆ、みりん、砂糖、塩、酒、油など）を中心にする
+- 材料の name は「食材マスタ」の名前を使う。マスタにない食材を使うときは一般的な名前にする。水は材料に入れず手順に書く
+- 量はマスタの基準単位で書く。大さじ 1 = 15ml、小さじ 1 = 5ml。少々・適量は quantity と unit を null
+- displayText は短い表記（例: 玉ねぎ 1/2個）
+- 手順は下ごしらえ（prep: 切る・下味など、調理の前日までにできること）と調理（cook: 内鍋に入れてから）に分け、短い文にする
+- maxServings1_6l は 1.6L の内鍋で一度に作れる最大の人数分の推定
+- 「既存のレシピ」と同じ料理や、ほぼ同じ料理にしない
+- 使い切れない余りや、気をつける点があれば warnings に書く`
+
+export function suggestPrompt(input: SuggestPromptInput): string {
+  return `## 余りそうな食材（優先順）
+${input.leftovers.map((l) => `- ${l.name} ${Math.round(l.quantity * 100) / 100}${l.unit}`).join('\n')}
+
+## 既存のレシピ（これと重ならない料理に）
+${input.avoidTitles.length > 0 ? input.avoidTitles.join('、') : 'なし'}
+
+## 食材マスタ（名前と基準単位）
+${masterList(input.ingredients)}`
 }

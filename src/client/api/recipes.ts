@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Recipe, RecipeInput, RecipeSummary } from '../../shared/schemas/recipe'
-import type { EstimateCaloriesInput, RecipeDraft } from '../../shared/schemas/recipeDraft'
+import type { EstimateCaloriesInput, RecipeDraft, SuggestRecipeInput } from '../../shared/schemas/recipeDraft'
 import { ApiRequestError, apiFetch } from './client'
 
 const keys = {
@@ -39,7 +39,11 @@ export function useSaveRecipe(id: string | undefined) {
       }),
     onSuccess: (saved) => {
       qc.setQueryData(keys.detail(saved.id), saved)
-      return qc.invalidateQueries({ queryKey: keys.all })
+      return Promise.all([
+        qc.invalidateQueries({ queryKey: keys.all }),
+        // レシピが増えたり変わったりしたら献立の提案を計算し直す
+        qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'plans' && q.queryKey[2] === 'recommendations' }),
+      ])
     },
   })
 }
@@ -61,6 +65,18 @@ export function useImportRecipe() {
       apiFetch<RecipeDraft>('/recipes/import-url', {
         method: 'POST',
         body: JSON.stringify({ url }),
+        signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+      }),
+  })
+}
+
+/** 余りそうな食材から AI に 1 品の下書きを作らせる（保存しない） */
+export function useSuggestRecipe() {
+  return useMutation({
+    mutationFn: (input: SuggestRecipeInput) =>
+      apiFetch<RecipeDraft>('/recipes/suggest', {
+        method: 'POST',
+        body: JSON.stringify(input),
         signal: AbortSignal.timeout(AI_TIMEOUT_MS),
       }),
   })

@@ -78,6 +78,31 @@ describe('POST /api/recipes/import-url', () => {
   })
 })
 
+describe('POST /api/recipes/suggest', () => {
+  it('余りの食材から下書きを返す。マスタと照合し、作成元は ai', async () => {
+    const onion = (await api.call<{ items: Ingredient[] }>('GET', '/ingredients')).body.items.find(
+      (i) => i.name === '玉ねぎ',
+    )
+    const res = await api.call<RecipeDraft>('POST', '/recipes/suggest', {
+      leftovers: [{ ingredientId: onion?.id, quantity: 1.5 }],
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.title).toBe('玉ねぎの煮物')
+    expect(res.body.sourceType).toBe('ai')
+    expect(res.body.sourceUrl).toBeNull()
+    expect(res.body.ingredients[0]).toMatchObject({ ingredientId: onion?.id, quantity: 1.5 })
+  })
+
+  it('余りが空、またはマスタにない食材だけなら 400', async () => {
+    expect((await api.call('POST', '/recipes/suggest', { leftovers: [] })).status).toBe(400)
+    const res = await api.call<{ error: { code: string } }>('POST', '/recipes/suggest', {
+      leftovers: [{ ingredientId: 'nope', quantity: 1 }],
+    })
+    expect(res.status).toBe(400)
+    expect(res.body.error.code).toBe('UNKNOWN_INGREDIENT')
+  })
+})
+
 describe('POST /api/recipes/estimate-calories', () => {
   it('1 人前のカロリーを返す', async () => {
     const res = await api.call<{ caloriesKcal: number }>('POST', '/recipes/estimate-calories', {

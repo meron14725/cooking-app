@@ -45,6 +45,8 @@ export type RecipeDraft = {
   caloriesKcal: number | null
   hotcookMode: string | null
   sourceUrl: string | null
+  /** URL 取り込みなら url、補完提案なら ai */
+  sourceType: 'url' | 'ai'
   ingredients: {
     displayText: string
     /** マスタと照合できたもの */
@@ -65,6 +67,15 @@ export type RecipeDraft = {
 export const importUrlInputSchema = z.object({
   url: z.url('URL の形式が正しくありません').max(2000),
 })
+
+/** 補完提案: 余りそうな食材（レコメンドの余り。冷蔵のみのものを先に） */
+export const suggestRecipeInputSchema = z.object({
+  leftovers: z
+    .array(z.object({ ingredientId: z.string().min(1), quantity: z.number().positive().max(100000) }))
+    .min(1, '余る食材がありません')
+    .max(30),
+})
+export type SuggestRecipeInput = z.infer<typeof suggestRecipeInputSchema>
 
 export const estimateCaloriesInputSchema = z.object({
   servings: z.number().positive().max(20),

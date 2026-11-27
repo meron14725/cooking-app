@@ -275,6 +275,17 @@ describe('保存中の袋と調理', () => {
     expect((await api.call('POST', `/kits/${nimonoKit.id}/cooked`, {})).status).toBe(409)
   })
 
+  it('作った: 直前作業の食材でない在庫行の余り修正は無視する', async () => {
+    const { kits } = await stored()
+    const potato = (await stock()).find((i) => i.name === 'じゃがいも')
+    // 肉じゃがの袋には直前作業がないので、じゃがいもの行は対象外
+    const res = await api.call('POST', `/kits/${kitOf(kits, '肉じゃが').id}/cooked`, {
+      leftovers: [{ inventoryItemId: potato?.id, quantity: 0 }],
+    })
+    expect(res.status).toBe(200)
+    expect((await stock()).find((i) => i.name === 'じゃがいも')?.quantity).toBe(1)
+  })
+
   it('作ったが同時に何本届いても、在庫は 1 回分だけ減る', async () => {
     const { kits } = await stored()
     const id = kitOf(kits, '豆腐と豚の煮物').id

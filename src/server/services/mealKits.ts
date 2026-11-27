@@ -219,7 +219,9 @@ export async function cookKit(db: Db, id: string, input: KitCookedInput, today: 
   const needs = beforeCookNeeds(kit)
   const rows = (await stockRows(db, [...new Set(needs.map((n) => n.ingredientId))])).filter((r) => !r.isStaple)
   const final = new Map(consumeStock(rows, needs).updates.map((u) => [u.id, u.quantity]))
-  for (const l of input.leftovers) final.set(l.inventoryItemId, l.quantity)
+  // 余りの修正は、直前作業の食材の在庫行だけ受け付ける（それ以外の ID は無視する。画面を開いたあとに在庫が変わった場合も止めない）
+  const allowed = new Set(rows.map((r) => r.id))
+  for (const l of input.leftovers) if (allowed.has(l.inventoryItemId)) final.set(l.inventoryItemId, l.quantity)
 
   const now = new Date().toISOString()
   const stillStored = sql`EXISTS (SELECT 1 FROM meal_kits WHERE id = ${id} AND status = 'stored')`
