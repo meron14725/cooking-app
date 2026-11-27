@@ -1,11 +1,49 @@
-import { MAX_SERVINGS_PER_DISH, SERVINGS_STEP } from '../../shared/domain/constants'
-import type { Plan } from '../../shared/schemas/plan'
+import { MAX_SERVINGS_PER_DISH, MAX_TARGET_MEALS, SERVINGS_STEP } from '../../shared/domain/constants'
+import type { ExcludedProposal } from '../../shared/domain/recommend'
+import type { Plan, ProposalView } from '../../shared/schemas/plan'
 
 /**
- * 「別の案を出す」で、これまでに出した案（案ごとのレシピ ID）と何回目か。
- * 食べたい料理（anchor）と食数が変わったら、出した案は意味がなくなるので 1 回目に戻す
+ * 「別の案を出す」で、これまでに出した案（案ごとの料理と食数）と何回目か。
+ * 食べたい料理（anchor）と食数、固定、合計◯食が変わったら、出した案は意味がなくなるので 1 回目に戻す。
+ * 前のバージョンで覚えた、レシピ ID だけの案もそのまま送れる（API は古い形も受け付ける）
  */
-export type ProposalRounds = { anchors: string; round: number; shown: string[][] }
+export type ProposalRounds = { anchors: string; round: number; shown: ExcludedProposal[] }
+
+/** 案のキー（料理と食数）。同じ料理で食数だけ違う案も別のカードにする */
+export const proposalKey = (p: Pick<ProposalView, 'recipes'>) =>
+  p.recipes.map((r) => `${r.recipeId}:${r.servings}`).join()
+
+/**
+ * 同じ料理の組み合わせで食数だけ違う案は、先に出てきた（点数の良い）ほうだけ残す。
+ * 候補の料理が少ないと食数違いの案ばかり並ぶので、カードには出さない（食数はカードの ＋－ で変えられる）
+ */
+export function uniqueByRecipes<T extends Pick<ProposalView, 'recipes'>>(list: T[]): T[] {
+  const seen = new Set<string>()
+  return list.filter((p) => {
+    const key = p.recipes
+      .map((r) => r.recipeId)
+      .sort()
+      .join()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+/** 出した案として覚える形（料理と食数） */
+export const shownOf = (p: Pick<ProposalView, 'recipes'>) =>
+  p.recipes.map((r) => ({ recipeId: r.recipeId, servings: r.servings }))
+
+const isShown = (v: unknown) =>
+  Array.isArray(v) &&
+  (v.every((id) => typeof id === 'string') ||
+    v.every(
+      (e) =>
+        typeof e === 'object' &&
+        e !== null &&
+        typeof (e as Record<string, unknown>).recipeId === 'string' &&
+        typeof (e as Record<string, unknown>).servings === 'number',
+    ))
 
 /** 食べたい料理と食数のキー。並びによらない */
 export function anchorsKey(plan: Plan): string {
@@ -27,7 +65,7 @@ export const isProposalRounds = (v: unknown): v is ProposalRounds => {
     Number.isInteger(r.round) &&
     r.round >= 1 &&
     Array.isArray(r.shown) &&
-    r.shown.every((ids) => Array.isArray(ids) && ids.every((id) => typeof id === 'string'))
+    r.shown.every(isShown)
   )
 }
 
@@ -37,7 +75,7 @@ export function currentRounds(saved: ProposalRounds, anchors: string): ProposalR
 }
 
 /** 今出ている案を出した案に足して、次の回へ */
-export function nextRound(rounds: ProposalRounds, current: string[][]): ProposalRounds {
+export function nextRound(rounds: ProposalRounds, current: ExcludedProposal[]): ProposalRounds {
   return { ...rounds, round: rounds.round + 1, shown: [...rounds.shown, ...current] }
 }
 
@@ -87,4 +125,9 @@ export function stepDown(v: number, step = SERVINGS_STEP): number {
   return Math.max(step, (Math.ceil(v / step) - 1) * step)
 }
 export const canStepUp = (v: number, max = MAX_SERVINGS_PER_DISH) => v < max
+
+/** 合計◯食の ＋－（刻みの倍数で、刻みから MAX_TARGET_MEALS まで） */
+export const mealsUp = (v: number) => stepUp(v, SERVINGS_STEP, MAX_TARGET_MEALS)
+export const mealsDown = (v: number) => stepDown(v, SERVINGS_STEP)
+export const canMealsUp = (v: number) => canStepUp(v, MAX_TARGET_MEALS)
 export const canStepDown = (v: number, step = SERVINGS_STEP) => v > step

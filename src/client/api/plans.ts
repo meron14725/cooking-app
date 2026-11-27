@@ -1,8 +1,11 @@
 import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ExcludedProposal } from '../../shared/domain/recommend'
 import type {
   Plan,
   PlanCreateInput,
+  PlanDefaults,
   PlanRecipesInput,
+  PlanUpdateInput,
   ProposalView,
   RecommendationsResponse,
 } from '../../shared/schemas/plan'
@@ -10,7 +13,8 @@ import { apiFetch } from './client'
 
 const keys = {
   current: ['plans', 'current'] as const,
-  recommendations: (id: string, exclude: string[][] = []) => ['plans', id, 'recommendations', exclude] as const,
+  defaults: ['plans', 'defaults'] as const,
+  recommendations: (id: string, exclude: ExcludedProposal[] = []) => ['plans', id, 'recommendations', exclude] as const,
   evaluation: (id: string) => ['plans', id, 'evaluation'] as const,
 }
 
@@ -24,12 +28,12 @@ export function useCurrentPlan() {
 
 /**
  * 提案は保存しない計算結果。在庫やレシピが変わったら取り直す。
- * exclude はもう出した案（「別の案を出す」）。それを除いた次の案が返る。
+ * exclude はもう出した案（「別の案を出す」。料理と食数）。それを除いた次の案が返る。
  * fixed は鍵で固定した料理と食数。必ず含めて残りを選び直す
  */
 export function useRecommendations(
   planId: string | undefined,
-  exclude: string[][] = [],
+  exclude: ExcludedProposal[] = [],
   fixed: { recipeId: string; servings: number }[] = [],
   enabled = true,
 ) {
@@ -45,6 +49,11 @@ export function useRecommendations(
       }),
     enabled: Boolean(planId) && enabled,
   })
+}
+
+/** 献立を作るときの既定値（合計◯食は前回の献立の値） */
+export function usePlanDefaults() {
+  return useQuery({ queryKey: keys.defaults, queryFn: () => apiFetch<PlanDefaults>('/plans/defaults') })
 }
 
 export function usePlanEvaluation(planId: string | undefined, enabled = true) {
@@ -90,6 +99,16 @@ export function useCreatePlan() {
   const setCurrent = useSetCurrent()
   return useMutation({
     mutationFn: (input: PlanCreateInput) => apiFetch<Plan>('/plans', { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: setCurrent,
+  })
+}
+
+/** 献立の設定（合計◯食）を変える。draft のときだけ。変えたら提案を取り直す */
+export function useUpdatePlan(planId: string) {
+  const setCurrent = useSetCurrent()
+  return useMutation({
+    mutationFn: (input: PlanUpdateInput) =>
+      apiFetch<Plan>(`/plans/${planId}`, { method: 'PATCH', body: JSON.stringify(input) }),
     onSuccess: setCurrent,
   })
 }

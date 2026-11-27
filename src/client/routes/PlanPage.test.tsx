@@ -15,6 +15,7 @@ const plan = {
   status: 'draft',
   startsOn: null,
   confirmedAt: null,
+  targetMeals: 6,
   recipes: [
     {
       recipeId: 'a',
@@ -59,7 +60,9 @@ function proposal(added: string) {
 
 /** 候補は b〜e の 4 品。1 回に 3 案ずつ、出した案を除いて返す */
 function recommendations(body: unknown) {
-  const shown = new Set(((body as { exclude?: string[][] }).exclude ?? []).map((ids) => ids.join()))
+  type Shown = string[] | { recipeId: string; servings: number }[]
+  const ids = (p: Shown) => p.map((e) => (typeof e === 'string' ? e : e.recipeId))
+  const shown = new Set(((body as { exclude?: Shown[] }).exclude ?? []).map((p) => ids(p).join()))
   const rest = ['b', 'c', 'd', 'e'].filter((id) => !shown.has(`a,${id}`))
   return { proposals: rest.slice(0, 3).map(proposal), aiSuggestionRecommended: false, hasMore: rest.length > 3 }
 }
@@ -93,11 +96,11 @@ describe('献立の提案: 別の案を出す', () => {
 
     const second = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations'))[1]
     expect(JSON.parse(String(second?.[1]?.body))).toEqual({
-      exclude: [
-        ['a', 'b'],
-        ['a', 'c'],
-        ['a', 'd'],
-      ],
+      // 料理と食数で送る（同じ料理で食数だけ違う案は、別の案として出せる）
+      exclude: ['b', 'c', 'd'].map((id) => [
+        { recipeId: 'a', servings: 1 },
+        { recipeId: id, servings: 1 },
+      ]),
     })
   })
 
@@ -113,7 +116,7 @@ describe('献立の提案: 別の案を出す', () => {
     await waitFor(() => expect(screen.getByText('料理b')).toBeTruthy())
     // 覚えていた古い回も 1 回目で上書きされる（元の食べたい料理に戻しても復活しない）
     expect(JSON.parse(sessionStorage.getItem('plan-proposals:p1') ?? 'null')).toEqual({
-      anchors: 'a:1|',
+      anchors: 'a:1||6',
       round: 1,
       shown: [],
     })
@@ -268,5 +271,92 @@ describe('献立の提案: 上限より多い食数の食べたい料理', () =>
       expect(JSON.parse(String(call?.[1]?.body))).toEqual({ fixed: [{ recipeId: 'a', servings: 4 }] })
     })
     expect(await screen.findByText('固定中：肉じゃが 4食分')).toBeTruthy()
+  })
+})
+
+describe('合計◯食', () => {
+  const summary = {
+    id: 'a',
+    title: '肉じゃが',
+    servings: 2,
+    imageKey: null,
+    ingredientNames: ['じゃがいも'],
+    favoriteCount: null,
+    isFavorite: false,
+    cookCount: null,
+    caloriesKcal: null,
+    maxServings1_6l: 4,
+    dishType: 'main',
+    cuisine: 'japanese',
+  }
+
+  it('献立を作るとき、前回の合計から始まり、2 食ずつ変えて一緒に送る。料理の食数は 2 食から', async () => {
+    const fetch = mockApi((path) => {
+      if (path === '/plans/current') return { plan: null }
+      if (path === '/plans/defaults') return { targetMeals: 8 }
+      if (path === '/plans') return plan
+      return { items: [summary] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+    expect(await screen.findByText('8食')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '合計の食数を増やす' }))
+    expect(screen.getByText('10食')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('checkbox', { name: '肉じゃが を食べたい料理にする' }))
+    expect(screen.getByText('2食分')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /提案を見る/ }))
+    await waitFor(() => {
+      const call = fetch.mock.calls.find(([url, init]) => String(url).endsWith('/plans') && init?.method === 'POST')
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({
+        anchors: [{ recipeId: 'a', servings: 2 }],
+        targetMeals: 10,
+      })
+    })
+  })
+
+  it('提案の画面で合計を変えると献立に保存し、1 回目から提案し直す', async () => {
+    sessionStorage.setItem('plan-proposals:p1', JSON.stringify({ anchors: 'a:1||6', round: 2, shown: [['a', 'b']] }))
+    let current = plan
+    const fetch = mockApi((path, body) => {
+      if (path === '/plans/current') return { plan: current }
+      if (path === '/plans/p1/recommendations') return recommendations(body)
+      if (path === '/plans/p1') {
+        current = { ...plan, ...(body as { targetMeals: number }) }
+        return current
+      }
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+    expect(await screen.findByText('6食')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '合計の食数を増やす' }))
+    expect(await screen.findByText('8食')).toBeTruthy()
+    const patch = fetch.mock.calls.find(([, init]) => init?.method === 'PATCH')
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ targetMeals: 8 })
+    await waitFor(() =>
+      expect(JSON.parse(sessionStorage.getItem('plan-proposals:p1') ?? 'null')).toMatchObject({
+        anchors: 'a:1||8',
+        round: 1,
+        shown: [],
+      }),
+    )
+  })
+})
+
+describe('献立の提案: 食数だけ違う案', () => {
+  it('同じ料理の組み合わせで食数だけ違う案は 1 枚だけ出し、別の案を出すときは両方を出した案として送る', async () => {
+    const twice = { ...proposal('b'), recipes: proposal('b').recipes.map((r) => ({ ...r, servings: 2 })) }
+    const fetch = mockApi((path) => {
+      if (path === '/plans/current') return { plan }
+      if (path === '/plans/p1/recommendations')
+        return { proposals: [proposal('b'), twice, proposal('c')], aiSuggestionRecommended: false, hasMore: true }
+      return { items: [] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+    expect(await screen.findByRole('heading', { name: '提案（2案）' })).toBeTruthy()
+    expect(screen.getAllByText('料理b')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '別の案を出す' }))
+    await waitFor(() => {
+      const calls = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations'))
+      expect(JSON.parse(String(calls[1]?.[1]?.body)).exclude).toHaveLength(3)
+    })
   })
 })
