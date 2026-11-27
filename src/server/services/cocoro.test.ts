@@ -78,6 +78,13 @@ describe('parseAmountText', () => {
     expect(parseAmountText('1片（10g）')).toEqual({ quantity: 1, unit: '片' })
   })
 
+  it('「2〜3個」のような範囲は少ないほうの量と単位', () => {
+    expect(parseAmountText('2〜3個')).toEqual({ quantity: 2, unit: '個' })
+    expect(parseAmountText('1/2～1本')).toEqual({ quantity: 0.5, unit: '本' })
+    expect(parseAmountText('100~150g')).toEqual({ quantity: 100, unit: 'g' })
+    expect(parseAmountText('大さじ1〜2')).toEqual({ quantity: 1, unit: '大さじ' })
+  })
+
   it('少々・適量や読めない表記は null', () => {
     expect(parseAmountText('少々')).toEqual({ quantity: null, unit: null })
     expect(parseAmountText('適量')).toEqual({ quantity: null, unit: null })

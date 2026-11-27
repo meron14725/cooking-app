@@ -21,6 +21,7 @@ import { IngredientSelect, unitChoices } from '../components/ingredientInputs'
 import { PageHeader, useGoBack } from '../components/PageHeader'
 import { QuickAddIngredient } from '../components/QuickAddIngredient'
 import { RecipePhoto } from '../components/RecipePhoto'
+import type { EditFromDetail } from './RecipeDetailPage'
 
 type IngredientRow = {
   key: string
@@ -344,7 +345,11 @@ export function RecipeEditPage() {
     try {
       await remove.mutateAsync(id)
       // 消したレシピを見るページには戻れないので一覧へ
-      navigate('/recipes', { replace: true })
+      // 消したレシピの見るページに「戻る」で戻らないよう、見るページの手前まで履歴を戻す。
+      // 見るページを直接開いていたときは戻る先がないので、一覧に置き換える
+      const from = location.state as EditFromDetail | null
+      if (from?.fromDetail && from.detailInApp) navigate(-2)
+      else navigate('/recipes', { replace: true })
     } catch (err) {
       setDeleteError(err instanceof ApiRequestError ? err.message : '削除できませんでした')
     }

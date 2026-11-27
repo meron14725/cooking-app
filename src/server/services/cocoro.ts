@@ -154,8 +154,8 @@ export function parseAmountText(text: string | null | undefined): { quantity: nu
     const q = toNumber(before[2])
     return q === null ? { quantity: null, unit: null } : { quantity: q, unit: before[1] }
   }
-  // 単位が後: 300g、1/2個、2切れ、1片
-  const after = t.match(/^([\d./と]+)([^\d~〜～]*)/)
+  // 単位が後: 300g、1/2個、2切れ、1片。「2〜3個」のような範囲は少ないほうの量と、後ろの単位
+  const after = t.match(/^([\d./と]+)(?:[~〜～][\d./と]+)?([^\d~〜～]*)/)
   if (after?.[1]) {
     const q = toNumber(after[1])
     const unit = (after[2] ?? '').replace(/[程くらい分]+$/, '') || null

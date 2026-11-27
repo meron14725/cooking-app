@@ -11,7 +11,7 @@ function useRecipeSummary(recipeId: string): RecipeSummary | undefined {
   return useMemo(() => data?.find((r) => r.id === recipeId), [data, recipeId])
 }
 
-/** 「煮物 ・ まぜる ・ 10分 ・ 420kcal」 */
+/** 加熱の設定とカロリー。例: 「手動 > 煮物を作る > まぜる > 25分 ・ 約380kcal」 */
 function dishMeta(r: RecipeSummary | undefined): string {
   if (!r) return ''
   return [r.hotcookMode, r.caloriesKcal !== null && `${r.caloriesEstimated ? '約' : ''}${r.caloriesKcal}kcal`]
@@ -34,9 +34,11 @@ export function DishPhotoButton({
 }) {
   const recipe = useRecipeSummary(recipeId)
   const [open, setOpen] = useState(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   return (
     <>
       <button
+        ref={buttonRef}
         type="button"
         aria-label={`${title} の写真を見る`}
         onClick={(e) => {
@@ -51,7 +53,18 @@ export function DishPhotoButton({
           className={`border-2 border-surface shadow-[0_2px_8px_rgba(120,70,30,0.15)] ${className}`}
         />
       </button>
-      {open && <DishPhotoSheet recipeId={recipeId} title={title} recipe={recipe} onClose={() => setOpen(false)} />}
+      {open && (
+        <DishPhotoSheet
+          recipeId={recipeId}
+          title={title}
+          recipe={recipe}
+          onClose={() => {
+            setOpen(false)
+            // 閉じたら押したサムネイルにフォーカスを戻す（キーボードで迷子にならないように）
+            buttonRef.current?.focus()
+          }}
+        />
+      )}
     </>
   )
 }

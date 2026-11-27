@@ -25,6 +25,7 @@ import { RecipePhoto } from '../components/RecipePhoto'
 import { RecipeFilterButton, RecipeSortMenu } from '../components/RecipeSortMenu'
 import { ShoppingListView } from '../components/ShoppingListView'
 import { StickyAction } from '../components/StickyAction'
+import { dropMissing, loadPicked, type Picked, savePicked } from './planPicked'
 
 const errorMessage = (err: unknown, fallback: string) => (err instanceof ApiRequestError ? err.message : fallback)
 
@@ -57,8 +58,6 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
 
 // ---------- 1. 食べたい料理を選ぶ ----------
 
-type Picked = { recipeId: string; title: string; servings: number }
-
 /** 選んだ料理の食数。− で 1 から減らすと選択を外す（案D D-PlanPick） */
 function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => void }) {
   const btn = 'flex size-9 items-center justify-center rounded-full bg-surface text-ink'
@@ -86,24 +85,6 @@ function ServingsPill({ p, onChange }: { p: Picked; onChange: (v: number) => voi
   )
 }
 
-const PICKED_KEY = 'plan-picked'
-function loadPicked(): Picked[] {
-  try {
-    const v = JSON.parse(sessionStorage.getItem(PICKED_KEY) ?? '[]')
-    return Array.isArray(v) ? v : []
-  } catch {
-    return []
-  }
-}
-function savePicked(v: Picked[]) {
-  try {
-    if (v.length === 0) sessionStorage.removeItem(PICKED_KEY)
-    else sessionStorage.setItem(PICKED_KEY, JSON.stringify(v))
-  } catch {
-    // 覚えられなくても選ぶ操作はできる
-  }
-}
-
 function AnchorPicker() {
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<RecipeSort | ''>('')
@@ -125,6 +106,12 @@ function AnchorPicker() {
   // 選んだ料理の写真は、検索で一覧から消えても出せるよう全件の一覧から引く
   const all = useRecipes()
   const imageOf = (id: string) => all.data?.find((r) => r.id === id)?.imageKey ?? null
+  // 覚えていた料理のうち、削除されて今の一覧に無いものは外す（そのまま送ると献立を作れない）
+  useEffect(() => {
+    if (!all.data) return
+    const ids = new Set(all.data.map((r) => r.id))
+    setPicked((cur) => dropMissing(cur, ids))
+  }, [all.data])
   const create = useCreatePlan()
   const [error, setError] = useState<string | null>(null)
 
@@ -443,72 +430,77 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
       </div>
       {recs.isPending && <p className="text-ink-muted">計算中…</p>}
       {recs.isError && <p className="text-danger">{errorMessage(recs.error, '提案を出せませんでした')}</p>}
-      <ol aria-label="提案" className="flex flex-col gap-3">
-        {proposals.map((p, i) => {
-          const on = i === picked
-          const total = p.recipes.reduce((sum, r) => sum + r.servings, 0)
-          return (
-            <li key={proposalKey(p)}>
-              {/* カード全体がラジオボタンのラベル。中の写真や「買うものを見る」を押しても案は切り替わらない */}
-              <label
-                className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent ${
-                  on
-                    ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]'
-                    : 'cursor-pointer border-2 border-transparent'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="proposal"
-                  checked={on}
-                  onChange={() => setPickedKey(proposalKey(p))}
-                  aria-label={`案${i + 1}を選ぶ`}
-                  className="sr-only"
-                />
-                <span className="flex items-center gap-2">
-                  <span className="text-[15px] font-bold">案{i + 1}</span>
-                  {i === 0 && (
-                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
-                      おすすめ
-                    </span>
-                  )}
-                  {on ? (
-                    <span
-                      aria-hidden="true"
-                      className="ml-auto flex size-6 items-center justify-center rounded-full bg-accent text-white"
-                    >
-                      <Icon name="check" size={14} strokeWidth={2.8} />
-                    </span>
-                  ) : (
-                    <span aria-hidden="true" className="ml-auto size-6 rounded-full border-2 border-line-strong" />
-                  )}
-                </span>
-                <ul className="flex flex-col gap-2.5">
-                  {p.recipes.map((r) => (
-                    <li key={r.recipeId} className="flex items-center gap-3">
-                      <DishPhotoButton recipeId={r.recipeId} title={r.title} />
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-[15px] font-bold">{r.title}</span>
-                        <span className="text-xs text-ink-muted">
-                          {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
-                          {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+      {/* ol に radiogroup は付けられない（a11y の lint）ので、外側の div をラジオのまとまりにする */}
+      <div role="radiogroup" aria-label="提案">
+        <ol className="flex flex-col gap-3">
+          {proposals.map((p, i) => {
+            const on = i === picked
+            const total = p.recipes.reduce((sum, r) => sum + r.servings, 0)
+            // 日数は食べる日（dayIndex）の重なりを除いた数。1 日に 2 品入る提案でもずれない
+            const days = new Set(p.recipes.map((r) => r.dayIndex)).size
+            return (
+              <li key={proposalKey(p)}>
+                {/* カード全体がラジオボタンのラベル。中の写真や「買うものを見る」を押しても案は切り替わらない */}
+                <label
+                  className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent ${
+                    on
+                      ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]'
+                      : 'cursor-pointer border-2 border-transparent'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="proposal"
+                    checked={on}
+                    onChange={() => setPickedKey(proposalKey(p))}
+                    aria-label={`案${i + 1}を選ぶ`}
+                    className="sr-only"
+                  />
+                  <span className="flex items-center gap-2">
+                    <span className="text-[15px] font-bold">案{i + 1}</span>
+                    {i === 0 && (
+                      <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent-strong">
+                        おすすめ
+                      </span>
+                    )}
+                    {on ? (
+                      <span
+                        aria-hidden="true"
+                        className="ml-auto flex size-6 items-center justify-center rounded-full bg-accent text-white"
+                      >
+                        <Icon name="check" size={14} strokeWidth={2.8} />
+                      </span>
+                    ) : (
+                      <span aria-hidden="true" className="ml-auto size-6 rounded-full border-2 border-line-strong" />
+                    )}
+                  </span>
+                  <ul className="flex flex-col gap-2.5">
+                    {p.recipes.map((r) => (
+                      <li key={r.recipeId} className="flex items-center gap-3">
+                        <DishPhotoButton recipeId={r.recipeId} title={r.title} />
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate text-[15px] font-bold">{r.title}</span>
+                          <span className="text-xs text-ink-muted">
+                            {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
+                            {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                          </span>
                         </span>
-                      </span>
-                      <span className="shrink-0 rounded-full bg-sunken px-3 py-1 text-sm font-bold text-ink-soft">
-                        {fmtServings(r.servings)}食分
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <span className="-mt-1 text-right text-[13px] text-ink-soft">
-                  合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{p.recipes.length}日分）
-                </span>
-                <EvaluationDetails p={p} />
-              </label>
-            </li>
-          )
-        })}
-      </ol>
+                        <span className="shrink-0 rounded-full bg-sunken px-3 py-1 text-sm font-bold text-ink-soft">
+                          {fmtServings(r.servings)}食分
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <span className="-mt-1 text-right text-[13px] text-ink-soft">
+                    合計 <span className="font-bold text-ink">{fmtServings(total)}食分</span>（{days}日分）
+                  </span>
+                  <EvaluationDetails p={p} />
+                </label>
+              </li>
+            )
+          })}
+        </ol>
+      </div>
       {recs.data?.aiSuggestionRecommended && <AiSuggest proposal={recs.data.proposals[0]} />}
       {chosen && (
         <StickyAction hint="次に、食べる順と食数を決めます">
@@ -693,6 +685,8 @@ function DraftPlan({ plan }: { plan: Plan }) {
     plan.recipes.some((r) => r.role === 'added') ? 'order' : 'proposals',
   )
   const replace = useReplacePlanRecipes(plan.id)
+  // 最後の 1 品を外して献立ごと消すのと、「この献立をやめる」は失敗の出し方を分ける
+  const removeLast = useDeletePlan()
   const discard = useDeletePlan()
   const anchors = plan.recipes.filter((r) => r.role === 'anchor')
 
@@ -706,7 +700,7 @@ function DraftPlan({ plan }: { plan: Plan }) {
 
   /** 食べたい料理を 1 つ外して、提案を計算し直す。最後の 1 品を外したら献立ごとやめて、料理を選ぶところに戻る */
   function removeAnchor(recipeId: string) {
-    if (anchors.length <= 1) return discard.mutate(plan.id)
+    if (anchors.length <= 1) return removeLast.mutate(plan.id)
     replace.mutate({
       recipes: anchors
         .filter((r) => r.recipeId !== recipeId)
@@ -730,7 +724,7 @@ function DraftPlan({ plan }: { plan: Plan }) {
                   <button
                     type="button"
                     onClick={() => removeAnchor(r.recipeId)}
-                    disabled={replace.isPending || discard.isPending}
+                    disabled={replace.isPending || removeLast.isPending || discard.isPending}
                     aria-label={`${r.title}を外す`}
                     className="flex size-8 items-center justify-center rounded-full disabled:opacity-50"
                   >
@@ -739,8 +733,10 @@ function DraftPlan({ plan }: { plan: Plan }) {
                 </li>
               ))}
             </ul>
-            {(replace.isError || discard.isError) && (
-              <p className="text-sm text-danger">{errorMessage(replace.error ?? discard.error, '外せませんでした')}</p>
+            {(replace.isError || removeLast.isError) && (
+              <p className="text-sm text-danger">
+                {errorMessage(replace.error ?? removeLast.error, '外せませんでした')}
+              </p>
             )}
           </section>
           <Proposals plan={plan} onChosen={() => setStep('order')} />
@@ -756,6 +752,11 @@ function DraftPlan({ plan }: { plan: Plan }) {
       >
         この献立をやめる
       </Button>
+      {discard.isError && (
+        <p className="mt-2 text-center text-sm text-danger">
+          {errorMessage(discard.error, '献立をやめられませんでした')}
+        </p>
+      )}
     </>
   )
 }
@@ -794,6 +795,11 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
         >
           この献立を取り消す
         </Button>
+      )}
+      {plan.status === 'shopping' && discard.isError && (
+        <p className="mt-2 text-center text-sm text-danger">
+          {errorMessage(discard.error, '献立を取り消せませんでした')}
+        </p>
       )}
     </section>
   )

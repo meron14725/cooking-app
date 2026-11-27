@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { splitHotcookMode } from '../../shared/domain/hotcook'
 import { favoriteTotal, type Recipe, type RecipeIngredient } from '../../shared/schemas/recipe'
 import { ApiRequestError } from '../api/client'
@@ -117,11 +117,26 @@ function AddToPlan({ recipe }: { recipe: Recipe }) {
 }
 
 /** レシピを見るだけのページ（案D D-RecipeDetail）。編集は右上から */
+/** 見るページから編集画面へ渡す state */
+export type EditFromDetail = { fromDetail: true; detailInApp: boolean }
+
 export function RecipeDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
   const { data: recipe, isPending, isError, error } = useRecipe(id)
 
   if (isPending) return <p className="text-ink-muted">読み込み中…</p>
+  if (isError && error instanceof ApiRequestError && error.status === 404) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <BackButton fallback="/recipes" />
+        <p className="text-ink-soft">このレシピは削除されたか、見つかりません。</p>
+        <Link to="/recipes" replace className="text-accent">
+          レシピ一覧へ
+        </Link>
+      </div>
+    )
+  }
   if (isError || !recipe) return <p className="text-danger">{errorMessage(error, '読み込めませんでした')}</p>
 
   const { minutes, label } = splitHotcookMode(recipe.hotcookMode)
@@ -134,6 +149,8 @@ export function RecipeDetailPage() {
         <BackButton fallback="/recipes" />
         <Link
           to={`/recipes/${recipe.id}/edit`}
+          // 編集画面で削除したとき、この見るページも履歴から飛ばせるかどうか（このページがアプリの中から開かれたか）
+          state={{ fromDetail: true, detailInApp: location.key !== 'default' } satisfies EditFromDetail}
           className="flex min-h-11 items-center gap-1.5 rounded-full bg-surface pr-4 pl-3.5 text-sm font-bold text-ink shadow-[0_2px_10px_rgba(120,70,30,0.10)]"
         >
           <Icon name="pencil" size={16} strokeWidth={2} />
