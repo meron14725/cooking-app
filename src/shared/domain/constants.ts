@@ -9,6 +9,12 @@ export const EXPIRING_SOON_DAYS = 2
 /** 献立に入れる料理の既定の食数 */
 export const DEFAULT_SERVINGS = 1
 
+/** 食数を ＋－ で変えるときの刻み（2 人で食べる前提で 2。1 にも戻せる） */
+export const SERVINGS_STEP = 2
+
+/** 1 品あたりの食数の上限（1.6L で作れる量。KN-HW16G は 2〜4 人用） */
+export const MAX_SERVINGS_PER_DISH = 4
+
 /** 切った後の日持ちがマスタにないときの上限（日） */
 export const DEFAULT_PREPPED_FRIDGE_DAYS = 2
 export const DEFAULT_PREPPED_FREEZER_DAYS = 21
@@ -38,3 +44,12 @@ export const SCORE_WEIGHTS = {
   /** 最良案でも冷蔵のみの食材がこのパック数以上余るなら AI 補完をすすめる */
   aiSuggestionLeftoverPacks: 0.5,
 } as const
+
+/** 1 食あたりに足す調味料・常備品の目安（円）。常備品は買い物の合計には入れない（docs/design/10-cost.md） */
+export const STAPLE_COST_PER_MEAL_YEN = 20
+
+/** この日数より前に入れた価格は「古い」と出す */
+export const PRICE_STALE_DAYS = 365
+
+/** 食材の価格（代表量あたり）の上限（円） */
+export const MAX_PRICE_YEN = 100_000

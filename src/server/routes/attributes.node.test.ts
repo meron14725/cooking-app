@@ -84,6 +84,11 @@ describe('POST /api/recipes/attributes/estimate: 食材', () => {
       gramsPerUnit: 100,
       attributesSource: 'ai',
     })
+    // 名前で野菜と決まったものも、AI の分類（テスト用の AI は other）で変えない
+    const carrot = await addIngredient('にんじん', 'vegetable', '本')
+    resetSources()
+    await estimate()
+    expect(await ingredient(carrot.id)).toMatchObject({ category: 'vegetable', gramsPerUnit: 100 })
   })
 
   it('画面で分類を直した食材（manual）は変えない', async () => {
