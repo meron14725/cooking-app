@@ -698,6 +698,8 @@ function DraftPlan({ plan }: { plan: Plan }) {
     plan.recipes.some((r) => r.role === 'added') ? 'order' : 'proposals',
   )
   const replace = useReplacePlanRecipes(plan.id)
+  // 最後の 1 品を外して献立ごと消すのと、「この献立をやめる」は失敗の出し方を分ける
+  const removeLast = useDeletePlan()
   const discard = useDeletePlan()
   const anchors = plan.recipes.filter((r) => r.role === 'anchor')
 
@@ -711,7 +713,7 @@ function DraftPlan({ plan }: { plan: Plan }) {
 
   /** 食べたい料理を 1 つ外して、提案を計算し直す。最後の 1 品を外したら献立ごとやめて、料理を選ぶところに戻る */
   function removeAnchor(recipeId: string) {
-    if (anchors.length <= 1) return discard.mutate(plan.id)
+    if (anchors.length <= 1) return removeLast.mutate(plan.id)
     replace.mutate({
       recipes: anchors
         .filter((r) => r.recipeId !== recipeId)
@@ -735,7 +737,7 @@ function DraftPlan({ plan }: { plan: Plan }) {
                   <button
                     type="button"
                     onClick={() => removeAnchor(r.recipeId)}
-                    disabled={replace.isPending || discard.isPending}
+                    disabled={replace.isPending || removeLast.isPending || discard.isPending}
                     aria-label={`${r.title}を外す`}
                     className="flex size-8 items-center justify-center rounded-full disabled:opacity-50"
                   >
@@ -744,8 +746,10 @@ function DraftPlan({ plan }: { plan: Plan }) {
                 </li>
               ))}
             </ul>
-            {(replace.isError || discard.isError) && (
-              <p className="text-sm text-danger">{errorMessage(replace.error ?? discard.error, '外せませんでした')}</p>
+            {(replace.isError || removeLast.isError) && (
+              <p className="text-sm text-danger">
+                {errorMessage(replace.error ?? removeLast.error, '外せませんでした')}
+              </p>
             )}
           </section>
           <Proposals plan={plan} onChosen={() => setStep('order')} />
@@ -761,6 +765,11 @@ function DraftPlan({ plan }: { plan: Plan }) {
       >
         この献立をやめる
       </Button>
+      {discard.isError && (
+        <p className="mt-2 text-center text-sm text-danger">
+          {errorMessage(discard.error, '献立をやめられませんでした')}
+        </p>
+      )}
     </>
   )
 }
@@ -799,6 +808,11 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
         >
           この献立を取り消す
         </Button>
+      )}
+      {plan.status === 'shopping' && discard.isError && (
+        <p className="mt-2 text-center text-sm text-danger">
+          {errorMessage(discard.error, '献立を取り消せませんでした')}
+        </p>
       )}
     </section>
   )
