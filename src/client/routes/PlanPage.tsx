@@ -13,6 +13,7 @@ import {
   useReplacePlanRecipes,
 } from '../api/plans'
 import { aiErrorMessage, useRecipes, useSuggestRecipe } from '../api/recipes'
+import { DishPhotoButton } from '../components/DishPhoto'
 import { Button, inputClass } from '../components/form'
 import { Icon } from '../components/Icon'
 import { LocationBadge } from '../components/LocationBadge'
@@ -376,17 +377,16 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
                   </span>
                 )}
               </div>
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex flex-col gap-2.5">
                 {p.recipes.map((r) => (
-                  <li key={r.recipeId} className="flex items-center gap-2 text-[15px]">
-                    <span
-                      className={`size-1.5 shrink-0 rounded-full ${r.role === 'anchor' ? 'bg-ink' : 'bg-accent'}`}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 truncate font-medium">{r.title}</span>
-                    <span className="shrink-0 text-xs text-ink-muted">
-                      {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
-                      {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                  <li key={r.recipeId} className="flex items-center gap-3">
+                    <DishPhotoButton recipeId={r.recipeId} title={r.title} />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-[15px] font-bold">{r.title}</span>
+                      <span className="text-xs text-ink-muted">
+                        {r.role === 'anchor' ? '選んだ料理' : '追加'} ・ {r.dayIndex}日目
+                        {kitLocation(p, r.recipeId) === 'freezer' && ' ・ 冷凍'}
+                      </span>
                     </span>
                   </li>
                 ))}
@@ -504,6 +504,7 @@ function OrderAndConfirm({ plan, onBack }: { plan: Plan; onBack: () => void }) {
                   <Icon name="chevronLeft" size={18} strokeWidth={2} className="-rotate-90" />
                 </button>
               </div>
+              <DishPhotoButton recipeId={r.recipeId} title={r.title} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-xs text-ink-muted">
                   {i + 1}日目（{shortDate(addDays(startsOn, i))}）
@@ -659,12 +660,15 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
       {plan.status !== 'prepping' && plan.status !== 'shopping' && (
         <ol className="mb-5 divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
           {rows.map((r) => (
-            <li key={r.recipeId} className="py-3">
-              <div className="text-xs text-ink-muted">
-                {r.dayIndex}日目{plan.startsOn && `（${shortDate(addDays(plan.startsOn, r.dayIndex - 1))}）`}
-              </div>
-              <div className="font-bold">
-                {r.title} <span className="text-sm font-normal text-ink-muted">{r.servings}食</span>
+            <li key={r.recipeId} className="flex items-center gap-3 py-3">
+              <DishPhotoButton recipeId={r.recipeId} title={r.title} />
+              <div className="min-w-0">
+                <div className="text-xs text-ink-muted">
+                  {r.dayIndex}日目{plan.startsOn && `（${shortDate(addDays(plan.startsOn, r.dayIndex - 1))}）`}
+                </div>
+                <div className="font-bold">
+                  {r.title} <span className="text-sm font-normal text-ink-muted">{r.servings}食</span>
+                </div>
               </div>
             </li>
           ))}
