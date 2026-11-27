@@ -244,13 +244,24 @@ function KitCard({
 
 /** 下ごしらえ・袋詰めの途中の状態を覚えておくキー。保存したら消す */
 const sessionKey = (planId: string, name: 'step' | 'locations' | 'done') => `prep:${planId}:${name}`
-const isStep = (v: unknown): v is 'prep' | 'pack' => v === 'prep' || v === 'pack'
 const isLocations = isRecordOf(['fridge', 'freezer'] as const)
 
 /** 下ごしらえ中の献立: S05 下ごしらえ → S06 袋詰め */
-export function PrepAndPack({ planId }: { planId: string }) {
-  // 料理名や写真からレシピを見に行って戻ってきても、袋詰めの途中（段階と冷蔵/冷凍の選択）が消えないように覚えておく
-  const [step, setStep] = useSessionState<'prep' | 'pack'>(sessionKey(planId, 'step'), 'prep', isStep)
+export function PrepAndPack({
+  planId,
+  step,
+  onNext,
+  onBack,
+}: {
+  planId: string
+  /** 下ごしらえか袋詰めか（URL の段階。戻るボタンで下ごしらえに戻れる） */
+  step: 'prep' | 'pack'
+  /** 下ごしらえ完了 → 袋詰めへ */
+  onNext: () => void
+  /** 袋詰め → 下ごしらえに戻る */
+  onBack: () => void
+}) {
+  // 料理名や写真からレシピを見に行って戻ってきても、袋詰めの途中（冷蔵/冷凍の選択）が消えないように覚えておく
   const [locations, setLocations] = useSessionState<Record<string, KitLocation>>(
     sessionKey(planId, 'locations'),
     {},
@@ -317,14 +328,14 @@ export function PrepAndPack({ planId }: { planId: string }) {
         </p>
       )}
       {step === 'prep' ? (
-        <PrepStep planId={planId} data={data} onNext={() => setStep('pack')} />
+        <PrepStep planId={planId} data={data} onNext={onNext} />
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-2">
             <p className="text-sm text-ink-soft">
               {data.kits.length} つの袋に分けて保存します。冷蔵 / 冷凍は変えられます。
             </p>
-            <button type="button" onClick={() => setStep('prep')} className="min-h-8 shrink-0 text-sm text-accent">
+            <button type="button" onClick={onBack} className="min-h-8 shrink-0 text-sm text-accent">
               下ごしらえに戻る
             </button>
           </div>

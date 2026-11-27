@@ -254,6 +254,34 @@ function Row({ planId, item }: { planId: string; item: ShoppingItem }) {
   )
 }
 
+/** 見るだけの行（チェックと直すは出さない） */
+function ReadOnlyRow({ item }: { item: ShoppingItem }) {
+  const checked = item.checkedAt !== null
+  const { main, note } = lineText(item)
+  return (
+    <li className="flex min-h-15 items-center gap-3 py-2 pr-2 pl-3.5">
+      <span
+        aria-hidden="true"
+        className={`flex size-6 shrink-0 items-center justify-center rounded-md border-2 ${
+          checked ? 'border-leaf bg-leaf text-white' : 'border-line-strong bg-surface'
+        }`}
+      >
+        {checked && <Icon name="check" size={16} strokeWidth={2.8} />}
+      </span>
+      <span className={`flex min-w-0 flex-col gap-0.5 ${checked ? 'opacity-55' : ''}`}>
+        <span className={`text-base font-bold ${checked ? 'line-through' : ''}`}>
+          {item.name} <span className="font-medium">{main}</span>
+          <span className="sr-only">{checked ? '（買った）' : '（買っていない）'}</span>
+        </span>
+        <span className="truncate text-xs text-ink-muted">
+          {note && `${note} ・ `}
+          {item.isManual ? '手で追加' : item.usedFor.join('・')}
+        </span>
+      </span>
+    </li>
+  )
+}
+
 function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
   const masters = useIngredients()
   const add = useAddShoppingItem(planId)
@@ -321,7 +349,19 @@ function AddForm({ planId, onDone }: { planId: string; onDone: () => void }) {
 }
 
 /** S04 買い物リスト。売り場ごとに並べ、チェックすると在庫に入る */
-export function ShoppingListView({ planId, dishes = [] }: { planId: string; dishes?: string[] }) {
+export function ShoppingListView({
+  planId,
+  dishes = [],
+  readOnly = false,
+  onCompleted,
+}: {
+  planId: string
+  dishes?: string[]
+  /** 見るだけ（買い物が済んだ後に戻ってきたとき）。チェック・直す・手で足す・完了は出さない */
+  readOnly?: boolean
+  /** 買い物完了にできたら呼ぶ（次の段階へ進む） */
+  onCompleted?: () => void
+}) {
   const list = useShoppingList(planId)
   const { isPending, isError } = list
   const data = list.data?.items
@@ -334,6 +374,7 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
     setError(null)
     try {
       await complete.mutateAsync()
+      onCompleted?.()
     } catch (err) {
       setError(errorMessage(err, '完了にできませんでした'))
     }
@@ -379,14 +420,14 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
             <div key={cat.value} className="flex flex-col gap-2">
               <h3 className="text-[13px] font-bold tracking-[0.04em] text-ink-muted">{cat.label}</h3>
               <ul className="divide-y divide-line-soft overflow-hidden rounded-item bg-surface shadow-card">
-                {items.map((i) => (
-                  <Row key={i.id} planId={planId} item={i} />
-                ))}
+                {items.map((i) =>
+                  readOnly ? <ReadOnlyRow key={i.id} item={i} /> : <Row key={i.id} planId={planId} item={i} />,
+                )}
               </ul>
             </div>
           )
         })}
-      {adding ? (
+      {readOnly ? null : adding ? (
         <AddForm planId={planId} onDone={() => setAdding(false)} />
       ) : (
         <button
@@ -398,7 +439,7 @@ export function ShoppingListView({ planId, dishes = [] }: { planId: string; dish
           手で足す
         </button>
       )}
-      {data && (
+      {data && !readOnly && (
         <StickyAction
           hint={
             total === 0
