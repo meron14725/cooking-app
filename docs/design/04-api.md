@@ -79,7 +79,12 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | POST | `/api/inventory` | 手で追加（期限は省略時に自動計算） |
 | PATCH | `/api/inventory/:id` | 量・場所・期限の修正 |
 | POST | `/api/inventory/:id/use-up` | 使い切り |
-| GET | `/api/fridge` | 冷蔵庫ビュー用。在庫とミールキットを合わせ、期限の近い順に返す（`?location=`） |
+| GET | `/api/fridge` | 冷蔵庫ビュー用。在庫とミールキットを合わせ、期限の近い順に返す（`?location=`、`?kind=ingredient\|meal_kit`、`?expiringSoon=true`） |
+
+- 追加: 購入日は省略時に今日、保存場所は省略時にマスタの既定、期限は省略時に「購入日 + 保存場所の日持ち」（`shared/domain/expiry.ts`）。冷凍できない食材を冷凍にすると 400 `CANNOT_FREEZE`
+- 修正: 期限を指定せずに場所だけ変えたら、購入日から期限を計算し直す。量を 0 にすると使い切り（204）
+- 確保量: `stored` の袋の `before_cook` の量を、食材ごとに期限の近い在庫行から割り当てて `reservedQuantity` / `reservedFor` を付ける（`shared/domain/reservations.ts`。袋詰め・調理で減らす順と同じ）
+- 期限間近は `期限 − 今日 ≤ 2 日`（過ぎたものを含む）。`expiryStatus` は `expired` / `soon` / `ok`
 
 ```ts
 // GET /api/fridge の要素
