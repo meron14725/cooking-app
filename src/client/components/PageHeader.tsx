@@ -24,8 +24,17 @@ type Props = {
 export function useGoBack(fallback: string): () => void {
   const navigate = useNavigate()
   const location = useLocation()
-  // 最初に開いた画面の key は default
-  return () => (location.key === 'default' ? navigate(fallback, { replace: true }) : navigate(-1))
+  return () => (isFirstEntry(location.key) ? navigate(fallback, { replace: true }) : navigate(-1))
+}
+
+/**
+ * アプリを開いて最初の画面か（戻る先がアプリの中にない）。
+ * ブラウザでは react-router が履歴に入れる番号（idx）で見る。fallback へ置き換えた後も 0 のままなので、
+ * そこからもう一度戻るときもアプリの外へ出ない。番号がない（テストのメモリの履歴など）ときは最初の画面の key（default）で見る
+ */
+function isFirstEntry(key: string): boolean {
+  const idx = (window.history.state as { idx?: unknown } | null)?.idx
+  return typeof idx === 'number' ? idx === 0 : key === 'default'
 }
 
 /** 左上の白い丸の戻るボタン */
