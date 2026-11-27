@@ -344,10 +344,15 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
         {proposals.map((p, i) => {
           const on = i === picked
           return (
+            // カードのどこを押してもその案を選ぶ。キーボードでは下の「この案を選ぶ」ボタンで選べる
+            // biome-ignore lint/a11y/useKeyWithClickEvents: キーボード操作は中のボタンが受け持つ
             <li
               key={proposalKey(p)}
+              onClick={() => setPickedKey(proposalKey(p))}
               className={`flex flex-col gap-3.5 rounded-card bg-surface p-4 ${
-                on ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]' : 'border-2 border-transparent'
+                on
+                  ? 'border-2 border-accent shadow-[0_6px_20px_rgba(179,58,10,0.10)]'
+                  : 'cursor-pointer border-2 border-transparent'
               }`}
             >
               <div className="flex items-center gap-2">
