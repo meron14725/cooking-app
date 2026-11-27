@@ -145,7 +145,8 @@ type AgentResult = { reply: string; operations: AgentOperation[] }
 - Container の `POST /agent` は汎用にする: `{ prompt, readTools: [{ name, description, result | itemsById }], opTools: [{ name, description, inputSchema }] }` → `{ reply, calls: [{ tool, args }] }`。道具の中身（スナップショットとスキーマ）は Worker が毎回作るので、Container は道具の種類を知らない
   - `itemsById` の道具（`get_recipe`）は `{ id }` で引く。変更案の道具は 20 件まで記録する
 - 変更案の道具名は `propose_inventory_add` のように `op` の `.` を `_` にして頭に `propose_` を付ける。`inputSchema` は `{ targetId?, input? }` で、`input` は既存の zod スキーマの入力側（`z.toJSONSchema(schema, { io: 'input' })`）
-- Worker（`services/agent.ts`）は呼ばれた道具ごとに、知らない道具・対象がスナップショットにない・`input` が zod を通らない、の 3 つを捨てて `warnings` に書く。通ったものに `summary`（変更前は D1 の値）と `baseUpdatedAt` を付ける
+- Worker（`services/agent.ts`）は呼ばれた道具ごとに、知らない道具・対象がスナップショットにない・`input` が zod を通らない・同じ対象への 2 つ目の案（反映で必ず失敗するため。`shopping.add` は献立の行を変えないので除く）、の 4 つを捨てて `warnings` に書く。通ったものに `summary`（変更前はスナップショットの値）と `baseUpdatedAt` を付ける
+- `baseUpdatedAt` はスナップショットを作るときに各行の `updated_at` を先に読んでおき、そこから入れる（エージェントの実行中に変わった行は、反映のときに「変わりました」で止まる）
 - `recipe.create` は `sourceType = ai` で作る
 - テストは `AI_PROVIDER=fake` の `FakeAgentRunner`（「使った」を含む頼みなら在庫の先頭を半分にする案）と、決まった道具を呼ぶだけのランナーで行う
 

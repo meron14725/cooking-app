@@ -118,6 +118,45 @@ describe('requestAgent', () => {
     expect(result.operations[1]?.baseUpdatedAt).not.toBe('2000-01-01T00:00:00.000Z')
   })
 
+  it('baseUpdatedAt はエージェントの実行前（スナップショット）の値。実行中に変わった行の案は反映しない', async () => {
+    const db = createDb(api.env.DB)
+    const row = (await stock())[0]
+    const runner: AgentRunner = {
+      run: async () => {
+        // エージェントが考えている間に、画面から在庫を直した
+        await new Promise((r) => setTimeout(r, 5))
+        await api.call('PATCH', `/inventory/${row?.id}`, { quantity: 5 })
+        return {
+          reply: 'ok',
+          calls: [{ tool: 'propose_inventory_update', args: { targetId: row?.id, input: { quantity: 1 } } }],
+        }
+      },
+    }
+    const { operations } = await requestAgent(db, runner, 'x', today)
+    expect(operations[0]?.summary).toBe('在庫 玉ねぎ: 2個 → 1個')
+    const applied = await api.call<AgentApplyResult>('POST', '/agent/apply', { operations })
+    expect(applied.body.results[0]?.ok).toBe(false)
+    expect((await stock())[0]?.quantity).toBe(5)
+  })
+
+  it('同じ対象への 2 つ目の案は捨てる（形の違う案は数えない）', async () => {
+    const db = createDb(api.env.DB)
+    const id = (await stock())[0]?.id
+    const result = await requestAgent(
+      db,
+      runnerOf([
+        { tool: 'propose_inventory_update', args: { targetId: id, input: { quantity: -1 } } },
+        { tool: 'propose_inventory_update', args: { targetId: id, input: { quantity: 1 } } },
+        { tool: 'propose_inventory_use_up', args: { targetId: id } },
+      ]),
+      'x',
+      today,
+    )
+    expect(result.operations.map((o) => o.op)).toEqual(['inventory.update'])
+    expect(result.warnings).toHaveLength(2)
+    expect(result.warnings[1]).toContain('同じ対象')
+  })
+
   it('献立の料理を入れ替えると plans.updated_at が変わり、古い案は反映しない', async () => {
     const r1 = (await api.call<Recipe>('POST', '/recipes', recipeInput('肉じゃが'))).body
     const r2 = (await api.call<Recipe>('POST', '/recipes', recipeInput('豚汁'))).body
