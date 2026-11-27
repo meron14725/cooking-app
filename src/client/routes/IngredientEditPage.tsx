@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import {
   CATEGORY_OPTIONS,
   type Category,
@@ -13,7 +13,7 @@ import { ApiRequestError } from '../api/client'
 import { useDeleteIngredient, useIngredient, useSaveIngredient } from '../api/ingredients'
 import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
 import { Icon } from '../components/Icon'
-import { PageHeader } from '../components/PageHeader'
+import { PageHeader, useGoBack } from '../components/PageHeader'
 
 type UnitForm = { key: string; id?: string; label: string; quantity: string; isDefault: boolean }
 
@@ -121,7 +121,7 @@ const UNIT_SUGGESTIONS = ['個', '本', '枚', '袋', 'パック', '丁', '株',
 
 export function IngredientEditPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const goBack = useGoBack('/ingredients')
   const existing = useIngredient(id)
   const save = useSaveIngredient(id)
   const remove = useDeleteIngredient()
@@ -164,7 +164,7 @@ export function IngredientEditPage() {
     setErrors({})
     try {
       await save.mutateAsync(input)
-      navigate('/ingredients')
+      goBack()
     } catch (err) {
       setErrors({ form: err instanceof ApiRequestError ? err.message : '保存できませんでした' })
     }
@@ -175,7 +175,7 @@ export function IngredientEditPage() {
     setDeleteError(null)
     try {
       await remove.mutateAsync(id)
-      navigate('/ingredients')
+      goBack()
     } catch (err) {
       setDeleteError(err instanceof ApiRequestError ? err.message : '削除できませんでした')
     }
@@ -371,7 +371,7 @@ export function IngredientEditPage() {
         <Button type="submit" disabled={save.isPending} className="flex-1">
           {save.isPending ? '保存中…' : '保存'}
         </Button>
-        <Button variant="secondary" onClick={() => navigate('/ingredients')}>
+        <Button variant="secondary" onClick={() => goBack()}>
           戻る
         </Button>
       </div>

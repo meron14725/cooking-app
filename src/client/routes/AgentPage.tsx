@@ -85,7 +85,7 @@ export function AgentPage() {
 
   return (
     <>
-      <PageHeader title="AI に頼む" backTo="/more" />
+      <PageHeader title="AI に頼む" backTo="/" />
 
       {/* 下の入力欄の分だけ空ける */}
       {/* Layout の下余白（タブバー分）に、下に固定した入力欄の分を足す */}
