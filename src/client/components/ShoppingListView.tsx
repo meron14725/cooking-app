@@ -342,9 +342,11 @@ export function ShoppingListView({ planId }: { planId: string }) {
       {data && (
         <StickyAction
           hint={
-            unchecked > 0 && total > 0
-              ? `チェックしていないものが ${unchecked} 件あります。買わなかったものはそのままで完了できます`
-              : 'チェックしたものは在庫に入ります'
+            total === 0
+              ? undefined
+              : unchecked > 0
+                ? `チェックしていないものが ${unchecked} 件あります。買わなかったものはそのままで完了できます`
+                : 'チェックしたものは在庫に入ります'
           }
         >
           {error && <p className="text-center text-sm text-danger">{error}</p>}

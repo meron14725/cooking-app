@@ -625,18 +625,20 @@ function ConfirmedPlan({ plan }: { plan: Plan }) {
   const rows = [...plan.recipes].sort((a, b) => a.dayIndex - b.dayIndex)
   return (
     <section>
-      <ol className="mb-5 divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
-        {rows.map((r) => (
-          <li key={r.recipeId} className="py-3">
-            <div className="text-xs text-ink-muted">
-              {r.dayIndex}日目{plan.startsOn && `（${shortDate(addDays(plan.startsOn, r.dayIndex - 1))}）`}
-            </div>
-            <div className="font-bold">
-              {r.title} <span className="text-sm font-normal text-ink-muted">{r.servings}食</span>
-            </div>
-          </li>
-        ))}
-      </ol>
+      {plan.status !== 'prepping' && (
+        <ol className="mb-5 divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
+          {rows.map((r) => (
+            <li key={r.recipeId} className="py-3">
+              <div className="text-xs text-ink-muted">
+                {r.dayIndex}日目{plan.startsOn && `（${shortDate(addDays(plan.startsOn, r.dayIndex - 1))}）`}
+              </div>
+              <div className="font-bold">
+                {r.title} <span className="text-sm font-normal text-ink-muted">{r.servings}食</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
       {plan.status === 'shopping' && <ShoppingListView planId={plan.id} />}
       {plan.status === 'prepping' && <PrepAndPack planId={plan.id} />}
       {plan.status === 'shopping' && (
