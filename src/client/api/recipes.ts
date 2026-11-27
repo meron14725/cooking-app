@@ -73,6 +73,20 @@ export function useImportRecipe() {
   })
 }
 
+/** 「＋」のパネル: URL・メモ・料理名など何でも送って下書きを作らせる（保存しない）。signal で取りやめられる */
+export function useDraftRecipe() {
+  return useMutation({
+    mutationFn: ({ text, signal }: { text: string; signal?: AbortSignal }) =>
+      apiFetch<RecipeDraft>('/recipes/draft', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(AI_TIMEOUT_MS)])
+          : AbortSignal.timeout(AI_TIMEOUT_MS),
+      }),
+  })
+}
+
 /** 余りそうな食材から AI に 1 品の下書きを作らせる（保存しない） */
 export function useSuggestRecipe() {
   return useMutation({

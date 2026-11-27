@@ -189,3 +189,44 @@ describe('POST /api/recipes/import-url（COCORO KITCHEN）', () => {
     expect(res.body.official).toBeNull()
   })
 })
+
+describe('POST /api/recipes/draft（＋のパネル）', () => {
+  it('URL を含めば、そのページから下書きを作る（URL 以外の文はメモとして渡す）', async () => {
+    const spy = servePage(page)
+    const res = await api.call<RecipeDraft>('POST', '/recipes/draft', {
+      text: 'これ作りたい https://example.com/soup 玉ねぎ多めで',
+    })
+    expect(res.status).toBe(200)
+    expect((spy.mock.calls[0] as unknown[])[0]).toBe('https://example.com/soup')
+    expect(res.body.title).toBe('玉ねぎスープ')
+    expect(res.body.sourceType).toBe('url')
+    expect(res.body.sourceUrl).toBe('https://example.com/soup')
+  })
+
+  it('URL がなければ、文から AI が下書きを作る（ページは取りに行かない）', async () => {
+    const spy = servePage(page)
+    const res = await api.call<RecipeDraft>('POST', '/recipes/draft', {
+      text: '祖母の煮物\n材料:\n- 玉ねぎ 300 g',
+    })
+    expect(res.status).toBe(200)
+    expect(spy).not.toHaveBeenCalled()
+    expect(res.body.title).toBe('祖母の煮物')
+    expect(res.body.sourceType).toBe('ai')
+    expect(res.body.sourceUrl).toBeNull()
+    expect(res.body.official).toBeNull()
+    expect(res.body.ingredients.map((i) => [i.suggestedName, i.ingredientId !== null, i.quantity])).toEqual([
+      ['玉ねぎ', true, 1.5],
+    ])
+  })
+
+  it('空なら 400、ローカルの URL も 400', async () => {
+    expect((await api.call('POST', '/recipes/draft', { text: '   ' })).status).toBe(400)
+    expect((await api.call('POST', '/recipes/draft', { text: 'http://localhost/a' })).status).toBe(400)
+  })
+
+  it('AI の API キーがなければ 503', async () => {
+    const noKey = createTestApi({ env: { AI_PROVIDER: 'gemini' } })
+    const res = await noKey.call<{ error: { code: string } }>('POST', '/recipes/draft', { text: '肉じゃが' })
+    expect(res.status).toBe(503)
+  })
+})

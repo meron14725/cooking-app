@@ -51,6 +51,12 @@ export class FakeProvider implements AiProvider {
     }
   }
 
+  /** 本文をそのまま extractRecipe と同じ読み方で読む（1 行目をタイトル、「- 」の行を材料） */
+  async draftFromText(input: Parameters<AiProvider['draftFromText']>[0]): Promise<RecipeDraftRaw> {
+    const draft = await this.extractRecipe({ url: '', text: input.text, ingredients: input.ingredients })
+    return { ...draft, warnings: [...draft.warnings, 'これはテスト用の下書きです'] }
+  }
+
   /** 余りをそのまま材料にした下書きを返す。タイトルは「<先頭の余り>の煮物」 */
   async suggestRecipe(input: Parameters<AiProvider['suggestRecipe']>[0]): Promise<RecipeDraftRaw> {
     return {

@@ -1,5 +1,5 @@
 import type { EstimateCaloriesInput } from '../../shared/schemas/recipeDraft'
-import type { MasterRef, SuggestPromptInput } from './provider'
+import type { MasterRef, SuggestPromptInput, TextDraftPromptInput } from './provider'
 
 export const EXTRACT_SYSTEM = `あなたはホットクック（シャープの自動調理鍋、内鍋 1.6L）向けにレシピを整理するアシスタントです。
 与えられたレシピページの内容から、指定の JSON 形式で 1 品分の下書きを作ってください。
@@ -22,6 +22,29 @@ export function extractPrompt(input: { url: string; text: string; ingredients: M
 ${masterList(input.ingredients)}
 
 ## レシピページ（${input.url}）
+${input.text}`
+}
+
+export const TEXT_DRAFT_SYSTEM = `あなたはホットクック（シャープの自動調理鍋、内鍋 1.6L）向けにレシピを整理するアシスタントです。
+利用者が書いた文から、指定の JSON 形式で 1 品分の下書きを作ってください。文はレシピのメモ、材料の一覧、作りたい料理の名前、使いたい食材など、形が決まっていません。
+
+- 文に材料や作り方が書いてあれば、それに沿って整理する。書いていない部分だけを一般的な作り方で補い、補ったことを warnings に書く
+- 料理名や「鶏ももとキャベツで何か」のような希望だけなら、ホットクック 1.6L で作れる一般的なレシピを 1 品考え、考えたレシピであることを warnings に書く
+- 人数の指定がなければ 2 人前で作り、warnings に書く。caloriesKcal は 1 人前の推定
+- hotcookMode にホットクックの設定（例: 手動 > 煮物を作る > まぜる > 20分）を書く
+- 材料の name は「食材マスタ」の名前に寄せる（例: たまねぎ → 玉ねぎ）。マスタにない食材は一般的な名前を新しく付ける。水は材料に入れず手順に書く
+- 量はマスタの基準単位で書く。「1/2個」→ 0.5、マスタに 1 単位あたりの重さ（g）があれば g から直す。大さじ 1 = 15ml、小さじ 1 = 5ml。少々・適量は quantity と unit を null
+- displayText は短い表記（例: 玉ねぎ 1/2個）
+- 手順は下ごしらえ（prep: 切る・下味など、調理の前日までにできること）と調理（cook: 内鍋に入れてから）に分け、短い文にする
+- maxServings1_6l は 1.6L の内鍋で一度に作れる最大の人数分の推定
+- 揚げ物・焼き目が必要なものなどホットクックに向かない場合も、近い作り方にして warnings に書く
+- レシピと関係のない文（質問や雑談など）なら、作れそうな料理を無理に作らず、title に「下書きを作れませんでした」、warnings にその理由を書く`
+
+export function textDraftPrompt(input: TextDraftPromptInput): string {
+  return `## 食材マスタ（名前と基準単位）
+${masterList(input.ingredients)}
+
+## 利用者が書いた文
 ${input.text}`
 }
 
