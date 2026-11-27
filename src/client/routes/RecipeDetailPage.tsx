@@ -116,10 +116,10 @@ function AddToPlan({ recipe }: { recipe: Recipe }) {
   )
 }
 
-/** レシピを見るだけのページ（案D D-RecipeDetail）。編集は右上から */
 /** 見るページから編集画面へ渡す state */
 export type EditFromDetail = { fromDetail: true; detailInApp: boolean }
 
+/** レシピを見るだけのページ（案D D-RecipeDetail）。編集は右上から */
 export function RecipeDetailPage() {
   const { id } = useParams()
   const location = useLocation()

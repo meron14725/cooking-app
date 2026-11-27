@@ -19,7 +19,7 @@ function clearPrepSession(planId: string) {
 
 const fmt = (n: number | null, unit: string) => (n === null ? '少々' : `${Math.round(n * 100) / 100}${unit}`)
 
-/** S05 下ごしらえ。チェックは画面上だけ（進み具合の目印） */
+/** S05 下ごしらえ。チェックは進み具合の目印（保存しないが、このタブの間は覚えておく） */
 function PrepStep({
   planId,
   data,
@@ -242,12 +242,12 @@ function KitCard({
   )
 }
 
-/** 下ごしらえ中の献立: S05 下ごしらえ → S06 袋詰め */
 /** 下ごしらえ・袋詰めの途中の状態を覚えておくキー。保存したら消す */
 const sessionKey = (planId: string, name: 'step' | 'locations' | 'done') => `prep:${planId}:${name}`
 const isStep = (v: unknown): v is 'prep' | 'pack' => v === 'prep' || v === 'pack'
 const isLocations = isRecordOf(['fridge', 'freezer'] as const)
 
+/** 下ごしらえ中の献立: S05 下ごしらえ → S06 袋詰め */
 export function PrepAndPack({ planId }: { planId: string }) {
   // 料理名や写真からレシピを見に行って戻ってきても、袋詰めの途中（段階と冷蔵/冷凍の選択）が消えないように覚えておく
   const [step, setStep] = useSessionState<'prep' | 'pack'>(sessionKey(planId, 'step'), 'prep', isStep)
