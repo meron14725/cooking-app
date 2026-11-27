@@ -607,8 +607,9 @@ function DraftPlan({ plan }: { plan: Plan }) {
     setStep('proposals')
   }
 
-  /** 食べたい料理を 1 つ外して、提案を計算し直す */
+  /** 食べたい料理を 1 つ外して、提案を計算し直す。最後の 1 品を外したら献立ごとやめて、料理を選ぶところに戻る */
   function removeAnchor(recipeId: string) {
+    if (anchors.length <= 1) return discard.mutate(plan.id)
     replace.mutate({
       recipes: anchors
         .filter((r) => r.recipeId !== recipeId)
@@ -626,28 +627,23 @@ function DraftPlan({ plan }: { plan: Plan }) {
               {anchors.map((r) => (
                 <li
                   key={r.recipeId}
-                  className={`flex min-h-10 items-center gap-1 rounded-full bg-ink text-sm font-bold text-white ${
-                    anchors.length > 1 ? 'pr-1.5 pl-3.5' : 'px-3.5'
-                  }`}
+                  className="flex min-h-10 items-center gap-1 rounded-full bg-ink pr-1.5 pl-3.5 text-sm font-bold text-white"
                 >
                   {r.title}（{r.servings}食）
-                  {/* 1 品だけのときは外さない（献立をやめるのは下のボタン） */}
-                  {anchors.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAnchor(r.recipeId)}
-                      disabled={replace.isPending}
-                      aria-label={`${r.title}を外す`}
-                      className="flex size-8 items-center justify-center rounded-full disabled:opacity-50"
-                    >
-                      <Icon name="close" size={14} strokeWidth={2.4} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeAnchor(r.recipeId)}
+                    disabled={replace.isPending || discard.isPending}
+                    aria-label={`${r.title}を外す`}
+                    className="flex size-8 items-center justify-center rounded-full disabled:opacity-50"
+                  >
+                    <Icon name="close" size={14} strokeWidth={2.4} />
+                  </button>
                 </li>
               ))}
             </ul>
-            {replace.isError && (
-              <p className="text-sm text-danger">{errorMessage(replace.error, '外せませんでした')}</p>
+            {(replace.isError || discard.isError) && (
+              <p className="text-sm text-danger">{errorMessage(replace.error ?? discard.error, '外せませんでした')}</p>
             )}
           </section>
           <Proposals plan={plan} onChosen={() => setStep('order')} />
