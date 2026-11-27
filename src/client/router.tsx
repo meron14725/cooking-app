@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router'
 import { Layout } from './components/Layout'
+import { AgentPage } from './routes/AgentPage'
 import { CookPage } from './routes/CookPage'
 import { FridgePage } from './routes/FridgePage'
 import { HomePage } from './routes/HomePage'
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: 'recipes/import', element: <RecipeImportPage /> },
       { path: 'recipes/:id', element: <RecipeEditPage /> },
       { path: 'more', element: <MorePage /> },
+      { path: 'agent', element: <AgentPage /> },
       { path: 'ingredients', element: <IngredientsPage /> },
       { path: 'ingredients/new', element: <IngredientEditPage /> },
       { path: 'ingredients/:id', element: <IngredientEditPage /> },

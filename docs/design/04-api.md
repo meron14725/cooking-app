@@ -170,3 +170,10 @@ check / uncheck を冪等にしておくと、通信が不安定な店内で再�
 | POST | `/api/kits/:id/cooked` | 作った。直前作業用に確保した在庫を減らす（期限の近い行から）。`{ leftovers?: [{ inventoryItemId, quantity }] }` で余りを修正（直前作業の食材の在庫行だけ。ほかの ID は無視）。全袋が終われば plan を done に（同じ batch）。stored 以外は 409 |
 | POST | `/api/kits/:id/discard` | 捨てた。在庫は減らさない（確保は自動で外れる）。全袋が終われば plan を done に |
 | PATCH | `/api/kits/:id` | 保存場所・期限の修正。`{ location?, useBy? }`。期限を指定せずに場所を変えると袋詰めの日から計算し直す |
+
+## AI に頼む（[08](./08-agent.md)）
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| POST | `/api/agent/requests` | `{ instruction }`（500 文字まで）→ `{ reply, operations, warnings }`。DB は変えない。`AI_PROVIDER` が `cursor` か `fake` のときだけ（ほかは 503） |
+| POST | `/api/agent/apply` | `{ operations }`（20 件まで）→ `{ results: { ok, error? }[] }`。op ごとに入力を zod で検証し、対象の `updated_at` が `baseUpdatedAt` と違えば失敗（409 相当の文）。失敗してもほかは続ける |

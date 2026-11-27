@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { handleStructured, type Reply } from './app.ts'
+import { handleAgent, handleStructured, type Reply } from './app.ts'
 import { cursorRunner } from './cursor.ts'
 
 const apiKey = process.env.CURSOR_API_KEY ?? ''
@@ -34,6 +34,14 @@ const server = createServer(async (req, res) => {
           body: { error: { code: 'AI_NOT_CONFIGURED', message: 'CURSOR_API_KEY がありません' } },
         })
       return send(await handleStructured(await readJson(req), runAgent))
+    }
+    if (req.method === 'POST' && req.url === '/agent') {
+      if (!apiKey)
+        return send({
+          status: 503,
+          body: { error: { code: 'AI_NOT_CONFIGURED', message: 'CURSOR_API_KEY がありません' } },
+        })
+      return send(await handleAgent(await readJson(req), runAgent))
     }
     send({ status: 404, body: { error: { code: 'NOT_FOUND', message: 'not found' } } })
   } catch (err) {

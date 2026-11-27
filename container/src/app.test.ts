@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { handleStructured, type RunAgent } from './app'
+import { handleAgent, handleStructured, MAX_OPERATIONS, type RunAgent } from './app'
 
 const body = { system: 'sys', prompt: 'p', jsonSchema: { type: 'object' } }
 
@@ -46,5 +46,49 @@ describe('handleStructured', () => {
     })
     expect(res.status).toBe(504)
     expect(aborted).toBe(true)
+  })
+})
+
+describe('handleAgent', () => {
+  const agentBody = {
+    prompt: '玉ねぎを半分使った',
+    readTools: [
+      { name: 'list_inventory', description: '在庫', result: [{ id: 'inv1', name: '玉ねぎ', quantity: 1 }] },
+      { name: 'get_recipe', description: 'レシピ', itemsById: { r1: { title: '肉じゃが' } } },
+    ],
+    opTools: [{ name: 'propose_inventory_update', description: '在庫を直す', inputSchema: { type: 'object' } }],
+  }
+
+  it('読む道具はスナップショットを返し、変更案の道具は呼ばれた引数を記録するだけ', async () => {
+    const res = await handleAgent(agentBody, async ({ tools }) => {
+      expect(JSON.parse(String(await tools.list_inventory?.execute({})))).toEqual([
+        { id: 'inv1', name: '玉ねぎ', quantity: 1 },
+      ])
+      expect(JSON.parse(String(await tools.get_recipe?.execute({ id: 'r1' })))).toEqual({ title: '肉じゃが' })
+      expect(await tools.get_recipe?.execute({ id: 'nope' })).toContain('見つかりません')
+      await tools.propose_inventory_update?.execute({ targetId: 'inv1', input: { quantity: 0.5 } })
+      return { text: '玉ねぎを 0.5 個にする案です' }
+    })
+    expect(res).toMatchObject({
+      status: 200,
+      body: {
+        reply: '玉ねぎを 0.5 個にする案です',
+        calls: [{ tool: 'propose_inventory_update', args: { targetId: 'inv1', input: { quantity: 0.5 } } }],
+      },
+    })
+  })
+
+  it(`変更案は ${MAX_OPERATIONS} 件まで`, async () => {
+    const res = await handleAgent(agentBody, async ({ tools }) => {
+      for (let i = 0; i < MAX_OPERATIONS + 3; i++) await tools.propose_inventory_update?.execute({ i })
+      return {}
+    })
+    expect((res.body as { calls: unknown[] }).calls).toHaveLength(MAX_OPERATIONS)
+  })
+
+  it('形が違えば 400', async () => {
+    expect((await handleAgent({ prompt: 'x', readTools: [], opTools: [{ name: 'a' }] }, async () => ({}))).status).toBe(
+      400,
+    )
   })
 })

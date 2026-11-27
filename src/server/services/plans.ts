@@ -255,6 +255,8 @@ export async function replacePlanRecipes(db: Db, id: string, input: PlanRecipesI
   await db.batch([
     db.delete(planRecipes).where(eq(planRecipes.planId, id)),
     db.insert(planRecipes).values(input.recipes.map((r) => ({ planId: id, ...r }))),
+    // 料理を入れ替えたら献立の updated_at も変える（「AI に頼む」の競合検出に使う。docs/design/08-agent.md）
+    db.update(plans).set({ updatedAt: new Date().toISOString() }).where(eq(plans.id, id)),
   ])
   return getPlan(db, id)
 }
