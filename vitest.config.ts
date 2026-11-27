@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config'
 
-// ロジック（shared/domain）の単体テスト用。Workers を使う結合テストは後の PR で追加する
+// 単体テスト用。画面のテスト（*.test.tsx）はファイルの先頭で jsdom を指定する
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts', 'seed/**/*.test.ts', 'container/src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'seed/**/*.test.ts', 'container/src/**/*.test.ts'],
   },
 })
