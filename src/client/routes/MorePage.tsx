@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { EstimateAttributesPanel } from '../components/EstimateAttributesPanel'
 import { Icon, type IconName } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 
@@ -37,6 +38,9 @@ export function MorePage() {
           </li>
         ))}
       </ul>
+      <div className="mt-5">
+        <EstimateAttributesPanel />
+      </div>
     </>
   )
 }

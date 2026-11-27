@@ -28,6 +28,7 @@ const onion: Ingredient = {
   beforeCookTask: null,
   frozenCookNote: null,
   isStaple: false,
+  attributesSource: null,
   priceYen: 198,
   priceSource: 'default',
   priceUpdatedAt: '2024-01-10T00:00:00.000Z',

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { estimateAttributesInputSchema } from '../../shared/schemas/attributes'
 import { recipeFavoriteInputSchema, recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
 import {
   draftInputSchema,
@@ -13,6 +14,7 @@ import type { AppEnv } from '../app'
 import type { Db } from '../db/client'
 import { createDb } from '../db/client'
 import { ApiError } from '../errors'
+import { estimateAttributes } from '../services/attributes'
 import {
   cocoroDraftRaw,
   cocoroHotcookMode,
@@ -119,6 +121,11 @@ export const recipeRoutes = new Hono<AppEnv>()
   .post('/estimate-calories', validate('json', estimateCaloriesInputSchema), async (c) => {
     const result = await getProvider(c.env).estimateCalories(c.req.valid('json'))
     return c.json(result)
+  })
+  // 食材の分類・重さとレシピの区分・系統をまとめて推定して保存する（docs/design/09-recommendation-v2.md）
+  .post('/attributes/estimate', validate('json', estimateAttributesInputSchema), async (c) => {
+    const { limit } = c.req.valid('json')
+    return c.json(await estimateAttributes(createDb(c.env.DB), () => getProvider(c.env), limit))
   })
   .get('/:id', async (c) => c.json(await getRecipe(createDb(c.env.DB), c.req.param('id'))))
   .put('/:id', validate('json', recipeInputSchema), async (c) => {

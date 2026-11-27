@@ -131,6 +131,8 @@ export type Ingredient = {
   beforeCookTask: string | null
   frozenCookNote: string | null
   isStaple: boolean
+  /** 分類と重さをどう決めたか（rule / ai / manual）。null = 取り込みのまま */
+  attributesSource: 'rule' | 'ai' | 'manual' | null
   /** 代表量あたりの価格（円）。未設定は null */
   priceYen: number | null
   priceSource: PriceSource | null
