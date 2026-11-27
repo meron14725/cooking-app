@@ -22,9 +22,7 @@ function AiBubble({ children }: { children: React.ReactNode }) {
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
         <Icon name="sparkle" size={16} />
       </span>
-      <div className="min-w-0 flex-1 rounded-item rounded-tl-md bg-surface shadow-card px-4 py-3 text-[15px] leading-relaxed">
-        {children}
-      </div>
+      <div className="min-w-0 flex-1 pt-1 text-[15px] leading-[1.7]">{children}</div>
     </div>
   )
 }
@@ -100,7 +98,7 @@ export function AgentPage() {
         )}
 
         {asked && (
-          <div className="ml-10 self-end rounded-item rounded-tr-md bg-accent-soft px-4 py-3 text-[15px] leading-relaxed text-ink">
+          <div className="max-w-[82%] self-end rounded-[18px] rounded-br-[4px] bg-ink px-3.5 py-3 text-[15px] leading-relaxed whitespace-pre-wrap text-white">
             {asked}
           </div>
         )}
@@ -130,50 +128,53 @@ export function AgentPage() {
             </AiBubble>
 
             {result.operations.length > 0 && (
-              <section aria-label="変更案" className="flex flex-col gap-2.5">
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-sm font-bold text-ink-muted">変更案</h2>
-                  <p className="text-[13px] text-ink-muted">
+              <section aria-label="変更案" className="overflow-hidden rounded-card bg-surface shadow-card">
+                <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2.5">
+                  <h2 className="text-sm font-bold">変更案</h2>
+                  <p className="text-xs text-ink-muted">
                     {selected.size} / {result.operations.length} 件を選択
                   </p>
                 </div>
-                <ul className="flex flex-col gap-2">
+                <ul>
                   {result.operations.map((o, i) => (
                     // 同じ案が 2 つ並ぶことがあるので位置をキーにする
                     // biome-ignore lint/suspicious/noArrayIndexKey: 一覧は反映まで並べ替えない
                     <li key={i}>
-                      <label
-                        className={`flex min-h-14 cursor-pointer items-start gap-3 rounded-item border bg-surface px-4 py-3.5 ${
-                          selected.has(i) ? 'border-accent-line' : 'border-line'
-                        }`}
-                      >
+                      <label className="flex min-h-14 cursor-pointer items-start gap-3 border-t border-line-soft px-4 py-3.5">
                         <input
                           type="checkbox"
                           checked={selected.has(i)}
                           onChange={() => toggle(i)}
                           className="mt-0.5 size-5 shrink-0 accent-accent"
                         />
-                        <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="flex min-w-0 flex-col gap-1">
                           <span className="text-xs text-ink-muted">{targetLabel(o.op)}</span>
-                          <span className="text-[15px]">{o.summary}</span>
+                          <span className="text-[15px] font-bold">{o.summary}</span>
                         </span>
                       </label>
                     </li>
                   ))}
                 </ul>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-1 border-t border-line-soft px-4 pt-3 pb-3">
                   <Button
                     onClick={onApply}
                     disabled={busy || selected.size === 0}
-                    className="min-h-13 flex-1 text-base"
+                    className="min-h-12.5 w-full text-[15px]"
                   >
                     {apply.isPending ? '反映しています…' : `選んだ ${selected.size} 件を反映`}
                   </Button>
-                  <Button variant="secondary" onClick={() => setResult(null)} disabled={apply.isPending}>
-                    やめる
-                  </Button>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-ink-muted">「反映」を押すまで、在庫やレシピは変わりません</p>
+                    <button
+                      type="button"
+                      onClick={() => setResult(null)}
+                      disabled={apply.isPending}
+                      className="min-h-10 shrink-0 px-2 text-sm font-bold text-ink-soft"
+                    >
+                      やめる
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-ink-muted">「反映」を押すまで、在庫やレシピは変わりません</p>
               </section>
             )}
           </>
@@ -211,18 +212,18 @@ export function AgentPage() {
             value={instruction}
             onChange={(e) => setInstruction(e.target.value)}
             maxLength={500}
-            rows={2}
+            rows={1}
             placeholder="頼みたいことを書く"
-            className="block w-full resize-none rounded-control border border-transparent bg-surface px-4 py-2.5 text-base shadow-card placeholder:text-ink-muted focus:border-accent focus:ring-2 focus:ring-accent-line focus:outline-none"
+            className="block min-h-12 w-full resize-none rounded-control border border-transparent bg-surface px-3.5 py-3 text-base shadow-card placeholder:text-ink-muted focus:border-accent focus:ring-2 focus:ring-accent-line focus:outline-none"
           />
         </label>
         <button
           type="submit"
           disabled={busy}
           aria-label="送る"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-accent disabled:opacity-50"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-ink text-white disabled:opacity-50"
         >
-          <Icon name="arrowUp" size={22} strokeWidth={2} />
+          <Icon name="arrowUp" size={20} strokeWidth={2} />
         </button>
       </form>
     </>
