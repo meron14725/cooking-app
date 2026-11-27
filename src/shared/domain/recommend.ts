@@ -1,12 +1,17 @@
 /**
- * レコメンド（docs/design/05-recommendation.md）。DB に依存しない純粋関数。
- * 食べたい料理（anchor）に、買ったパックを食べ切れる追加料理を組み合わせた案を出す。
+ * レコメンド（docs/design/05-recommendation.md、09-recommendation-v2.md）。DB に依存しない純粋関数。
+ * 食べたい料理（anchor）に、買ったパックを食べ切れる追加料理を組み合わせ、合計◯食に食数を配った案を出す。
  */
 import type { Cuisine, DishType } from '../schemas/recipe'
 import {
+  CANDIDATE_POOL,
   CANDIDATES_BY_ADD_COUNT,
   DEFAULT_PREPPED_FRIDGE_DAYS,
-  DEFAULT_SERVINGS,
+  DEFAULT_TARGET_MEALS,
+  DIVERSITY_CANDIDATES,
+  DIVERSITY_LAMBDA,
+  DIVERSITY_RECENT_EXCLUDES,
+  EXPIRING_SOON_DAYS,
   MAX_DISHES,
   MAX_EVALUATIONS,
   MAX_PROPOSALS,
@@ -14,8 +19,9 @@ import {
   type RecommendWeights,
   SCORE_WEIGHTS,
   SERVINGS_STEP,
-  TARGET_RECIPE_COUNT,
+  SIMILARITY_WEIGHTS,
 } from './constants'
+import { addDays } from './date'
 import { expiryOf } from './expiry'
 import { type RecipeFeatures, recipeFeatures, type ScoreBreakdown, scoreProposal } from './recommendScore'
 
@@ -56,6 +62,7 @@ export type RecRecipe = {
   dishType?: DishType | null
   cuisine?: Cuisine | null
   cookMinutes?: number | null
+  usesMixingUnit?: boolean | null
   favoriteCount?: number | null
   isFavorite?: boolean
   cookCount?: number | null
@@ -73,28 +80,25 @@ export type RecommendInput = {
   ingredients: Map<string, RecIngredient>
   today: string
   /**
-   * もう出した案（「別の案を出す」）。案ごとのレシピ ID の並び。anchor を除いた追加料理の組み合わせで比べるので、
-   * anchor を含めても含めなくてもよく、順番も問わない
+   * もう出した案（「別の案を出す」）。食数付き（{ recipeId, servings }[]）なら同じ料理と食数の案を除き、
+   * レシピ ID だけ（古い形）なら anchor と固定を除いた料理の組み合わせで除く。順番は問わない
    */
-  exclude?: string[][]
+  exclude?: ExcludedProposal[]
   /**
    * 鍵で固定した料理と食数。必ず含め、残りの品数分だけ選び直す。
    * anchor を固定したときはその食数を使い、追加料理を固定したときは追加料理（added）のまま入れる
    */
   fixed?: { recipe: RecRecipe; servings: number }[]
-  /**
-   * 合計◯食の目標。あれば提案 v2（料理ごとの食数を配り、点数の項目を増やした探索）で選ぶ。
-   * なければ品数（targetCount）と既定の食数で選ぶ（v2 の絞り込みと多様性が入ったら v2 だけにする）
-   */
+  /** 合計◯食の目標（既定 DEFAULT_TARGET_MEALS）。料理ごとに食数を配る */
   targetMeals?: number
   /** 提案 v2 の重み（一部だけ上書きできる。調整のスクリプトとテスト用） */
   weights?: Partial<RecommendWeights>
   options?: {
-    targetCount?: number
     maxProposals?: number
-    defaultServings?: number
-    /** 提案 v2 の食数の刻み（既定 SERVINGS_STEP） */
+    /** 食数の刻み（既定 SERVINGS_STEP） */
     servingsStep?: number
+    /** 多様性の強さ（既定 DIVERSITY_LAMBDA。0 で点数順そのまま） */
+    diversityLambda?: number
   }
 }
 
@@ -458,104 +462,6 @@ export function evaluatePlan(input: {
   return buildProposal(input.items, evaluate(input.items, ctx), input.ingredients, days)
 }
 
-/** 選び直した追加料理の組み合わせを比べるためのキー（anchor と固定した料理を除き、順番によらない） */
-function comboKey(recipeIds: string[], baseIds: Set<string>): string {
-  return recipeIds
-    .filter((id) => !baseIds.has(id))
-    .sort()
-    .join('\n')
-}
-
-export function recommend(input: RecommendInput): RecommendResult {
-  if (input.targetMeals !== undefined) return recommendByMeals(input, input.targetMeals)
-  const targetCount = input.options?.targetCount ?? TARGET_RECIPE_COUNT
-  const maxProposals = input.options?.maxProposals ?? MAX_PROPOSALS
-  const defaultServings = input.options?.defaultServings ?? DEFAULT_SERVINGS
-  const ctx: Ctx = { available: input.available, ingredients: input.ingredients, today: input.today }
-  // 必ず入る料理: anchor（固定していればその食数）と、固定した追加料理
-  const fixedServings = new Map((input.fixed ?? []).map((f) => [f.recipe.id, f.servings]))
-  const anchors = input.anchors.map((a) => ({
-    ...a,
-    servings: fixedServings.get(a.recipe.id) ?? a.servings,
-    role: 'anchor' as const,
-  }))
-  const anchorIds = new Set(anchors.map((a) => a.recipe.id))
-  const fixedAdded = (input.fixed ?? [])
-    .filter((f) => !anchorIds.has(f.recipe.id))
-    .map((f) => ({ ...f, role: 'added' as const }))
-  const base = [...anchors, ...fixedAdded]
-  const baseIds = new Set(base.map((b) => b.recipe.id))
-  const addCount = targetCount - base.length
-  const excluded = new Set((input.exclude ?? []).map((ids) => comboKey(ids, baseIds)))
-
-  // 必ず入る料理だけの 1 案（目標の品数に届いている、または足せる候補がない）
-  const anchorsOnly = (aiSuggestionRecommended: boolean): RecommendResult => {
-    const proposals = excluded.has('') ? [] : [buildProposal(base, evaluate(base, ctx), input.ingredients)]
-    return { proposals, aiSuggestionRecommended, hasMore: false }
-  }
-
-  // 必ず入る料理だけで目標の品数に届いていれば探索しない
-  if (addCount <= 0) return anchorsOnly(false)
-
-  const candidates = input.catalog.filter((r) => !baseIds.has(r.id) && fitsPot(r, defaultServings))
-  if (candidates.length === 0) return anchorsOnly(true)
-
-  const k = Math.min(addCount, candidates.length)
-  const scored: { added: RecRecipe[]; evaluation: Evaluation }[] = []
-  for (const added of combinations(candidates, k)) {
-    const items = [...base, ...added.map((recipe) => ({ recipe, servings: defaultServings }))]
-    scored.push({ added, evaluation: evaluate(items, ctx) })
-  }
-  scored.sort(
-    (a, b) =>
-      a.evaluation.score - b.evaluation.score ||
-      a.added
-        .map((r) => r.id)
-        .join()
-        .localeCompare(b.added.map((r) => r.id).join()),
-  )
-  // AI 補完をすすめるかは、出した案によらずいちばん良い組み合わせで決める（「別の案を出す」で変わらない）
-  const overallBest = scored[0]
-  const aiSuggestionRecommended =
-    !overallBest || overallBest.evaluation.maxPerishableLeftoverPacks >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS
-  const isNew = (s: (typeof scored)[number]) =>
-    !excluded.has(
-      comboKey(
-        s.added.map((r) => r.id),
-        baseIds,
-      ),
-    )
-  const remaining = scored.filter(isNew)
-
-  // 似た案（追加料理が 1 品でも同じ）を避けて上位を選び、足りなければ飛ばした案で埋める
-  const picked: typeof scored = []
-  const skipped: typeof scored = []
-  const usedAdded = new Set<string>()
-  for (const s of remaining) {
-    if (picked.length >= maxProposals) break
-    if (s.added.some((r) => usedAdded.has(r.id))) {
-      skipped.push(s)
-      continue
-    }
-    picked.push(s)
-    for (const r of s.added) usedAdded.add(r.id)
-  }
-  for (const s of skipped) {
-    if (picked.length >= maxProposals) break
-    picked.push(s)
-  }
-  picked.sort((a, b) => a.evaluation.score - b.evaluation.score)
-
-  const proposals = picked.map((s) =>
-    buildProposal(
-      [...base, ...s.added.map((recipe) => ({ recipe, servings: defaultServings, role: 'added' as const }))],
-      s.evaluation,
-      input.ingredients,
-    ),
-  )
-  return { proposals, aiSuggestionRecommended, hasMore: remaining.length > picked.length }
-}
-
 // ---------- 提案 v2: 合計◯食に食数を配る（docs/design/09-recommendation-v2.md） ----------
 
 /** 1 品に配れる食数: 刻みの倍数で、1 回で作れる量まで。刻みより小さい量しか作れなければその量だけ */
@@ -600,9 +506,46 @@ type MealScored = {
   breakdown: ScoreBreakdown
 }
 
-function recommendByMeals(input: RecommendInput, targetMeals: number): RecommendResult {
+/** 似ている度合いを比べるための、案の特徴（anchor と固定を除いた追加料理と、食数の配り方） */
+type Profile = {
+  ids: Set<string>
+  mains: Set<string>
+  heat: Set<string>
+  mainCuisine: string | null
+  mixing: number
+  /** 食数を大きい順に並べた形。古い形の exclude では分からないので null */
+  shape: string | null
+}
+
+const jaccard = (a: Set<string>, b: Set<string>) => {
+  if (a.size === 0 && b.size === 0) return 0
+  let common = 0
+  for (const x of a) if (b.has(x)) common++
+  return common / (a.size + b.size - common)
+}
+
+/** 似ている度合い（0〜1）。追加した料理がない案どうしは食数の配り方だけで比べる */
+export function similarity(a: Profile, b: Profile, w: typeof SIMILARITY_WEIGHTS = SIMILARITY_WEIGHTS): number {
+  const sameShape = a.shape !== null && a.shape === b.shape ? 1 : 0
+  if (a.ids.size === 0 && b.ids.size === 0) return sameShape
+  return (
+    w.recipes * jaccard(a.ids, b.ids) +
+    w.mainIngredient * jaccard(a.mains, b.mains) +
+    w.mainCuisine * (a.mainCuisine !== null && a.mainCuisine === b.mainCuisine ? 1 : 0) +
+    w.heatMode * jaccard(a.heat, b.heat) +
+    w.mixing * (a.mixing === b.mixing ? 1 : 0) +
+    w.shape * sameShape
+  )
+}
+
+/** もう出した案（「別の案を出す」）。食数付きの新しい形と、レシピ ID だけの古い形 */
+export type ExcludedProposal = string[] | { recipeId: string; servings: number }[]
+
+export function recommend(input: RecommendInput): RecommendResult {
+  const targetMeals = input.targetMeals ?? DEFAULT_TARGET_MEALS
   const maxProposals = input.options?.maxProposals ?? MAX_PROPOSALS
   const step = input.options?.servingsStep ?? SERVINGS_STEP
+  const lambda = input.options?.diversityLambda ?? DIVERSITY_LAMBDA
   const weights: RecommendWeights = { ...RECOMMEND_WEIGHTS, ...input.weights }
   const ctx: Ctx = { available: input.available, ingredients: input.ingredients, today: input.today }
 
@@ -610,7 +553,7 @@ function recommendByMeals(input: RecommendInput, targetMeals: number): Recommend
   const anchorIds = new Set(input.anchors.map((a) => a.recipe.id))
   const fixedAdded = (input.fixed ?? []).filter((f) => !anchorIds.has(f.recipe.id))
   const baseIds = new Set([...anchorIds, ...fixedAdded.map((f) => f.recipe.id)])
-  const excluded = new Set((input.exclude ?? []).map((ids) => comboKey(ids, baseIds)))
+  const fixedIds = new Set([...fixedServings.keys()])
 
   const all = new Map<string, RecRecipe>()
   for (const r of [...input.catalog, ...input.anchors.map((a) => a.recipe), ...fixedAdded.map((f) => f.recipe)]) {
@@ -619,7 +562,60 @@ function recommendByMeals(input: RecommendInput, targetMeals: number): Recommend
   const features = recipeFeatures([...all.values()], input.ingredients)
   const featureOf = (r: RecRecipe) => features.get(r.id) as RecipeFeatures
 
-  // 食数が決まっている料理（固定した anchor と追加料理）と、配り直す anchor
+  // ---- 前に出した案 ----
+  // 新しい形は「固定を除いた料理と食数」、古い形は「anchor と固定を除いた料理の組み合わせ」で比べる
+  const exactKey = (entries: { recipeId: string; servings: number }[]) =>
+    entries
+      .filter((e) => !fixedIds.has(e.recipeId))
+      .map((e) => `${e.recipeId}:${e.servings}`)
+      .sort()
+      .join('\n')
+  const setKey = (ids: string[]) =>
+    ids
+      .filter((id) => !baseIds.has(id))
+      .sort()
+      .join('\n')
+  const exclude = input.exclude ?? []
+  const excludedExact = new Set<string>()
+  const excludedSets = new Set<string>()
+  for (const p of exclude) {
+    if (p.length > 0 && typeof p[0] !== 'string')
+      excludedExact.add(exactKey(p as { recipeId: string; servings: number }[]))
+    else excludedSets.add(setKey(p as string[]))
+  }
+  const keyOf = (s: MealScored) => exactKey(s.items.map((i) => ({ recipeId: i.recipe.id, servings: i.servings })))
+  const addedKeyOf = (s: MealScored) => setKey(s.added.map((r) => r.id))
+  const isExcluded = (s: MealScored) => excludedExact.has(keyOf(s)) || excludedSets.has(addedKeyOf(s))
+
+  const profileOf = (items: { recipe: RecRecipe; servings: number | null }[]): Profile => {
+    const added = items.filter((i) => !baseIds.has(i.recipe.id)).map((i) => featureOf(i.recipe))
+    const mainCuisines = [
+      ...new Set(added.filter((f) => f.dishType === 'main' && f.cuisine).map((f) => f.cuisine as string)),
+    ].sort()
+    const servings = items.map((i) => i.servings)
+    return {
+      ids: new Set(items.filter((i) => !baseIds.has(i.recipe.id)).map((i) => i.recipe.id)),
+      mains: new Set(added.flatMap((f) => (f.mainIngredientId ? [f.mainIngredientId] : []))),
+      heat: new Set(added.flatMap((f) => (f.heatMode ? [f.heatMode] : []))),
+      mainCuisine: mainCuisines.length > 0 ? mainCuisines.join() : null,
+      mixing: added.filter((f) => f.usesMixingUnit).length,
+      shape: servings.some((x) => x === null) ? null : (servings as number[]).sort((a, b) => b - a).join(),
+    }
+  }
+  // 似ている度合いは新しいほうの案とだけ比べる（古い案は除くだけ）
+  const previous = exclude.slice(-DIVERSITY_RECENT_EXCLUDES).flatMap((p) => {
+    const entries =
+      p.length > 0 && typeof p[0] !== 'string'
+        ? (p as { recipeId: string; servings: number }[])
+        : (p as string[]).map((recipeId) => ({ recipeId, servings: null }))
+    const items = entries.flatMap((e) => {
+      const recipe = all.get(e.recipeId)
+      return recipe ? [{ recipe, servings: e.servings }] : []
+    })
+    return items.length > 0 ? [profileOf(items)] : []
+  })
+
+  // ---- 食数が決まっている料理（固定した anchor と追加料理）と、配り直す anchor ----
   const fixedItems: MealItem[] = [
     ...input.anchors
       .filter((a) => fixedServings.has(a.recipe.id))
@@ -635,15 +631,15 @@ function recommendByMeals(input: RecommendInput, targetMeals: number): Recommend
   const restMeals = targetMeals - fixedItems.reduce((a, i) => a + i.servings, 0)
 
   let evaluations = 0
-  const score = (items: MealItem[], added: RecRecipe[]): MealScored => {
+  const scoreItems = (items: MealItem[], added: RecRecipe[]): MealScored => {
     const evaluation = evaluate(items, ctx)
-    const { score: total, breakdown } = scoreProposal(
+    const { score, breakdown } = scoreProposal(
       items.map((i) => ({ recipeId: i.recipe.id, servings: i.servings, role: i.role, wantedServings: i.wanted })),
       evaluation.score,
       features,
       weights,
     )
-    return { items, added, evaluation, score: total, breakdown }
+    return { items, added, evaluation, score, breakdown }
   }
 
   // 選んだときの食数のままの anchor（目標に配れないときの 1 案、単品の点数の土台）
@@ -659,9 +655,9 @@ function recommendByMeals(input: RecommendInput, targetMeals: number): Recommend
     scoreBreakdown: s.breakdown,
   })
   const baseOnly = (aiSuggestionRecommended: boolean): RecommendResult => {
-    const s = score([...fixedItems, ...wantedAnchors], [])
+    const s = scoreItems([...fixedItems, ...wantedAnchors], [])
     return {
-      proposals: excluded.has('') ? [] : [asProposal(s)],
+      proposals: isExcluded(s) ? [] : [asProposal(s)],
       aiSuggestionRecommended,
       hasMore: false,
       evaluations: 1,
@@ -675,99 +671,164 @@ function recommendByMeals(input: RecommendInput, targetMeals: number): Recommend
     .map((c) => {
       const min = allowedServings(featureOf(c), step)[0] as number
       const item: MealItem = { recipe: c, servings: min, role: 'added', wanted: null }
-      return { recipe: c, score: score([...fixedItems, ...wantedAnchors, item], [c]).score }
+      return { recipe: c, score: scoreItems([...fixedItems, ...wantedAnchors, item], [c]).score }
     })
     .sort((a, b) => a.score - b.score || a.recipe.id.localeCompare(b.recipe.id))
-
-  const maxAdd = Math.min(3, MAX_DISHES - fixedItems.length - freeAnchors.length)
-  const results: MealScored[] = []
+  const maxAdd = Math.max(0, Math.min(3, MAX_DISHES - fixedItems.length - freeAnchors.length))
   const anchorOptions = freeAnchors.map((a) => allowedServings(featureOf(a.recipe), step))
-  // anchor や固定に刻みより少ししか作れない料理があると、合計が目標ぴったりにならないことがある。
-  // そのときは目標以下でいちばん近い合計を探す
-  for (let goal = restMeals; goal > restMeals - step && results.length === 0 && goal > 0; goal--) {
-    searchMeals(goal)
+
+  // ---- 候補の枠 ----
+  const expiringIds = new Set(
+    input.available.filter((a) => a.expiresOn <= addDays(input.today, EXPIRING_SOON_DAYS)).map((a) => a.ingredientId),
+  )
+  const baseTypes = new Set(
+    [...fixedItems.map((i) => i.recipe), ...freeAnchors.map((a) => a.recipe)].map((r) => featureOf(r).dishType),
+  )
+  const missingTypes = (['main', 'side', 'soup'] as const).filter((t) => !baseTypes.has(t))
+  const byPopularity = [...singles]
+    .filter((s) => featureOf(s.recipe).popularity > 0)
+    .sort((a, b) => featureOf(b.recipe).popularity - featureOf(a.recipe).popularity)
+  const poolOf = (round: number): RecRecipe[] => {
+    const grow = CANDIDATE_POOL.growth ** round
+    const n = (base: number) => Math.ceil(base * grow)
+    const slots: RecRecipe[][] = [
+      singles.slice(0, n(CANDIDATE_POOL.score)).map((s) => s.recipe),
+      singles
+        .filter((s) => s.recipe.ingredients.some((i) => expiringIds.has(i.ingredientId)))
+        .slice(0, n(CANDIDATE_POOL.expiring))
+        .map((s) => s.recipe),
+      byPopularity.slice(0, n(CANDIDATE_POOL.popular)).map((s) => s.recipe),
+      ...missingTypes.map((t) =>
+        singles
+          .filter((s) => featureOf(s.recipe).dishType === t)
+          .slice(0, n(CANDIDATE_POOL.perMissingType))
+          .map((s) => s.recipe),
+      ),
+    ]
+    // 単品の点数の枠を 2 件、ほかの枠を 1 件ずつ交互に取り、上から使う件数を絞っても枠の料理が残るようにする
+    const pool: RecRecipe[] = []
+    const seen = new Set<string>()
+    const push = (r: RecRecipe | undefined) => {
+      if (r && !seen.has(r.id) && pool.length < CANDIDATE_POOL.max) {
+        seen.add(r.id)
+        pool.push(r)
+      }
+    }
+    const longest = Math.max(...slots.map((s) => s.length))
+    for (let i = 0; i < longest; i++) {
+      push(slots[0]?.[2 * i])
+      push(slots[0]?.[2 * i + 1])
+      for (const slot of slots.slice(1)) push(slot[i])
+    }
+    // 主な食材が候補に少ないもの
+    const mains = new Set(pool.map((r) => featureOf(r).mainIngredientId))
+    let rare = 0
+    for (const s of singles) {
+      if (rare >= n(CANDIDATE_POOL.rareMain)) break
+      const main = featureOf(s.recipe).mainIngredientId
+      if (seen.has(s.recipe.id) || mains.has(main)) continue
+      mains.add(main)
+      push(s.recipe)
+      rare++
+    }
+    return pool
   }
 
-  function searchMeals(goal: number) {
-    outer: for (let addCount = 0; addCount <= Math.max(0, maxAdd); addCount++) {
-      const pool = addCount === 0 ? [] : singles.slice(0, CANDIDATES_BY_ADD_COUNT[addCount] ?? 0).map((s) => s.recipe)
-      if (addCount > 0 && pool.length < addCount) break
-      for (const added of addCount === 0 ? [[] as RecRecipe[]] : combinations(pool, addCount)) {
-        const options = [...anchorOptions, ...added.map((r) => allowedServings(featureOf(r), step))]
-        for (const alloc of allocations(options, goal)) {
-          if (evaluations >= MAX_EVALUATIONS) break outer
-          evaluations++
-          const items: MealItem[] = [
-            ...fixedItems,
-            ...freeAnchors.map((a, i) => ({
-              recipe: a.recipe,
-              servings: alloc[i] as number,
-              role: 'anchor' as const,
-              wanted: a.servings,
-            })),
-            ...added.map((recipe, i) => ({
-              recipe,
-              servings: alloc[freeAnchors.length + i] as number,
-              role: 'added' as const,
-              wanted: null,
-            })),
-          ]
-          results.push(score(items, added))
+  const search = (round: number) => {
+    const pool = poolOf(round)
+    const grow = CANDIDATE_POOL.growth ** round
+    const results: MealScored[] = []
+    // 次の回で候補を広げられるか（上から使う件数で切った、または枠を広げると候補が増える）
+    let sliced = false
+    let evals = 0
+    const searchGoal = (goal: number) => {
+      for (let addCount = 0; addCount <= maxAdd; addCount++) {
+        const size = Math.min(pool.length, Math.ceil((CANDIDATES_BY_ADD_COUNT[addCount] ?? 0) * grow))
+        if (addCount > 0 && size < pool.length) sliced = true
+        const list = addCount === 0 ? [] : pool.slice(0, size)
+        if (addCount > 0 && list.length < addCount) break
+        // 品数ごとに評価の回数を分ける（多い品数の組み合わせまで届くように）
+        const budget = evals + Math.floor((MAX_EVALUATIONS - evals) / (maxAdd - addCount + 1))
+        outer: for (const added of addCount === 0 ? [[] as RecRecipe[]] : combinations(list, addCount)) {
+          const options = [...anchorOptions, ...added.map((r) => allowedServings(featureOf(r), step))]
+          for (const alloc of allocations(options, goal)) {
+            if (evals >= budget) break outer
+            evals++
+            const items: MealItem[] = [
+              ...fixedItems,
+              ...freeAnchors.map((a, i) => ({
+                recipe: a.recipe,
+                servings: alloc[i] as number,
+                role: 'anchor' as const,
+                wanted: a.servings,
+              })),
+              ...added.map((recipe, i) => ({
+                recipe,
+                servings: alloc[freeAnchors.length + i] as number,
+                role: 'added' as const,
+                wanted: null,
+              })),
+            ]
+            results.push(scoreItems(items, added))
+          }
         }
       }
     }
+    // anchor や固定に刻みより少ししか作れない料理があると、合計が目標ぴったりにならないことがある。
+    // そのときは目標以下でいちばん近い合計を探す
+    for (let goal = restMeals; goal > restMeals - step && results.length === 0 && goal > 0; goal--) searchGoal(goal)
+    evaluations += evals
+    results.sort((a, b) => a.score - b.score || keyOf(a).localeCompare(keyOf(b)))
+    return { results, canGrow: sliced || poolOf(round + 1).length > pool.length }
   }
 
-  // 目標の食数に配れない（anchor だけで超える、作れる量が足りないなど）ときは、選んだときの食数のまま 1 案
-  if (results.length === 0) return baseOnly(candidates.length === 0)
-
-  const key = (s: MealScored) =>
-    s.added
-      .map((r) => r.id)
-      .sort()
-      .join('\n')
-  results.sort((a, b) => a.score - b.score || key(a).localeCompare(key(b)))
-  const best = results[0]
+  // 「別の案を出す」の回は、出した案の数から出す。残りがなければ枠を広げて探し直す
+  let round = Math.ceil(exclude.length / maxProposals)
+  let found = search(round)
+  if (found.results.length === 0 && round === 0) return baseOnly(candidates.length === 0)
+  const best = found.results[0]
   const aiSuggestionRecommended =
     candidates.length === 0 ||
     (best?.evaluation.maxPerishableLeftoverPacks ?? 0) >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS
+  let remaining = found.results.filter((s) => !isExcluded(s))
+  for (let extra = 0; remaining.length === 0 && found.canGrow && extra < MAX_EXTRA_ROUNDS; extra++) {
+    round++
+    found = search(round)
+    remaining = found.results.filter((s) => !isExcluded(s))
+  }
+  if (found.results.length === 0) return baseOnly(candidates.length === 0)
 
-  // 出した組み合わせ（追加料理の集合）を除く。同じ集合の食数違いもまとめて除く（食数込みの比べ方は次の PR）
-  const remaining = results.filter((s) => !excluded.has(key(s)))
-  // 似た案（追加料理が 1 品でも同じで、食数の配り方も同じ）を避けて上位を選び、足りなければ飛ばした案で埋める。
-  // 配り方が違えば（カレー 4 ＋副菜 2 と、カレー 2 ＋ 2 品を 2 食ずつ）料理が重なっても別の案として出す
-  const picked: MealScored[] = []
-  const skipped: MealScored[] = []
-  const used = new Map<string, Set<string>>()
+  // ---- 多様性を見ながら選ぶ（MMR）----
+  const pool = remaining.slice(0, DIVERSITY_CANDIDATES).map((s) => ({ s, profile: profileOf(s.items) }))
+  const picked: typeof pool = []
   const pickedKeys = new Set<string>()
-  const shapeOf = (s: MealScored) =>
-    s.items
-      .map((i) => i.servings)
-      .sort((a, b) => b - a)
-      .join(',')
-  for (const s of remaining) {
-    if (picked.length >= maxProposals) break
-    const ids = s.added.length === 0 ? [''] : s.added.map((r) => r.id)
-    const shape = shapeOf(s)
-    if (ids.some((id) => used.get(id)?.has(shape))) {
-      skipped.push(s)
-      continue
+  while (picked.length < maxProposals) {
+    let choice: (typeof pool)[number] | null = null
+    let choiceValue = Number.POSITIVE_INFINITY
+    for (const c of pool) {
+      if (pickedKeys.has(keyOf(c.s))) continue
+      let maxSim = 0
+      for (const other of [...picked.map((p) => p.profile), ...previous]) {
+        maxSim = Math.max(maxSim, similarity(c.profile, other))
+      }
+      const value = c.s.score + lambda * maxSim
+      if (value < choiceValue - EPS) {
+        choice = c
+        choiceValue = value
+      }
     }
-    picked.push(s)
-    pickedKeys.add(key(s))
-    for (const id of ids) used.set(id, new Set([...(used.get(id) ?? []), shape]))
+    if (!choice) break
+    picked.push(choice)
+    pickedKeys.add(keyOf(choice.s))
   }
-  for (const s of skipped) {
-    if (picked.length >= maxProposals) break
-    picked.push(s)
-    pickedKeys.add(key(s))
-  }
-  picked.sort((a, b) => a.score - b.score)
-  const remainingKeys = new Set(remaining.map(key))
+  const left = new Set(remaining.map(keyOf))
   return {
-    proposals: picked.map(asProposal),
+    proposals: picked.map((p) => asProposal(p.s)),
     aiSuggestionRecommended,
-    hasMore: remainingKeys.size > pickedKeys.size,
+    hasMore: left.size > pickedKeys.size || found.canGrow,
     evaluations,
   }
 }
+
+/** 残りがないときに枠を広げて探し直す回数の上限 */
+const MAX_EXTRA_ROUNDS = 4

@@ -213,3 +213,99 @@ describe('計算量', () => {
     expect(Date.now() - started).toBeLessThan(2000)
   })
 })
+
+describe('多様性と別の案（食数付きの exclude）', () => {
+  // 主な食材が同じ、とても人気の料理を 6 つ足す（点数だけなら上位を占める）
+  const clones = Array.from({ length: 6 }, (_, i) => ({
+    ...get('sabaMiso'),
+    id: `clone${i}`,
+    title: `さばのみそ煮 ${i}`,
+    favoriteCount: 10_000,
+  }))
+  const catalog = [...fixtureCatalog, ...clones]
+  const anchors = [{ recipe: get('curry'), servings: 2 }]
+  const cloneCount = (r: ReturnType<typeof run>) =>
+    r.proposals.filter((p) => p.recipes.some((x) => x.recipeId.startsWith('clone'))).length
+
+  it('λ = 0 なら点数順そのまま。λ を入れると、主な食材の同じ案ばかりにならない', () => {
+    const plain = run({ anchors, catalog, targetMeals: 4, options: { diversityLambda: 0 } })
+    expect(cloneCount(plain)).toBe(3)
+    const scores = plain.proposals.map((p) => p.score)
+    expect(scores).toEqual([...scores].sort((a, b) => a - b))
+    const diverse = run({ anchors, catalog, targetMeals: 4 })
+    expect(cloneCount(diverse)).toBeLessThan(3)
+  })
+
+  it('前に出した案とも比べる。似た案を見たあとは、似ていない案が上に来る', () => {
+    const first = run({ anchors, catalog, targetMeals: 4, options: { diversityLambda: 0, maxProposals: 1 } })
+    const exclude = first.proposals.map((p) => p.recipes.map((x) => ({ recipeId: x.recipeId, servings: x.servings })))
+    expect(cloneCount(first)).toBe(1)
+    const next = run({ anchors, catalog, targetMeals: 4, exclude, options: { maxProposals: 1 } })
+    expect(cloneCount(next)).toBe(0)
+  })
+
+  it('食数付きなら、同じ料理でも食数が違う案は出せる。古い形（ID だけ）なら料理の組み合わせごと除く', () => {
+    const small = [get('curry'), get('spinachOhitashi'), get('broccoliSteam')]
+    const addedSet = (p: { recipes: { recipeId: string; role: string }[] }) =>
+      p.recipes
+        .filter((x) => x.role === 'added')
+        .map((x) => x.recipeId)
+        .sort()
+        .join()
+    const withServings = run({
+      anchors,
+      catalog: small,
+      exclude: [
+        [
+          { recipeId: 'curry', servings: 4 },
+          { recipeId: 'spinachOhitashi', servings: 2 },
+        ],
+      ],
+    })
+    const keys = withServings.proposals.map((p) =>
+      p.recipes
+        .map((x) => `${x.recipeId}:${x.servings}`)
+        .sort()
+        .join(),
+    )
+    expect(keys).not.toContain(['curry:4', 'spinachOhitashi:2'].join())
+    expect(withServings.proposals.map(addedSet)).toContain('spinachOhitashi')
+    const idsOnly = run({ anchors, catalog: small, exclude: [['curry', 'spinachOhitashi']] })
+    expect(idsOnly.proposals.map(addedSet)).not.toContain('spinachOhitashi')
+  })
+
+  it('別の案を重ねると、枠が広がり、いろいろな料理が出る。同じ料理と食数の案は二度出ない', () => {
+    const big = [...fixtureCatalog, ...syntheticCatalog(300)]
+    const exclude: { recipeId: string; servings: number }[][] = []
+    const keys = new Set<string>()
+    const addedIds = new Set<string>()
+    for (let round = 0; round < 6; round++) {
+      const r = run({ anchors, catalog: big, exclude })
+      expect(r.proposals.length).toBeGreaterThan(0)
+      for (const p of r.proposals) {
+        const key = p.recipes
+          .map((x) => `${x.recipeId}:${x.servings}`)
+          .sort()
+          .join()
+        expect(keys.has(key)).toBe(false)
+        keys.add(key)
+        for (const x of p.recipes) if (x.role === 'added') addedIds.add(x.recipeId)
+        exclude.push(p.recipes.map((x) => ({ recipeId: x.recipeId, servings: x.servings })))
+      }
+    }
+    expect(addedIds.size).toBeGreaterThan(15)
+  })
+
+  it('600 件・前に出した案 300 件でも時間内に返る', () => {
+    const big = [...fixtureCatalog, ...syntheticCatalog(600)]
+    const exclude = Array.from({ length: 300 }, (_, i) => [
+      { recipeId: 'curry', servings: 2 },
+      { recipeId: `syn${i}`, servings: 4 },
+    ])
+    const started = Date.now()
+    const r = run({ anchors, catalog: big, exclude, targetMeals: 8 })
+    expect(r.proposals.length).toBeGreaterThan(0)
+    expect(r.evaluations ?? 0).toBeLessThanOrEqual(MAX_EVALUATIONS * 5)
+    expect(Date.now() - started).toBeLessThan(3000)
+  })
+})

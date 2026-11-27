@@ -74,6 +74,45 @@ export const VEGETABLE_G_PER_MEAL = 120
 export const CANDIDATES_BY_ADD_COUNT: Record<number, number> = { 1: 30, 2: 20, 3: 10 }
 /** 1 回の提案で評価する組み合わせ × 食数の配り方の上限 */
 export const MAX_EVALUATIONS = 4000
+/**
+ * 候補の枠（単品の点数で並べた中から、枠ごとに上位を取って合わせる）。
+ * 「別の案を出す」の回ごとに件数を growth 倍に広げ、合わせて max 件まで
+ */
+export const CANDIDATE_POOL = {
+  /** 単品の点数が良い（食材の使い回し・在庫） */
+  score: 20,
+  /** 期限間近の在庫を使う */
+  expiring: 5,
+  /** 人気 */
+  popular: 5,
+  /** base にない区分（主菜・副菜・汁物）ごとの上位 */
+  perMissingType: 5,
+  /** 主な食材が候補に少ないもの */
+  rareMain: 5,
+  max: 60,
+  growth: 1.5,
+} as const
+/** 多様性: 選ぶ値 = 点数 + λ × 選んだ案・前に出した案との似ている度合いの最大（0 で点数順そのまま） */
+export const DIVERSITY_LAMBDA = 1.0
+/** 似ている度合い（0〜1）の重み。足して 1 */
+export const SIMILARITY_WEIGHTS = {
+  /** 追加した料理の重なり */
+  recipes: 0.35,
+  /** 追加した料理の主な食材の重なり */
+  mainIngredient: 0.2,
+  /** 追加した主菜の系統が同じ */
+  mainCuisine: 0.15,
+  /** 加熱のモードの重なり */
+  heatMode: 0.1,
+  /** まぜ技を使う品数が同じ */
+  mixing: 0.05,
+  /** 食数の配り方（大きい順に並べた形）が同じ */
+  shape: 0.15,
+} as const
+/** 多様性を見て選ぶとき、点数の良い順に何案まで比べるか */
+export const DIVERSITY_CANDIDATES = 300
+/** 前に出した案のうち、似ている度合いを比べる新しいほうからの件数（それより前は除くだけ） */
+export const DIVERSITY_RECENT_EXCLUDES = 12
 
 /**
  * 提案 v2 の点数の重み（小さいほど良い点数に足す。popularity だけは引く）。

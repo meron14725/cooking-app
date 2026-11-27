@@ -163,6 +163,25 @@ describe('献立 API', () => {
     expect((await api.call('POST', url, { exclude: 'x' })).status).toBe(400)
   })
 
+  it('別の案: exclude は食数付きでも渡せ、同じ料理と食数の案は出ない', async () => {
+    const plan = (await createPlan([{ recipeId: anchor.id }])).body
+    const url = `/plans/${plan.id}/recommendations`
+    const first = await api.call<RecommendationsResponse>('POST', url, {})
+    const exclude = first.body.proposals.map((p) =>
+      p.recipes.map((r) => ({ recipeId: r.recipeId, servings: r.servings })),
+    )
+    const second = await api.call<RecommendationsResponse>('POST', url, { exclude })
+    expect(second.status).toBe(200)
+    const key = (list: { recipeId: string; servings: number }[]) =>
+      list
+        .map((r) => `${r.recipeId}:${r.servings}`)
+        .sort()
+        .join()
+    const shown = new Set(exclude.map(key))
+    for (const p of second.body.proposals) expect(shown.has(key(p.recipes))).toBe(false)
+    expect((await api.call('POST', url, { exclude: [[{ recipeId: anchor.id, servings: 0 }]] })).status).toBe(400)
+  })
+
   it('保存していない並びを評価する（食分を変えたとき）。献立は変わらない', async () => {
     const plan = (await createPlan([{ recipeId: anchor.id }])).body
     const recipes = [

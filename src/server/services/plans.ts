@@ -71,6 +71,7 @@ async function loadRecRecipes(db: Db, includeIds: string[] = []): Promise<RecRec
     dishType: r.dishType,
     cuisine: r.cuisine,
     cookMinutes: r.cookMinutes,
+    usesMixingUnit: r.usesMixingUnit,
     favoriteCount: r.favoriteCount,
     isFavorite: r.isFavorite,
     cookCount: r.cookCount,

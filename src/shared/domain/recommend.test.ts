@@ -3,6 +3,7 @@ import { addDays } from './date'
 import {
   type AvailableStock,
   choosePurchase,
+  type ExcludedProposal,
   evaluate,
   evaluatePlan,
   kitLocation,
@@ -129,13 +130,16 @@ describe('recommend', () => {
       recipe('porkOnly', [['pork', 200]]),
       recipe('carrotOnly', [['carrot', 3]]),
     ]
+    // anchor を 1 食に固定して、もう 1 品を選ばせる
     const result = recommend({
       anchors: [{ recipe: anchor, servings: 1 }],
       catalog,
       available: [],
       ingredients,
       today,
-      options: { targetCount: 2, defaultServings: 1 },
+      fixed: [{ recipe: anchor, servings: 1 }],
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     expect(result.proposals[0]?.recipes.map((r) => r.recipeId).sort()).toEqual(['anchor', 'onionSoup'])
     expect(result.proposals[0]?.leftovers).toEqual([])
@@ -150,7 +154,8 @@ describe('recommend', () => {
       available,
       ingredients,
       today,
-      options: { targetCount: 2 },
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     expect(result.proposals[0]?.recipes.map((r) => r.recipeId)).toContain('useTofu')
     expect(result.proposals[0]?.usesInventory).toMatchObject([{ inventoryItemId: 't1', isExpiringSoon: true }])
@@ -165,7 +170,8 @@ describe('recommend', () => {
       available,
       ingredients,
       today,
-      options: { targetCount: 2 },
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     expect(result.proposals[0]?.recipes.map((r) => r.recipeId)).toContain('useCarrot')
   })
@@ -178,12 +184,13 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
-      options: { targetCount: 1 },
+      targetMeals: 1,
+      options: { servingsStep: 1 },
     })
     expect(result.proposals[0]?.shopping).toMatchObject([{ ingredientId: 'tofu', buyQuantity: 1 }])
   })
 
-  it('anchor が目標の品数以上なら探索せず 1 案だけ返す', () => {
+  it('anchor だけで合計◯食に届けば、追加せず 1 案だけ返す', () => {
     const catalog = ['a', 'b', 'c', 'd'].map((id) => recipe(id, [['onion', 1]]))
     const result = recommend({
       anchors: catalog.slice(0, 3).map((recipe) => ({ recipe, servings: 1 })),
@@ -191,6 +198,8 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
+      targetMeals: 3,
+      options: { servingsStep: 1 },
     })
     expect(result.proposals).toHaveLength(1)
     expect(result.proposals[0]?.recipes.every((r) => r.role === 'anchor')).toBe(true)
@@ -208,7 +217,9 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
-      options: { targetCount: 2 },
+      fixed: [{ recipe: anchor, servings: 1 }],
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     const ids = result.proposals.flatMap((p) => p.recipes.map((r) => r.recipeId))
     expect(ids).not.toContain('tooBig')
@@ -217,7 +228,7 @@ describe('recommend', () => {
 
   describe('別の案（exclude）', () => {
     const catalog = [anchor, ...['a', 'b', 'c', 'd', 'e'].map((id) => recipe(id, [['onion', 1]]))]
-    const run = (exclude: string[][], targetCount = 3) =>
+    const run = (exclude: ExcludedProposal[], targetCount = 3) =>
       recommend({
         anchors: [{ recipe: anchor, servings: 1 }],
         catalog,
@@ -225,7 +236,8 @@ describe('recommend', () => {
         ingredients,
         today,
         exclude,
-        options: { targetCount },
+        targetMeals: targetCount,
+        options: { servingsStep: 1 },
       })
     const keys = (r: ReturnType<typeof recommend>) =>
       r.proposals.map((p) =>
@@ -249,17 +261,25 @@ describe('recommend', () => {
       for (const k of keys(second)) expect(keys(first)).not.toContain(k)
     })
 
-    it('出し尽くすと空で hasMore は false。AI 補完のすすめは出した案によらない', () => {
-      // 候補 5 品から 2 品 = 10 通り
-      const seen: string[][] = []
+    it('出し尽くすと空で hasMore は false。同じ料理と食数の案は二度出ない。AI 補完のすすめは出した案によらない', () => {
+      const seen: { recipeId: string; servings: number }[][] = []
+      const shown = new Set<string>()
       const ai = run([]).aiSuggestionRecommended
-      for (let round = 0; round < 10; round++) {
+      for (let round = 0; round < 30; round++) {
         const r = run(seen)
         expect(r.aiSuggestionRecommended).toBe(ai)
         if (r.proposals.length === 0) break
-        for (const p of r.proposals) seen.push(p.recipes.map((x) => x.recipeId))
+        for (const p of r.proposals) {
+          const entries = p.recipes.map((x) => ({ recipeId: x.recipeId, servings: x.servings }))
+          const key = entries
+            .map((e) => `${e.recipeId}:${e.servings}`)
+            .sort()
+            .join()
+          expect(shown.has(key)).toBe(false)
+          shown.add(key)
+          seen.push(entries)
+        }
         if (!r.hasMore) {
-          expect(seen).toHaveLength(10)
           const last = run(seen)
           expect(last.proposals).toEqual([])
           expect(last.hasMore).toBe(false)
@@ -295,6 +315,8 @@ describe('recommend', () => {
         today,
         fixed,
         exclude,
+        targetMeals: 3,
+        options: { servingsStep: 1 },
       })
 
     it('固定した追加料理は必ず入り、食数はそのまま。残りは固定した料理の余りを使う組み合わせから選ぶ', () => {
@@ -302,7 +324,7 @@ describe('recommend', () => {
       expect(r.proposals.length).toBeGreaterThan(0)
       for (const p of r.proposals) {
         expect(p.recipes).toContainEqual(expect.objectContaining({ recipeId: 'tofuHalf', role: 'added', servings: 1 }))
-        expect(p.recipes).toHaveLength(3)
+        expect(p.recipes.reduce((n, x) => n + x.servings, 0)).toBe(3)
       }
       // 豆腐 1 丁を半分ずつ使い切る相方が一番上
       expect(r.proposals[0]?.recipes.map((x) => x.recipeId)).toContain('tofuHalf2')
@@ -346,7 +368,15 @@ describe('recommend', () => {
 
   it('上位の案どうしで追加料理が重ならない（候補が十分あるとき）', () => {
     const catalog = [anchor, ...['a', 'b', 'c', 'd', 'e', 'f'].map((id) => recipe(id, [['onion', 1]]))]
-    const result = recommend({ anchors: [{ recipe: anchor, servings: 1 }], catalog, available: [], ingredients, today })
+    const result = recommend({
+      anchors: [{ recipe: anchor, servings: 1 }],
+      catalog,
+      available: [],
+      ingredients,
+      today,
+      targetMeals: 3,
+      options: { servingsStep: 1 },
+    })
     expect(result.proposals).toHaveLength(3)
     const added = result.proposals.flatMap((p) => p.recipes.filter((r) => r.role === 'added').map((r) => r.recipeId))
     expect(new Set(added).size).toBe(added.length)
@@ -361,6 +391,8 @@ describe('recommend', () => {
         available: [],
         ingredients,
         today,
+        targetMeals: 1,
+        options: { servingsStep: 1 },
       }).aiSuggestionRecommended,
     ).toBe(true)
     const catalog = [tofuHalf, recipe('porkOnly', [['pork', 200]])]
@@ -370,7 +402,9 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
-      options: { targetCount: 2 },
+      fixed: [{ recipe: tofuHalf, servings: 1 }],
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     expect(result.aiSuggestionRecommended).toBe(true)
   })
@@ -384,7 +418,8 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
-      options: { targetCount: 1 },
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     expect(one.proposals[0]?.totalCaloriesKcal).toBe(1000)
     const two = recommend({
@@ -396,7 +431,8 @@ describe('recommend', () => {
       available: [],
       ingredients,
       today,
-      options: { targetCount: 2 },
+      targetMeals: 2,
+      options: { servingsStep: 1 },
     })
     expect(two.proposals[0]?.totalCaloriesKcal).toBeNull()
   })

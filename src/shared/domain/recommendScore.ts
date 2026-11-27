@@ -14,7 +14,7 @@ import {
   type RecommendWeights,
   VEGETABLE_G_PER_MEAL,
 } from './constants'
-import { cookMinutesFromHotcookMode, toGrams } from './recipeAttributes'
+import { cookMinutesFromHotcookMode, type HeatMode, heatModeFromHotcookMode, toGrams } from './recipeAttributes'
 import type { RecIngredient, RecRecipe } from './recommend'
 
 /** 料理ごとの特徴（提案のたびに 1 回だけ計算して使い回す） */
@@ -33,6 +33,10 @@ export type RecipeFeatures = {
   cuisine: Cuisine | null
   /** 1 回で作れる食数（1.6L の上限と MAX_SERVINGS_PER_DISH の小さいほう） */
   potCap: number
+  /** 加熱のモード（ホットクックの設定から。分からなければ null） */
+  heatMode: HeatMode | null
+  /** まぜ技ユニットを使うか（分からなければ null） */
+  usesMixingUnit: boolean | null
 }
 
 const PROTEIN = new Set(['meat', 'fish', 'tofu_egg_dairy'])
@@ -72,6 +76,8 @@ export function recipeFeatures(
       dishType: r.dishType ?? null,
       cuisine: r.cuisine ?? null,
       potCap: Math.min(MAX_SERVINGS_PER_DISH, r.maxServings1_6l ?? MAX_SERVINGS_PER_DISH),
+      heatMode: heatModeFromHotcookMode(r.hotcookMode ?? null),
+      usesMixingUnit: r.usesMixingUnit ?? null,
     })
   }
   return result

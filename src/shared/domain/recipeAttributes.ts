@@ -79,6 +79,21 @@ export function mixingFromHotcookMode(mode: string | null): boolean | null {
   return null
 }
 
+export const HEAT_MODES = ['nimono', 'mushi', 'muisui', 'itame', 'soup', 'other'] as const
+export type HeatMode = (typeof HEAT_MODES)[number]
+
+/** 加熱のモード（煮物・蒸し物・無水・炒め・スープ・その他）。設定がなければ null */
+export function heatModeFromHotcookMode(mode: string | null): HeatMode | null {
+  if (!mode) return null
+  const t = norm(mode)
+  if (/無水/.test(t)) return 'muisui'
+  if (/蒸し|蒸す/.test(t)) return 'mushi'
+  if (/炒め/.test(t)) return 'itame'
+  if (/スープ|汁/.test(t)) return 'soup'
+  if (/煮/.test(t)) return 'nimono'
+  return 'other'
+}
+
 /** 調理時間の目安: ホットクックの加熱時間 + 下ごしらえ。加熱時間が読めなければ null */
 export function cookMinutesFromHotcookMode(mode: string | null): number | null {
   const { minutes } = splitHotcookMode(mode)
