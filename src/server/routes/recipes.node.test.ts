@@ -66,6 +66,10 @@ describe('レシピ API', () => {
     expect(got.body).toEqual(created.body)
   })
 
+  it('API からは作成元 seed で作れない', async () => {
+    expect((await api.call('POST', '/recipes', curry({ sourceType: 'seed' as never }))).status).toBe(400)
+  })
+
   it('材料が空、または人数が 0 だと 400', async () => {
     expect((await api.call('POST', '/recipes', curry({ ingredients: [] }))).status).toBe(400)
     expect((await api.call('POST', '/recipes', curry({ servings: 0 }))).status).toBe(400)

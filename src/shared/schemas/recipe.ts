@@ -69,8 +69,8 @@ export const recipeInputSchema = z.object({
     .nullish()
     .transform((v) => v ?? null),
   packSeasonings: z.boolean().default(false),
-  /** 作成時だけ使う。更新では変えない */
-  sourceType: recipeSourceTypeSchema.default('manual'),
+  /** 作成時だけ使う。更新では変えない。seed はマイグレーションだけが入れる */
+  sourceType: z.enum(['manual', 'url', 'ai']).default('manual'),
   sourceUrl: z
     .url('URL の形式が正しくありません')
     .max(2000)
