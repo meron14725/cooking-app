@@ -2,7 +2,7 @@ import { createApp } from '../app'
 import { createTestD1 } from './d1'
 
 /** ローカル扱い（認証スキップ）の Env と、それで API を叩くヘルパー */
-export function createTestApi(opts: { seed?: boolean } = {}) {
+export function createTestApi(opts: { seed?: boolean; env?: Partial<Env> } = {}) {
   const DB = createTestD1({ seed: opts.seed ?? false })
   const env: Env = {
     DB,
@@ -10,6 +10,8 @@ export function createTestApi(opts: { seed?: boolean } = {}) {
     ACCESS_TEAM_DOMAIN: '',
     ACCESS_AUD: '',
     ENVIRONMENT: 'local',
+    AI_PROVIDER: 'fake',
+    ...opts.env,
   }
   const app = createApp()
 

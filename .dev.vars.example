@@ -1,3 +1,7 @@
 # ローカル開発用。`cp .dev.vars.example .dev.vars` で使う（.dev.vars は git に入れない）
 # local のときだけ Cloudflare Access の JWT 検証をスキップする
 ENVIRONMENT=local
+
+# AI はローカルでは固定値を返す fake を使う。本物で試すなら gemini にして GEMINI_API_KEY を入れる
+AI_PROVIDER=fake
+# GEMINI_API_KEY=
