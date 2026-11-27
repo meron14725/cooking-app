@@ -24,6 +24,10 @@ export async function listKits(
   today: string,
   opts: { status?: KitStatus; plannedOnOrBefore?: string } = {},
 ): Promise<MealKit[]> {
+  const kitConditions = and(
+    eq(mealKits.status, opts.status ?? 'stored'),
+    opts.plannedOnOrBefore ? lte(mealKits.plannedOn, opts.plannedOnOrBefore) : undefined,
+  )
   const rows = await db
     .select({
       id: mealKits.id,
@@ -39,16 +43,11 @@ export async function listKits(
     })
     .from(mealKits)
     .innerJoin(recipes, eq(recipes.id, mealKits.recipeId))
-    .where(
-      and(
-        eq(mealKits.status, opts.status ?? 'stored'),
-        opts.plannedOnOrBefore ? lte(mealKits.plannedOn, opts.plannedOnOrBefore) : undefined,
-      ),
-    )
+    .where(kitConditions)
     .orderBy(asc(mealKits.plannedOn), asc(mealKits.useBy), asc(recipes.title))
-  const ids = rows.map((r) => r.id)
+  // ID を IN に並べると D1 のバインド変数の上限（100）を超えるので、同じ条件で meal_kits と JOIN して取る
   const items =
-    ids.length === 0
+    rows.length === 0
       ? []
       : await db
           .select({
@@ -61,8 +60,9 @@ export async function listKits(
             beforeCookTask: mealKitItems.beforeCookTask,
           })
           .from(mealKitItems)
+          .innerJoin(mealKits, eq(mealKits.id, mealKitItems.mealKitId))
           .innerJoin(ingredients, eq(ingredients.id, mealKitItems.ingredientId))
-          .where(inArray(mealKitItems.mealKitId, ids))
+          .where(kitConditions)
           .orderBy(asc(mealKitItems.createdAt), asc(mealKitItems.id))
   return rows.map((r) => {
     const e = expiryOf(r.useBy, today)

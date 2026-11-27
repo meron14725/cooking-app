@@ -66,14 +66,19 @@ export async function listShopping(db: Db, planId: string): Promise<ShoppingList
     .innerJoin(ingredients, eq(ingredients.id, shoppingItems.ingredientId))
     .leftJoin(packageUnits, eq(packageUnits.id, shoppingItems.packageUnitId))
     .where(eq(shoppingItems.planId, planId))
-  const ingredientIds = [...new Set(rows.map((r) => r.ingredientId))]
   const [units, uses] = await Promise.all([
-    ingredientIds.length === 0
+    // 買い物リストの食材は 100 種を超えうるので、ID を並べずにサブクエリで取る（D1 のバインド変数の上限は 100）
+    rows.length === 0
       ? []
       : db
           .select()
           .from(packageUnits)
-          .where(inArray(packageUnits.ingredientId, ingredientIds))
+          .where(
+            inArray(
+              packageUnits.ingredientId,
+              db.select({ id: shoppingItems.ingredientId }).from(shoppingItems).where(eq(shoppingItems.planId, planId)),
+            ),
+          )
           .orderBy(asc(packageUnits.quantity), asc(packageUnits.id)),
     db
       .selectDistinct({

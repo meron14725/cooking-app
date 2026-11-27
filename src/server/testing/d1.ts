@@ -8,6 +8,9 @@ export const MIGRATIONS_DIR = join(import.meta.dirname, '../../../migrations')
 
 type Params = SQLInputValue[]
 
+/** D1 の 1 クエリあたりのバインド変数の上限 */
+export const D1_MAX_BOUND_PARAMS = 100
+
 function normalize(params: unknown[]): Params {
   return params.map((p) => {
     if (typeof p === 'boolean') return p ? 1 : 0
@@ -24,6 +27,12 @@ class Statement {
   ) {}
 
   bind(...params: unknown[]) {
+    // 本物の D1 は 1 クエリのバインド変数が 100 を超えると「too many SQL variables」で失敗する
+    if (params.length > D1_MAX_BOUND_PARAMS) {
+      throw new Error(
+        `D1_ERROR: too many SQL variables (${params.length} > ${D1_MAX_BOUND_PARAMS}): ${this.query.slice(0, 200)}`,
+      )
+    }
     return new Statement(this.db, this.query, normalize(params))
   }
 
