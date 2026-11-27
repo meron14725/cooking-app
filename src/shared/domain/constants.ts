@@ -74,6 +74,13 @@ export const VEGETABLE_G_PER_MEAL = 120
 export const CANDIDATES_BY_ADD_COUNT: Record<number, number> = { 1: 30, 2: 20, 3: 10 }
 /** 1 回の提案で評価する組み合わせ × 食数の配り方の上限 */
 export const MAX_EVALUATIONS = 4000
+/** 出していない案が残らないとき、枠を広げて探し直す回数の上限 */
+export const MAX_EXTRA_ROUNDS = 4
+/**
+ * 1 回の呼び出しで評価する回数の合計の上限。今の回（4,000）＋ AI 補完のすすめを決める 1 回目（4,000）＋ 探し直し（2,000 ずつ）が、
+ * これを超えたら打ち切る（Workers の CPU 時間を抑える）
+ */
+export const MAX_EVALUATIONS_PER_CALL = 12_000
 /**
  * 候補の枠（単品の点数で並べた中から、枠ごとに上位を取って合わせる）。
  * 「別の案を出す」の回ごとに件数を growth 倍に広げ、合わせて max 件まで
