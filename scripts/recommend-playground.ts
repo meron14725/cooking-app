@@ -3,6 +3,7 @@
 //   npm run rec:try -- --anchor curry
 //   npm run rec:try -- --anchor curry --anchor mapo:4 --target 8 --weights vegetable=0.6,popularity=0
 //   npm run rec:try -- --synthetic 600 --anchor syn0      # 件数を増やして計算量を見る
+//   npm run rec:try -- --anchor curry --lambda 0           # 多様性を切って点数順そのままにする
 //   npm run rec:try -- --from-local-d1 --anchor <レシピID>  # ローカルの D1（wrangler dev の .wrangler/state）を使う
 // 既定は架空のレシピ（src/shared/domain/testing/catalog.ts）。在庫は --from-local-d1 のときだけ、確保分を引かずに使う
 import { spawnSync } from 'node:child_process'
@@ -19,6 +20,7 @@ type Args = {
   synthetic: number | null
   fromLocalD1: boolean
   proposals: number
+  lambda: number | undefined
 }
 
 function parseArgs(argv: string[]): Args {
@@ -29,6 +31,7 @@ function parseArgs(argv: string[]): Args {
     synthetic: null,
     fromLocalD1: false,
     proposals: 3,
+    lambda: undefined,
   }
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i]
@@ -42,6 +45,7 @@ function parseArgs(argv: string[]): Args {
       args.anchors.push({ id: id ?? '', servings: servings ? Number(servings) : DEFAULT_SERVINGS })
     } else if (key === '--target') args.target = Number(value())
     else if (key === '--proposals') args.proposals = Number(value())
+    else if (key === '--lambda') args.lambda = Number(value())
     else if (key === '--synthetic') args.synthetic = Number(value())
     else if (key === '--from-local-d1') args.fromLocalD1 = true
     else if (key === '--weights') {
@@ -167,7 +171,7 @@ const run = (w: typeof RECOMMEND_WEIGHTS) =>
     today: todayJst(),
     targetMeals: args.target,
     weights: w,
-    options: { maxProposals: args.proposals },
+    options: { maxProposals: args.proposals, diversityLambda: args.lambda },
   })
 const started = performance.now()
 const result = run(weights)

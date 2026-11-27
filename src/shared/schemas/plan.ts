@@ -47,9 +47,17 @@ export type PlanCreateInput = z.infer<typeof planCreateSchema>
 
 export const recommendationsInputSchema = z.object({
   maxProposals: z.number().int().min(1).max(10).optional(),
-  /** もう出した案（「別の案を出す」）。案ごとのレシピ ID。これらを除いた次点を返す */
+  /**
+   * もう出した案（「別の案を出す」）。案ごとの料理と食数（{ recipeId, servings }[]）。これらを除いた次点を返す。
+   * 古い形（レシピ ID の配列）も受け付け、そのときは食数を問わずに料理の組み合わせで除く
+   */
   exclude: z
-    .array(z.array(z.string().min(1).max(100)).max(10))
+    .array(
+      z.union([
+        z.array(z.string().min(1).max(100)).max(10),
+        z.array(z.object({ recipeId: z.string().min(1).max(100), servings: z.number().positive().max(100) })).max(10),
+      ]),
+    )
     .max(300)
     .optional(),
   /** 鍵で固定した料理と食数。必ず含め、残りの品数分を選び直す */
