@@ -9,6 +9,7 @@ const tabs: { to: string; label: string; icon: IconName; paths: string[] }[] = [
   { to: '/more', label: 'その他', icon: 'more', paths: ['/more', '/ingredients', '/agent'] },
 ]
 
+/** 画面の下に浮いたカプセル型のタブバー。今いるタブは白い丸 */
 export function TabBar() {
   const { pathname } = useLocation()
   const isActive = (tab: (typeof tabs)[number]) =>
@@ -18,9 +19,9 @@ export function TabBar() {
     // 高さを変えたら index.css の --tabbar-h も直す
     <nav
       aria-label="メインメニュー"
-      className="fixed inset-x-0 bottom-0 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]"
+      className="pointer-events-none fixed inset-x-0 bottom-0 px-4 pb-[calc(16px+env(safe-area-inset-bottom))]"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5 px-2 pt-1.5 pb-1.5">
+      <ul className="pointer-events-auto mx-auto grid max-w-[calc(28rem-2rem)] grid-cols-5 rounded-[32px] bg-tab p-2 shadow-tabbar">
         {tabs.map((tab) => {
           const active = isActive(tab)
           return (
@@ -28,11 +29,11 @@ export function TabBar() {
               <Link
                 to={tab.to}
                 aria-current={active ? 'page' : undefined}
-                className={`flex min-h-13 flex-col items-center justify-center gap-[3px] text-[11px] ${
-                  active ? 'font-bold text-accent' : 'text-ink-muted'
+                className={`flex min-h-13 flex-col items-center justify-center gap-0.5 rounded-3xl text-[11px] ${
+                  active ? 'bg-surface font-bold text-accent-strong' : 'text-tab-ink'
                 }`}
               >
-                <Icon name={tab.icon} size={24} />
+                <Icon name={tab.icon} size={22} strokeWidth={active ? 1.9 : 1.8} />
                 {tab.label}
               </Link>
             </li>

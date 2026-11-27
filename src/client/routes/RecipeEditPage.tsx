@@ -433,7 +433,7 @@ export function RecipeEditPage() {
         onChange={(v) => set('packSeasonings', v)}
       />
 
-      <fieldset className="min-w-0 space-y-3 rounded-card border border-line bg-surface p-4">
+      <fieldset className="min-w-0 space-y-3 rounded-card bg-surface shadow-card p-4">
         <legend className="px-1 text-sm font-bold text-ink-soft">材料（{form.servings || '?'}人前）</legend>
         <p className="text-xs text-ink-muted">
           量は空にすると「少々・適量」の扱いです。量を変えると表示の文字列は作り直されます。マスタにない食材は先に
@@ -577,7 +577,7 @@ export function RecipeEditPage() {
         </Button>
       </fieldset>
 
-      <fieldset className="min-w-0 space-y-3 rounded-card border border-line bg-surface p-4">
+      <fieldset className="min-w-0 space-y-3 rounded-card bg-surface shadow-card p-4">
         <legend className="px-1 text-sm font-bold text-ink-soft">手順</legend>
         <p className="text-xs text-ink-muted">下ごしらえ（切る・下味）と調理（ホットクックに入れてから）に分けます。</p>
         {form.steps.map((step, index) => {

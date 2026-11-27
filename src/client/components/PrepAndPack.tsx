@@ -53,7 +53,7 @@ function PrepStep({
                     type="button"
                     onClick={() => toggle(c.ingredientId)}
                     aria-pressed={on}
-                    className="flex w-full items-start gap-3 rounded-item border border-line bg-surface px-4 py-3.5 text-left"
+                    className="flex w-full items-start gap-3 rounded-item bg-surface shadow-card px-4 py-3.5 text-left"
                   >
                     <span
                       className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border-2 ${
@@ -118,7 +118,7 @@ function PrepStep({
       {asIs.length > 0 && (
         <section className="flex flex-col gap-2.5">
           <h2 className="text-sm font-bold text-ink-muted">切らずにそのまま袋へ</h2>
-          <p className="rounded-item border border-line bg-surface px-4 py-3 text-sm">
+          <p className="rounded-item bg-surface shadow-card px-4 py-3 text-sm">
             {asIs.map((a) => `${a.name} ${fmt(a.quantity, a.unit)}（${a.recipeTitle}）`).join('、')}
           </p>
         </section>
@@ -166,7 +166,7 @@ function KitCard({
   }
   const warn = kit.warnings.length > 0
   return (
-    <li className="overflow-hidden rounded-card border border-line bg-surface">
+    <li className="overflow-hidden rounded-card bg-surface shadow-card">
       <div className="flex flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">

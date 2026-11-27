@@ -47,7 +47,7 @@ function ExpiringSoon() {
       {isError && <p className="text-sm text-danger">読み込めませんでした</p>}
       {data && data.length === 0 && <p className="text-sm text-ink-muted">期限が近いものはありません</p>}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
+        <ul className="divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
           {data.slice(0, EXPIRING_LIMIT).map((e) => (
             <li key={`${e.kind}-${e.id}`} className="flex items-center gap-3 py-3.5">
               {e.kind === 'meal_kit' && (
@@ -146,7 +146,7 @@ function StoredKits() {
   return (
     <section className="flex flex-col gap-2.5">
       <SectionHeading title="保存中の袋" />
-      <ul className="divide-y divide-line-soft rounded-card border border-line bg-surface px-4">
+      <ul className="divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
         {kits.map((k, i) => {
           const isToday = k.plannedOn <= today
           return (
@@ -221,7 +221,7 @@ export function HomePage() {
           <Link
             to="/agent"
             aria-label="AI に頼む"
-            className="flex size-11 items-center justify-center rounded-full border border-line bg-surface text-accent"
+            className="flex size-11 items-center justify-center rounded-full bg-surface shadow-card text-accent"
           >
             <Icon name="sparkles" />
           </Link>

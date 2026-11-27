@@ -21,7 +21,7 @@ export function MorePage() {
   return (
     <>
       <PageHeader title="その他" />
-      <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
+      <ul className="divide-y divide-line-soft overflow-hidden rounded-card bg-surface shadow-card">
         {items.map((i) => (
           <li key={i.to}>
             <Link to={i.to} className="flex min-h-16 items-center gap-3 px-4 py-3.5">

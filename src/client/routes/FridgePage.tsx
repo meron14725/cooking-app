@@ -388,7 +388,7 @@ export function FridgePage() {
         </p>
       )}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-line-soft overflow-hidden rounded-card border border-line bg-surface">
+        <ul className="divide-y divide-line-soft overflow-hidden rounded-card bg-surface shadow-card">
           {data.map((entry) => (
             <EntryRow
               key={`${entry.kind}-${entry.id}`}

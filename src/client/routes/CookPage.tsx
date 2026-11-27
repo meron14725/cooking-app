@@ -201,7 +201,7 @@ export function CookPage() {
 
       {view.beforeCook.length > 0 && (
         <Section no={++no} title="直前の作業">
-          <ul className="divide-y divide-line-soft overflow-hidden rounded-item border border-line bg-surface">
+          <ul className="divide-y divide-line-soft overflow-hidden rounded-item bg-surface shadow-card">
             {view.beforeCook.map((b) => {
               const on = done.has(b.ingredientId)
               return (
@@ -241,7 +241,7 @@ export function CookPage() {
       )}
 
       <Section no={++no} title="入れる順">
-        <ol className="divide-y divide-line-soft rounded-item border border-line bg-surface px-4">
+        <ol className="divide-y divide-line-soft rounded-item bg-surface shadow-card px-4">
           {view.addOrder.map((a, i) => (
             <li key={a.ingredientId} className="flex items-start gap-3 py-3">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-line-strong text-xs font-bold text-ink-muted">

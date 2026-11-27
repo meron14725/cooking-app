@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 /** 入力欄の見た目（幅は含まない） */
 export const inputBaseClass =
-  'rounded-control border border-line-strong bg-surface px-3.5 py-2.5 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line disabled:bg-sunken disabled:text-ink-muted'
+  'rounded-control border border-transparent bg-surface px-4 py-2.5 text-base shadow-card focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-line disabled:bg-sunken disabled:text-ink-muted'
 
 export const inputClass = `w-full ${inputBaseClass}`
 
@@ -56,9 +56,9 @@ export function Button({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'add' }) {
   const styles = {
-    primary: 'bg-accent text-white disabled:opacity-50',
-    secondary: 'border border-line-strong bg-surface text-ink',
-    danger: 'border border-danger/30 bg-surface text-danger',
+    primary: 'bg-accent text-white shadow-accent disabled:opacity-50 disabled:shadow-none',
+    secondary: 'bg-surface text-ink shadow-card',
+    danger: 'bg-surface text-danger shadow-card',
     /** 行を足すボタン（点線の枠） */
     add: 'flex w-full items-center justify-center gap-1.5 border border-dashed border-line-dashed text-ink-soft',
   }[variant]
