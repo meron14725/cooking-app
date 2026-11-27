@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { shortDate, todayJst } from '../../shared/domain/date'
+import { splitHotcookMode } from '../../shared/domain/hotcook'
 import { locationLabel } from '../../shared/schemas/ingredient'
 import type { MealKit } from '../../shared/schemas/kit'
 import { PLAN_STATUS_LABELS } from '../../shared/schemas/plan'
@@ -8,10 +9,9 @@ import { apiFetch } from '../api/client'
 import { useFridge } from '../api/inventory'
 import { useCookView, useKits } from '../api/mealKits'
 import { useCurrentPlan } from '../api/plans'
+import { useRecipe } from '../api/recipes'
 import { ExpiryBadge } from '../components/ExpiryBadge'
 import { Icon } from '../components/Icon'
-import { LocationBadge } from '../components/LocationBadge'
-import { PageHeader } from '../components/PageHeader'
 
 /** ホームに出す期限間近の件数 */
 const EXPIRING_LIMIT = 5
@@ -28,9 +28,9 @@ function longDate(iso: string) {
 function SectionHeading({ title, link }: { title: string; link?: { to: string; label: string } }) {
   return (
     <div className="flex items-baseline justify-between">
-      <h2 className="text-sm font-bold text-ink-muted">{title}</h2>
+      <h2 className="text-lg font-bold">{title}</h2>
       {link && (
-        <Link to={link.to} className="flex min-h-8 items-center text-sm text-accent">
+        <Link to={link.to} className="flex min-h-8 items-center text-sm font-medium text-accent">
           {link.label}
         </Link>
       )}
@@ -41,17 +41,17 @@ function SectionHeading({ title, link }: { title: string; link?: { to: string; l
 function ExpiringSoon() {
   const { data, isPending, isError } = useFridge({ expiringSoon: true })
   return (
-    <section className="flex flex-col gap-2.5">
-      <SectionHeading title="期限が近いもの" link={{ to: '/fridge', label: '冷蔵庫を見る' }} />
+    <section className="flex flex-col gap-3">
+      <SectionHeading title="期限が近いもの" link={{ to: '/fridge', label: '冷蔵庫' }} />
       {isPending && <p className="text-sm text-ink-muted">読み込み中…</p>}
       {isError && <p className="text-sm text-danger">読み込めませんでした</p>}
       {data && data.length === 0 && <p className="text-sm text-ink-muted">期限が近いものはありません</p>}
       {data && data.length > 0 && (
-        <ul className="divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
+        <ul className="divide-y divide-line-soft rounded-card bg-surface px-4.5 py-1 shadow-card">
           {data.slice(0, EXPIRING_LIMIT).map((e) => (
             <li key={`${e.kind}-${e.id}`} className="flex items-center gap-3 py-3.5">
               {e.kind === 'meal_kit' && (
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-[18px] bg-accent-soft text-accent">
                   <Icon name="bag" />
                 </span>
               )}
@@ -76,108 +76,152 @@ function ExpiringSoon() {
   )
 }
 
-/** 今日の袋 1 つ分のカード。ホットクックの設定と直前作業は調理画面と同じデータから出す */
-function TodayKitCard({ kit }: { kit: MealKit }) {
+/** 今日の袋 1 つ分のカード。加熱時間を大きく出す。ホットクックの設定と直前作業は調理画面と同じデータから出す */
+function TodayKitCard({ kit, day }: { kit: MealKit; day: number | null }) {
   const { data: cook } = useCookView(kit.id)
+  const { data: recipe } = useRecipe(kit.recipeId)
   const overdue = kit.plannedOn < todayJst()
   const beforeCook = cook?.beforeCook ?? []
+  const { minutes, label } = splitHotcookMode(cook?.hotcookMode ?? null)
   return (
-    <div className="flex flex-col gap-4 rounded-card border-[1.5px] border-accent-line bg-surface p-5 shadow-[0_1px_2px_rgba(60,40,20,0.05)]">
-      <div className="flex items-center gap-1.5">
+    <section
+      aria-label="今日はこの袋"
+      className="relative flex flex-col gap-4.5 overflow-hidden rounded-[32px] bg-accent-soft px-5.5 pt-6 pb-5.5"
+    >
+      <span aria-hidden="true" className="absolute -top-10 -right-10 size-40 rounded-full bg-[#ffd2b3]" />
+      <div className="relative flex items-center justify-between gap-2">
+        <p className={`text-[13px] font-bold ${overdue ? 'text-danger' : 'text-accent-strong'}`}>
+          {overdue ? `${shortDate(kit.plannedOn)} の袋 ・ 予定日を過ぎています` : '今日はこの袋'}
+          {!overdue && day !== null && ` ・ ${day}日目`}
+        </p>
         <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${overdue ? 'bg-danger-soft text-danger' : 'bg-accent-soft text-accent-strong'}`}
+          className={`rounded-full bg-white/80 px-3 py-1 text-xs font-medium ${kit.location === 'freezer' ? 'text-frozen' : 'text-leaf'}`}
         >
-          {overdue ? '予定日を過ぎています' : '今日'}
+          {kit.location === 'freezer' ? '冷凍' : '冷蔵'}
         </span>
-        <LocationBadge location={kit.location} />
-        <span className="ml-auto text-xs text-ink-muted">{kit.servings}食分</span>
       </div>
-      <div className="flex items-center gap-3.5">
-        <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-accent">
-          <Icon name="bag" size={28} strokeWidth={1.6} />
-        </span>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <p className="text-2xl leading-snug font-bold">{kit.title}</p>
-          {cook?.hotcookMode && <p className="text-[13px] text-ink-muted">{cook.hotcookMode}</p>}
-        </div>
-      </div>
-      {beforeCook.length > 0 && (
-        <div className="flex items-center gap-2.5 rounded-xl bg-ground px-3.5 py-3">
-          <Icon name="clock" size={18} className="text-ink-muted" />
-          <p className="min-w-0 text-sm">
-            直前作業 {beforeCook.length}件：
-            <span className="font-bold">
-              {beforeCook[0]?.name} ・ {beforeCook[0]?.task}
-            </span>
-            {beforeCook.length > 1 && ' ほか'}
+      <div className="relative flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-display text-[32px] leading-tight font-bold">{kit.title}</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            {kit.servings}食分
+            {recipe?.caloriesKcal != null && ` ・ ${recipe.caloriesEstimated ? '約' : ''}${recipe.caloriesKcal}kcal`}
           </p>
         </div>
+        {minutes !== null && (
+          <div className="shrink-0 text-right">
+            <p className="font-display text-[46px] leading-none font-bold text-accent">
+              {minutes}
+              <span className="text-base text-ink-soft">分</span>
+            </p>
+            {label && <p className="mt-1 text-xs text-ink-soft">{label}</p>}
+          </div>
+        )}
+      </div>
+      {minutes === null && label && <p className="relative -mt-2 text-[13px] text-ink-soft">{label}</p>}
+      {beforeCook.length > 0 && (
+        <p className="relative rounded-[18px] bg-white/75 px-4 py-3 text-sm">
+          先に{' '}
+          <span className="font-bold">
+            {beforeCook[0]?.name}を{beforeCook[0]?.task}
+          </span>
+          {beforeCook.length > 1 && ` ほか${beforeCook.length - 1}件`}
+        </p>
       )}
       <Link
         to={`/kits/${kit.id}/cook`}
-        className="flex min-h-13 items-center justify-center gap-1.5 rounded-control bg-accent text-base font-bold text-white"
+        className="relative flex min-h-14 items-center justify-center gap-1.5 rounded-full bg-accent text-[17px] font-bold text-white shadow-accent"
       >
-        作る
-        <Icon name="chevronRight" size={18} strokeWidth={2} />
+        作りはじめる
+        <Icon name="chevronRight" size={18} strokeWidth={2.2} />
       </Link>
-    </div>
-  )
-}
-
-function TodayKits() {
-  const { data } = useKits({ plannedOnOrBefore: todayJst() })
-  if (!data || data.length === 0) return null
-  return (
-    <section className="flex flex-col gap-2.5">
-      <SectionHeading title="今日はこの袋" />
-      {data.map((k) => (
-        <TodayKitCard key={k.id} kit={k} />
-      ))}
     </section>
   )
 }
 
-/** 保存中の袋（食べる予定日の順）。今日の分は上のカードと同じものに「今日」と付ける */
-function StoredKits() {
-  const { data } = useKits()
+/** この献立の袋（作ったもの＋保存中のもの）を食べる予定日の順に */
+function usePlanKits() {
+  const stored = useKits()
+  const cooked = useKits({ status: 'cooked' })
+  const planId = stored.data?.[0]?.planId
+  if (!stored.data || !planId) return { kits: [], stored: stored.data ?? [] }
+  const kits = [...stored.data, ...(cooked.data ?? []).filter((k) => k.planId === planId)]
+    .filter((k) => k.planId === planId)
+    .sort((a, b) => a.plannedOn.localeCompare(b.plannedOn) || a.id.localeCompare(b.id))
+  return { kits, stored: stored.data }
+}
+
+function TodayKits() {
+  const { data } = useKits({ plannedOnOrBefore: todayJst() })
+  const { kits } = usePlanKits()
   if (!data || data.length === 0) return null
-  const today = todayJst()
-  const kits = [...data].sort((a, b) => a.plannedOn.localeCompare(b.plannedOn))
   return (
-    <section className="flex flex-col gap-2.5">
-      <SectionHeading title="保存中の袋" />
-      <ul className="divide-y divide-line-soft rounded-card bg-surface shadow-card px-4">
+    <>
+      {data.map((k) => {
+        const index = kits.findIndex((p) => p.id === k.id)
+        return <TodayKitCard key={k.id} kit={k} day={index >= 0 ? index + 1 : null} />
+      })}
+    </>
+  )
+}
+
+/** この献立の袋を横に並べた進み具合。作った袋はチェック、今日の袋は番号、冷凍の袋は雪のマーク */
+function PlanKitsProgress() {
+  const { kits } = usePlanKits()
+  if (kits.length === 0) return null
+  const today = todayJst()
+  const currentId = kits.find((k) => k.status === 'stored')?.id
+  return (
+    <section className="flex flex-col gap-3.5">
+      <SectionHeading title="この献立" />
+      <ol className="flex items-start overflow-x-auto rounded-card bg-surface px-3 py-4.5 shadow-card">
         {kits.map((k, i) => {
-          const isToday = k.plannedOn <= today
+          const done = k.status === 'cooked'
+          const current = k.id === currentId
           return (
-            <li key={k.id}>
-              <Link to={`/kits/${k.id}/cook`} className="flex min-h-13 items-center gap-3 py-3">
-                <span
-                  className={`flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-[13px] font-bold ${
-                    isToday ? 'border-accent text-accent' : 'border-line-strong text-ink-muted'
-                  }`}
-                >
-                  {i + 1}
-                </span>
-                <span className={`min-w-0 flex-1 truncate text-[15px] ${isToday ? 'font-bold' : ''}`}>{k.title}</span>
-                {k.plannedOn < today ? (
-                  <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger">
-                    {shortDate(k.plannedOn)} ・ 過ぎています
+            <li key={k.id} className="flex min-w-21 flex-1 items-start">
+              {i > 0 && <span aria-hidden="true" className="mt-[18px] h-[3px] w-6 shrink-0 rounded-full bg-track" />}
+              <Link
+                to={done ? '/fridge' : `/kits/${k.id}/cook`}
+                aria-current={current ? 'step' : undefined}
+                className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
+              >
+                {done ? (
+                  <span className="flex size-10 items-center justify-center rounded-full bg-leaf-soft text-leaf">
+                    <Icon name="check" size={18} strokeWidth={2.6} />
+                    <span className="sr-only">作った</span>
                   </span>
-                ) : isToday ? (
-                  <span className="text-xs font-bold text-accent-strong">今日</span>
+                ) : current ? (
+                  <span className="flex size-10 items-center justify-center rounded-full bg-accent font-display text-[17px] font-bold text-white ring-5 ring-accent-soft">
+                    {i + 1}
+                  </span>
                 ) : k.location === 'freezer' ? (
-                  <span className="rounded-full bg-frozen-soft px-2 py-0.5 text-xs text-frozen">
-                    冷凍 ・ {shortDate(k.plannedOn)}
+                  <span className="flex size-10 items-center justify-center rounded-full bg-frozen-soft text-frozen">
+                    <Icon name="frozen" size={18} strokeWidth={2} />
+                    <span className="sr-only">冷凍</span>
                   </span>
                 ) : (
-                  <span className="text-xs text-ink-muted">{shortDate(k.plannedOn)}</span>
+                  <span className="flex size-10 items-center justify-center rounded-full bg-sunken font-display text-[17px] font-bold text-ink-soft">
+                    {i + 1}
+                  </span>
+                )}
+                <span className={`line-clamp-2 text-[13px] leading-snug ${current ? 'font-bold' : 'text-ink-muted'}`}>
+                  {k.title}
+                </span>
+                {!done && (
+                  <span className={`text-[11px] ${k.plannedOn < today ? 'font-bold text-danger' : 'text-ink-muted'}`}>
+                    {k.plannedOn <= today
+                      ? k.plannedOn < today
+                        ? `${shortDate(k.plannedOn)} 過ぎ`
+                        : '今日'
+                      : shortDate(k.plannedOn)}
+                  </span>
                 )}
               </Link>
             </li>
           )
         })}
-      </ul>
+      </ol>
     </section>
   )
 }
@@ -188,7 +232,7 @@ function PlanLink() {
     return (
       <Link
         to="/plan"
-        className="flex min-h-13 items-center justify-center gap-1.5 rounded-control border border-accent-line bg-accent-wash font-bold text-accent-strong"
+        className="flex min-h-13 items-center justify-center gap-1.5 rounded-full bg-surface font-bold text-accent-strong shadow-card"
       >
         献立の続き（{PLAN_STATUS_LABELS[plan.status]}）
         <Icon name="chevronRight" size={18} strokeWidth={2} />
@@ -198,7 +242,7 @@ function PlanLink() {
   return (
     <Link
       to="/plan"
-      className="flex min-h-13 items-center justify-center gap-1.5 rounded-control border border-dashed border-line-dashed font-bold text-ink-soft"
+      className="flex min-h-13 items-center justify-center gap-1.5 rounded-full border border-dashed border-line-dashed font-bold text-ink-soft"
     >
       <Icon name="plus" size={18} strokeWidth={2} />
       食べたい料理を選ぶ
@@ -214,23 +258,20 @@ export function HomePage() {
 
   return (
     <>
-      <PageHeader
-        title="ホーム"
-        eyebrow={longDate(todayJst())}
-        action={
-          <Link
-            to="/agent"
-            aria-label="AI に頼む"
-            className="flex size-11 items-center justify-center rounded-full bg-surface shadow-card text-accent"
-          >
-            <Icon name="sparkles" />
-          </Link>
-        }
-      />
-      <div className="flex flex-col gap-7">
+      <header className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold">{longDate(todayJst())}</h1>
+        <Link
+          to="/agent"
+          aria-label="AI に頼む"
+          className="flex size-12 items-center justify-center rounded-full bg-surface text-accent shadow-raised"
+        >
+          <Icon name="sparkle" size={22} />
+        </Link>
+      </header>
+      <div className="flex flex-col gap-6.5">
         <TodayKits />
+        <PlanKitsProgress />
         <PlanLink />
-        <StoredKits />
         <ExpiringSoon />
       </div>
       <p className="mt-7 text-xs text-ink-muted">
