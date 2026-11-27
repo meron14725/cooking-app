@@ -174,6 +174,28 @@ describe('献立 API', () => {
     expect(unknown.status).toBe(400)
   })
 
+  it('鍵で固定: 固定した料理と食数を必ず含めて残りを選ぶ。知らないレシピは 400', async () => {
+    const plan = (await createPlan([{ recipeId: anchor.id }])).body
+    const url = `/plans/${plan.id}/recommendations`
+    const res = await api.call<RecommendationsResponse>('POST', url, { fixed: [{ recipeId: partner.id, servings: 2 }] })
+    expect(res.status).toBe(200)
+    expect(res.body.proposals.length).toBeGreaterThan(0)
+    for (const p of res.body.proposals) {
+      expect(p.recipes).toContainEqual(expect.objectContaining({ recipeId: partner.id, role: 'added', servings: 2 }))
+    }
+    expect((await api.call('POST', url, { fixed: [{ recipeId: 'nope', servings: 1 }] })).status).toBe(400)
+    expect(
+      (
+        await api.call('POST', url, {
+          fixed: [
+            { recipeId: partner.id, servings: 1 },
+            { recipeId: partner.id, servings: 2 },
+          ],
+        })
+      ).status,
+    ).toBe(400)
+  })
+
   it('提案は在庫を先に使う（確保分を超えた量は使わない）', async () => {
     await api.call('POST', '/inventory', {
       ingredientId: pork.id,

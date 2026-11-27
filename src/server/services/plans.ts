@@ -194,6 +194,14 @@ export async function recommendForPlan(
       return recipe ? [{ recipe, servings: r.servings }] : []
     })
   if (anchors.length === 0) throw new ApiError(409, 'INVALID_STATE', '食べたい料理が選ばれていません')
+  const fixed = (opts.fixed ?? []).map((f) => ({ recipe: byId.get(f.recipeId), servings: f.servings }))
+  const missing = (opts.fixed ?? []).filter((_, i) => {
+    const recipe = fixed[i]?.recipe
+    return !recipe || recipe.archived
+  })
+  if (missing.length > 0) {
+    throw new ApiError(400, 'UNKNOWN_RECIPE', 'レシピが見つかりません', { recipeIds: missing.map((f) => f.recipeId) })
+  }
   const result = recommend({
     anchors,
     catalog: catalog.filter((r) => !r.archived),
@@ -201,6 +209,7 @@ export async function recommendForPlan(
     ingredients: ingredientMap,
     today,
     exclude: opts.exclude,
+    fixed: fixed.flatMap((f) => (f.recipe ? [{ recipe: f.recipe, servings: f.servings }] : [])),
     options: { maxProposals: opts.maxProposals },
   })
   return {
