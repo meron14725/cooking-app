@@ -201,7 +201,7 @@ export function CookPage() {
 
       {view.beforeCook.length > 0 && (
         <Section no={++no} title="直前の作業">
-          <ul className="divide-y divide-line-soft overflow-hidden rounded-[16px] border border-line bg-surface">
+          <ul className="divide-y divide-line-soft overflow-hidden rounded-item border border-line bg-surface">
             {view.beforeCook.map((b) => {
               const on = done.has(b.ingredientId)
               return (
@@ -241,7 +241,7 @@ export function CookPage() {
       )}
 
       <Section no={++no} title="入れる順">
-        <ol className="divide-y divide-line-soft rounded-[16px] border border-line bg-surface px-4">
+        <ol className="divide-y divide-line-soft rounded-item border border-line bg-surface px-4">
           {view.addOrder.map((a, i) => (
             <li key={a.ingredientId} className="flex items-start gap-3 py-3">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-line-strong text-xs font-bold text-ink-muted">
@@ -261,7 +261,7 @@ export function CookPage() {
       </Section>
 
       <Section no={++no} title="ホットクックの設定">
-        <p className="rounded-[16px] border-[1.5px] border-accent-line bg-surface px-4 py-4 text-lg font-bold">
+        <p className="rounded-item border-[1.5px] border-accent-line bg-surface px-4 py-4 text-lg font-bold">
           {view.hotcookMode ?? '設定が登録されていません'}
         </p>
         {view.cookSteps.length > 0 && (
@@ -275,7 +275,7 @@ export function CookPage() {
       </Section>
 
       {view.frozenNotes.length > 0 && (
-        <section className="mb-6 rounded-[16px] bg-frozen-soft px-4 py-3.5 text-sm text-frozen">
+        <section className="mb-6 rounded-item bg-frozen-soft px-4 py-3.5 text-sm text-frozen">
           <h2 className="mb-1 flex items-center gap-1.5 font-bold">
             <Icon name="frozen" size={18} />
             冷凍の袋を使うとき
