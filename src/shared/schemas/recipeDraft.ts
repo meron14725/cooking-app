@@ -75,10 +75,6 @@ export type RecipeDraftOfficial = {
   score: number | null
 }
 
-export const importUrlInputSchema = z.object({
-  url: z.url('URL の形式が正しくありません').max(2000),
-})
-
 /** 「＋」のパネル: URL・メモ・料理名など何でも。URL を含めばそのページから、なければ文から下書きを作る */
 export const draftInputSchema = z.object({
   text: z.string().trim().min(1, '送る内容を入れてください').max(4000, '4000 文字までにしてください'),

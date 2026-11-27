@@ -1,12 +1,13 @@
 import { z } from 'zod'
-import type { RecipeDraftOfficial } from '../../shared/schemas/recipeDraft'
+import type { RecipeDraftOfficial, RecipeDraftRaw } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
 import { decodeEntities, readLimited } from './recipeImport'
 
 /**
  * COCORO KITCHEN（シャープ公式）のレシピ取り込み。
  * レシピのページは画面を JS で組み立てるので HTML に本文がない。レシピ 1 件の JSON API を取り、
- * 本文は AI に渡す文字列に、件数・メニュー番号・写真のキーは下書きの official に入れる。
+ * その JSON から AI を使わずに下書きを組み立てる（cocoroDraftRaw）。件数・メニュー番号・写真のキーは下書きの official に入れる。
+ * 利用者のメモが付いたときだけ、本文を AI に渡す文字列（cocoroSourceText）にしてメモと一緒に AI に読ませる。
  * 本文や写真はリポジトリにもデータベースの初期データにも入れない（取り込んだ利用者の D1 にだけ入る）
  */
 
@@ -38,6 +39,8 @@ export const cocoroRecipeSchema = z.object({
   cookingTime: str,
   calorie: str,
   menuNum: z.union([z.string(), z.number()]).nullish().catch(null),
+  /** まぜ技ユニットを使うか */
+  isMixed: z.boolean().nullish().catch(null),
   imageUrl: str,
   favoriteCount: count,
   cookCount: count,
@@ -121,4 +124,115 @@ export function cocoroSourceText(recipe: CocoroRecipe): string {
       .map((t, n) => `${n + 1}. ${t}`),
   ]
   return lines.filter((l) => l !== null).join('\n')
+}
+
+/** 少々・適量など、量を数えない表記 */
+const UNCOUNTED = /^(少々|適量|適宜|お好みで|ひとつまみ|少量)/
+
+const toNumber = (t: string): number | null => {
+  // 1と1/2、1/2、1.5、2
+  const m = t.match(/^(?:(\d+(?:\.\d+)?)と)?(\d+(?:\.\d+)?)(?:\/(\d+(?:\.\d+)?))?$/)
+  if (!m) return null
+  const whole = m[1] ? Number(m[1]) : 0
+  const value = m[3] ? Number(m[2]) / Number(m[3]) : Number(m[2])
+  return Number.isFinite(value) && Number(m[3] ?? 1) > 0 ? whole + value : null
+}
+
+/**
+ * 材料の量の表記を数と単位にする。例: 「300 g」→ 300 g、「1/2個」→ 0.5 個、「大さじ1と1/2」→ 1.5 大さじ。
+ * 少々・適量や読めない表記は quantity: null（単位も null）
+ */
+export function parseAmountText(text: string | null | undefined): { quantity: number | null; unit: string | null } {
+  const t = (text ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, '')
+    .replace(/[(（].*?[)）]/g, '')
+  if (!t || UNCOUNTED.test(t)) return { quantity: null, unit: null }
+  // 単位が前: 大さじ1、小さじ1/2、カップ1
+  const before = t.match(/^(大さじ|小さじ|カップ)([\d./と]+)/)
+  if (before?.[1] && before[2]) {
+    const q = toNumber(before[2])
+    return q === null ? { quantity: null, unit: null } : { quantity: q, unit: before[1] }
+  }
+  // 単位が後: 300g、1/2個、2切れ、1片
+  const after = t.match(/^([\d./と]+)([^\d~〜～]*)/)
+  if (after?.[1]) {
+    const q = toNumber(after[1])
+    const unit = (after[2] ?? '').replace(/[程くらい分]+$/, '') || null
+    return q === null ? { quantity: null, unit: null } : { quantity: q, unit }
+  }
+  return { quantity: null, unit: null }
+}
+
+/** 切り方らしい括弧書き。例: 玉ねぎ（くし形切り） */
+const CUT = /(切り|切る|みじん|すりおろ|ちぎ|ほぐ|そぎ|角|等分)/
+
+/** 「2人分」「2〜4人分」→ 2。読めなければ null */
+export function parseServings(text: string | null | undefined): number | null {
+  const m = (text ?? '').normalize('NFKC').match(/(\d+(?:\.\d+)?)/)
+  const n = m?.[1] ? Number(m[1]) : null
+  return n !== null && n > 0 && n <= 20 ? n : null
+}
+
+/** 「310kcal」「1人分 約310kcal」→ 310。「全量」とあれば人数で割る。読めなければ null */
+export function parseCalorie(text: string | null | undefined, servings: number): number | null {
+  const t = (text ?? '').normalize('NFKC')
+  const m = t.match(/(\d+(?:\.\d+)?)\s*kcal/i)
+  if (!m?.[1]) return null
+  const kcal = Number(m[1]) / (/全量|総/.test(t) ? servings : 1)
+  return kcal >= 0 && kcal <= 5000 ? Math.round(kcal) : null
+}
+
+/** ホットクックの設定。メニュー番号があれば「メニュー番号で探す → No.063」 */
+export function cocoroHotcookMode(recipe: CocoroRecipe): string | null {
+  const no = toOfficialMenuNo(recipe.menuNum)
+  return no ? `メニュー番号で探す → No.${no}` : null
+}
+
+/**
+ * レシピ 1 件の JSON から、AI を使わずに下書きを組み立てる（このあと normalizeDraft で食材マスタと照合する）。
+ * 手順は「内鍋」が出てくる手順から後を調理、それより前を下ごしらえにする
+ */
+export function cocoroDraftRaw(recipe: CocoroRecipe): RecipeDraftRaw {
+  const warnings: string[] = []
+  const parsedServings = parseServings(recipe.quantity)
+  if (parsedServings === null) warnings.push('何人分か読めなかったので 2 人分にしています。確認してください')
+  const servings = parsedServings ?? 2
+  const ingredients = (recipe.materials ?? []).map((m) => {
+    const rawName = plain(m.name)
+    const paren = rawName.match(/[（(](.*?)[）)]/)?.[1] ?? null
+    const name = rawName.replace(/[（(].*?[）)]/g, '').trim() || rawName
+    const amount = parseAmountText(plain(m.quantity))
+    const group = plain(m.group)
+    return {
+      displayText: `${rawName} ${plain(m.quantity)}${group ? `（${group}）` : ''}`.trim(),
+      name,
+      quantity: amount.quantity,
+      unit: amount.unit,
+      cutStyle: paren && CUT.test(paren) ? paren : null,
+    }
+  })
+  const methods = (recipe.methods ?? []).map((m) => plain(m.text || m.renderedHtml)).filter(Boolean)
+  const firstCook = methods.findIndex((t) => t.includes('内鍋'))
+  const steps: RecipeDraftRaw['steps'] = methods.map((text, n) => ({
+    phase: firstCook >= 0 && n < firstCook ? 'prep' : 'cook',
+    text,
+  }))
+  if (recipe.isMixed === true || recipe.isMixed === false) {
+    steps.push({ phase: 'cook', text: recipe.isMixed ? 'まぜ技ユニットを付ける' : 'まぜ技ユニットは付けない' })
+  }
+  for (const a of recipe.material_appendices ?? []) {
+    const t = plain(a)
+    if (t) warnings.push(`※ ${t}`)
+  }
+  return {
+    title: plain(recipe.name),
+    servings,
+    caloriesKcal: parseCalorie(recipe.calorie, servings),
+    hotcookMode: cocoroHotcookMode(recipe),
+    maxServings1_6l: null,
+    ingredients,
+    steps,
+    warnings,
+  }
 }

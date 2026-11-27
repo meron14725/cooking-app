@@ -37,14 +37,16 @@ function servePage(body: string, init: ResponseInit = { headers: { 'Content-Type
   return spy
 }
 
-describe('POST /api/recipes/import-url', () => {
+describe('POST /api/recipes/draft（URL）', () => {
   it('ページを取得して下書きを返す。マスタと照合し、単位を直す', async () => {
     const spy = servePage(page)
-    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', { url: 'https://example.com/soup' })
+    const res = await api.call<RecipeDraft>('POST', '/recipes/draft', { text: 'https://example.com/soup' })
     expect(res.status).toBe(200)
     expect(spy).toHaveBeenCalledOnce()
     expect(res.body.title).toBe('玉ねぎスープ')
     expect(res.body.sourceUrl).toBe('https://example.com/soup')
+    expect(res.body.sourceType).toBe('url')
+    expect(res.body.official).toBeNull()
     expect(res.body.ingredients.map((i) => [i.suggestedName, i.ingredientId !== null, i.quantity])).toEqual([
       ['玉ねぎ', true, 1.5],
       ['ぶり', false, 2],
@@ -52,11 +54,10 @@ describe('POST /api/recipes/import-url', () => {
     expect(res.body.warnings.some((w) => w.includes('ぶり'))).toBe(true)
   })
 
-  it('ローカルの URL は 400、ページが取れなければ 502', async () => {
-    expect((await api.call('POST', '/recipes/import-url', { url: 'http://localhost/' })).status).toBe(400)
+  it('ページが取れなければ 502', async () => {
     servePage('not found', { status: 404 })
-    const res = await api.call<{ error: { code: string } }>('POST', '/recipes/import-url', {
-      url: 'https://example.com/none',
+    const res = await api.call<{ error: { code: string } }>('POST', '/recipes/draft', {
+      text: 'https://example.com/none',
     })
     expect(res.status).toBe(502)
     expect(res.body.error.code).toBe('FETCH_FAILED')
@@ -64,17 +65,21 @@ describe('POST /api/recipes/import-url', () => {
 
   it('HTML でなければ 400', async () => {
     servePage('{}', { headers: { 'Content-Type': 'application/json' } })
-    expect((await api.call('POST', '/recipes/import-url', { url: 'https://example.com/a.json' })).status).toBe(400)
+    expect((await api.call('POST', '/recipes/draft', { text: 'https://example.com/a.json' })).status).toBe(400)
   })
 
   it('AI の API キーがなければ 503', async () => {
     const noKey = createTestApi({ env: { AI_PROVIDER: 'gemini' } })
     servePage(page)
-    const res = await noKey.call<{ error: { code: string } }>('POST', '/recipes/import-url', {
-      url: 'https://example.com/soup',
+    const res = await noKey.call<{ error: { code: string } }>('POST', '/recipes/draft', {
+      text: 'https://example.com/soup',
     })
     expect(res.status).toBe(503)
     expect(res.body.error.code).toBe('AI_NOT_CONFIGURED')
+  })
+
+  it('取り込み専用の import-url はもうない（404）', async () => {
+    expect((await api.call('POST', '/recipes/import-url', { url: 'https://example.com/soup' })).status).toBe(404)
   })
 })
 
@@ -125,28 +130,54 @@ const cocoroJson = {
   cookingTime: '約30分',
   calorie: '100kcal',
   menuNum: '0063',
+  isMixed: true,
   imageUrl: 'https://example.com/photo.jpg',
   favoriteCount: 1234,
   cookCount: 56789,
   score: 5,
-  materials: [{ name: '玉ねぎ', quantity: '300 g', group: null, orderNumber: 1 }],
-  material_appendices: [],
-  methods: [{ text: '内鍋に入れる', renderedHtml: '<p>内鍋に入れる</p>', orderNumber: 1 }],
+  materials: [
+    { name: '玉ねぎ（くし形切り）', quantity: '300 g', group: null, orderNumber: 1 },
+    { name: 'テスト調味料', quantity: '大さじ1と1/2', group: 'A', orderNumber: 2 },
+  ],
+  material_appendices: ['テスト用の注記'],
+  methods: [
+    { text: '材料を切る', renderedHtml: '<p>材料を切る</p>', orderNumber: 1 },
+    { text: '内鍋に入れる', renderedHtml: '<p>内鍋に入れる</p>', orderNumber: 2 },
+  ],
   unusedField: { nested: true },
 }
 
-describe('POST /api/recipes/import-url（COCORO KITCHEN）', () => {
-  it('レシピの JSON API を取り、件数・メニュー番号・写真のキーを下書きに入れる', async () => {
+const COCORO_URL = 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW24G/R9001'
+
+describe('POST /api/recipes/draft（COCORO KITCHEN の URL）', () => {
+  it('レシピの JSON API を 1 件だけ取り、AI を使わずに下書きを組み立てる', async () => {
     const spy = vi.fn(async () => Response.json(cocoroJson))
     globalThis.fetch = spy as unknown as typeof fetch
-    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', {
-      url: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW24G/R9001',
+    // AI のキーがなくても作れる（AI を呼ばない）
+    const noKey = createTestApi({ env: { AI_PROVIDER: 'gemini' } })
+    await noKey.call<Ingredient>('POST', '/ingredients', {
+      name: '玉ねぎ',
+      category: 'vegetable',
+      unit: '個',
+      gramsPerUnit: 200,
+      canFreeze: true,
+      fridgeDays: 30,
+      defaultLocation: 'pantry',
     })
+    const res = await noKey.call<RecipeDraft>('POST', '/recipes/draft', { text: COCORO_URL })
     expect(res.status).toBe(200)
     expect(spy).toHaveBeenCalledOnce()
     expect((spy.mock.calls[0] as unknown[])[0]).toBe(
       'https://cocoroplus.jp.sharp/kitchen/recipe/api/recipe/R9001/KN-HW24G',
     )
+    expect(res.body).toMatchObject({
+      title: 'テスト用の玉ねぎ煮',
+      servings: 2,
+      caloriesKcal: 100,
+      hotcookMode: 'メニュー番号で探す → No.063',
+      sourceUrl: COCORO_URL,
+      sourceType: 'url',
+    })
     expect(res.body.official).toEqual({
       officialMenuNo: '063',
       imageKey: 'img/R9001.jpg',
@@ -154,19 +185,26 @@ describe('POST /api/recipes/import-url（COCORO KITCHEN）', () => {
       cookCount: 56789,
       score: 5,
     })
-    // 本文は JSON から組み立てて AI に渡す（fake は 1 行目をタイトル、「- 」の行を材料にする）
-    expect(res.body.title).toBe('テスト用の玉ねぎ煮')
-    expect(res.body.ingredients.map((i) => [i.suggestedName, i.ingredientId !== null, i.quantity])).toEqual([
-      ['玉ねぎ', true, 1.5],
+    expect(res.body.ingredients.map((i) => [i.suggestedName, i.ingredientId !== null, i.quantity, i.cutStyle])).toEqual(
+      [
+        ['玉ねぎ', true, 1.5, 'くし形切り'],
+        ['テスト調味料', false, 1.5, null],
+      ],
+    )
+    expect(res.body.ingredients[1]?.displayText).toBe('テスト調味料 大さじ1と1/2（A）')
+    expect(res.body.steps).toEqual([
+      { phase: 'prep', text: '材料を切る' },
+      { phase: 'cook', text: '内鍋に入れる' },
+      { phase: 'cook', text: 'まぜ技ユニットを付ける' },
     ])
-    expect(res.body.sourceUrl).toBe('https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW24G/R9001')
+    expect(res.body.warnings).toContain('※ テスト用の注記')
   })
 
   it('URL に機種がなければ KN-HW16G で取る。写真がなければ imageKey は null', async () => {
     const spy = vi.fn(async () => Response.json({ ...cocoroJson, imageUrl: '' }))
     globalThis.fetch = spy as unknown as typeof fetch
-    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', {
-      url: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/R9002',
+    const res = await api.call<RecipeDraft>('POST', '/recipes/draft', {
+      text: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/R9002',
     })
     expect((spy.mock.calls[0] as unknown[])[0]).toBe(
       'https://cocoroplus.jp.sharp/kitchen/recipe/api/recipe/R9002/KN-HW16G',
@@ -174,19 +212,25 @@ describe('POST /api/recipes/import-url（COCORO KITCHEN）', () => {
     expect(res.body.official?.imageKey).toBeNull()
   })
 
+  it('メモが付いていれば本文とメモを AI に読ませる。メニュー番号は JSON の値を使う', async () => {
+    const spy = vi.fn(async () => Response.json(cocoroJson))
+    globalThis.fetch = spy as unknown as typeof fetch
+    const res = await api.call<RecipeDraft>('POST', '/recipes/draft', { text: `${COCORO_URL}\n玉ねぎ多めで` })
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledOnce()
+    // fake の AI は本文の 1 行目をタイトル、「- 」の行を材料にする
+    expect(res.body.title).toBe('テスト用の玉ねぎ煮')
+    expect(res.body.hotcookMode).toBe('メニュー番号で探す → No.063')
+    expect(res.body.official?.officialMenuNo).toBe('063')
+  })
+
   it('JSON が取れなければ 502', async () => {
     servePage('not found', { status: 404 })
-    const res = await api.call<{ error: { code: string } }>('POST', '/recipes/import-url', {
-      url: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW16G/R9003',
+    const res = await api.call<{ error: { code: string } }>('POST', '/recipes/draft', {
+      text: 'https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/KN-HW16G/R9003',
     })
     expect(res.status).toBe(502)
     expect(res.body.error.code).toBe('FETCH_FAILED')
-  })
-
-  it('COCORO 以外の URL では official は null', async () => {
-    servePage(page)
-    const res = await api.call<RecipeDraft>('POST', '/recipes/import-url', { url: 'https://example.com/soup' })
-    expect(res.body.official).toBeNull()
   })
 })
 

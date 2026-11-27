@@ -4,7 +4,6 @@ import { recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe
 import {
   draftInputSchema,
   estimateCaloriesInputSchema,
-  importUrlInputSchema,
   type RecipeDraft,
   splitUrl,
   suggestRecipeInputSchema,
@@ -14,7 +13,14 @@ import type { AppEnv } from '../app'
 import type { Db } from '../db/client'
 import { createDb } from '../db/client'
 import { ApiError } from '../errors'
-import { cocoroOfficial, cocoroSourceText, fetchCocoroRecipe, parseCocoroUrl } from '../services/cocoro'
+import {
+  cocoroDraftRaw,
+  cocoroHotcookMode,
+  cocoroOfficial,
+  cocoroSourceText,
+  fetchCocoroRecipe,
+  parseCocoroUrl,
+} from '../services/cocoro'
 import { listIngredients } from '../services/ingredients'
 import { assertPublicUrl, buildSourceText, fetchPage, normalizeDraft } from '../services/recipeImport'
 import { archiveRecipe, createRecipe, getRecipe, listRecipes, updateRecipe } from '../services/recipes'
@@ -29,29 +35,38 @@ const listQuerySchema = z.object({
 const masterRefs = (masters: { name: string; unit: string; gramsPerUnit: number | null }[]) =>
   masters.map((m) => ({ name: m.name, unit: m.unit, gramsPerUnit: m.gramsPerUnit }))
 
+const withMemo = (text: string, memo: string) =>
+  memo ? `${text}\n\n## 利用者のメモ（ページより優先する）\n${memo}` : text
+
 /**
- * URL のページから下書きを作る（保存しない）。memo があれば利用者のメモとしてページの本文の後ろに付ける。
- * COCORO KITCHEN のページは HTML に本文がないので、レシピ 1 件の JSON API を取る（services/cocoro.ts）
+ * 「＋」に貼られた URL から下書きを作る（保存しない）。memo があれば利用者のメモとして本文の後ろに付けて AI に読ませる。
+ * COCORO KITCHEN の URL はページの HTML ではなくレシピ 1 件の JSON API を取り、メモがなければ AI を使わずに
+ * JSON から下書きを組み立てる（services/cocoro.ts）
  */
 async function draftFromUrl(env: Env, db: Db, rawUrl: string, memo = ''): Promise<RecipeDraft> {
   const url = assertPublicUrl(rawUrl)
-  const ai = getProvider(env)
   const cocoro = parseCocoroUrl(url)
-  const [source, masters] = await Promise.all([
-    cocoro
-      ? fetchCocoroRecipe(cocoro).then((recipe) => ({
-          text: cocoroSourceText(recipe),
-          official: cocoroOfficial(recipe, cocoro),
-        }))
-      : fetchPage(url).then((html) => ({ text: buildSourceText(html).text, official: null })),
-    listIngredients(db),
-  ])
+  if (cocoro) {
+    const [recipe, masters] = await Promise.all([fetchCocoroRecipe(cocoro), listIngredients(db)])
+    const official = cocoroOfficial(recipe, cocoro)
+    if (!memo) return { ...normalizeDraft(cocoroDraftRaw(recipe), masters, url.toString()), official }
+    const raw = await getProvider(env).extractRecipe({
+      url: url.toString(),
+      text: withMemo(cocoroSourceText(recipe), memo),
+      ingredients: masterRefs(masters),
+    })
+    // メニュー番号はAIに任せず JSON の値を使う
+    const hotcookMode = cocoroHotcookMode(recipe) ?? raw.hotcookMode
+    return { ...normalizeDraft({ ...raw, hotcookMode }, masters, url.toString()), official }
+  }
+  const ai = getProvider(env)
+  const [html, masters] = await Promise.all([fetchPage(url), listIngredients(db)])
   const raw = await ai.extractRecipe({
     url: url.toString(),
-    text: memo ? `${source.text}\n\n## 利用者のメモ（ページより優先する）\n${memo}` : source.text,
+    text: withMemo(buildSourceText(html).text, memo),
     ingredients: masterRefs(masters),
   })
-  return { ...normalizeDraft(raw, masters, url.toString()), official: source.official }
+  return { ...normalizeDraft(raw, masters, url.toString()), official: null }
 }
 
 export const recipeRoutes = new Hono<AppEnv>()
@@ -63,12 +78,9 @@ export const recipeRoutes = new Hono<AppEnv>()
     const item = await createRecipe(createDb(c.env.DB), c.req.valid('json'))
     return c.json(item, 201)
   })
-  // URL から下書きを作る（保存しない。docs/design/06-ai.md「URL 取り込みの流れ」）
-  .post('/import-url', validate('json', importUrlInputSchema), async (c) => {
-    return c.json(await draftFromUrl(c.env, createDb(c.env.DB), c.req.valid('json').url))
-  })
   // 「＋」のパネル: URL・メモ・料理名など何でも受けて下書きを作る（保存しない）。
-  // URL を含めば import-url と同じ（残りの文はメモとして AI に渡す）、なければ文から AI が下書きを作る
+  // URL を含めばそのページから（残りの文はメモとして AI に渡す。docs/design/06-ai.md「URL 取り込みの流れ」）、
+  // なければ文から AI が下書きを作る
   .post('/draft', validate('json', draftInputSchema), async (c) => {
     const db = createDb(c.env.DB)
     const { url, memo } = splitUrl(c.req.valid('json').text)
