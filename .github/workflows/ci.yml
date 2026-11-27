@@ -17,5 +17,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # AI の Container（container/）の型チェック。Cursor SDK はこちらにだけ入れる
+      - run: npm ci --prefix container
+      - run: npx tsc -p container
       - run: npm test
       - run: npm run build

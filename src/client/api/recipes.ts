@@ -56,8 +56,8 @@ export function useDeleteRecipe() {
   })
 }
 
-/** AI の呼び出しは画面側でも 30 秒で打ち切る（docs/design/06-ai.md「応答時間と費用」） */
-const AI_TIMEOUT_MS = 30_000
+/** AI の呼び出しは画面側でも 90 秒で打ち切る（docs/design/08-agent.md「AI プロバイダ」。サーバ側は 75 秒 + ページ取得 10 秒） */
+const AI_TIMEOUT_MS = 90_000
 
 export function useImportRecipe() {
   return useMutation({

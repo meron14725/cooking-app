@@ -56,9 +56,17 @@ AI を Cursor SDK（`@cursor/sdk`）に移し、Cloudflare Containers の中で�
 `src/server/ai/cursor.ts` に `CursorProvider` を足し、`AI_PROVIDER=cursor` を既定にします。インターフェース（`extractRecipe` / `suggestRecipe` / `estimateCalories`）は変えないので、画面と API はそのまま使えます。
 
 - プロンプトは `prompts.ts` を共通で使う
-- タイムアウト: 1 回 60 秒、再試行 1 回。画面のタイムアウトは 30 秒 → 90 秒に延ばす（URL 取り込みはページ取得 10 秒 + 60 秒 + 余裕）
-  - 再試行で 90 秒を超えるときは再試行しない（残り時間で判断）
+- タイムアウト: 1 回の AI 呼び出しの合計を 75 秒にする。1 回目は 45 秒まで、形が違えば残り時間（15 秒以上あれば）で 1 回だけやり直す。画面のタイムアウトは 30 秒 → 90 秒に延ばす（URL 取り込みはページ取得 10 秒が先に入る）
 - Container が起動中などで繋がらないときは 503 `AI_STARTING`（画面は「AI を起動しています。少し待ってもう一度」）
+
+実装（#13）:
+- `container/`: Node 22 の型除去で `src/main.ts` をそのまま動かす（ビルドなし）。`/structured` と `/health`。依存は `@cursor/sdk` だけで、Cursor SDK はルートの package.json には入れない
+  - エージェントは `tools: ['mcp']`、`disallowedTools: ['task']`、`local.fs: emptyFs()`、`local.customTools` に `submit_result` だけ。`systemPrompt` はアカウントごとの有効化が要るので使わず、指示はメッセージの先頭に書く
+  - 打ち切りは Container 側でも行い（`run.cancel()`）、504 を返す
+- Worker: `AgentContainer`（`@cloudflare/containers` の `Container`、`sleepAfter: '10m'`）。`CURSOR_API_KEY` と `CURSOR_MODEL` を起動時の環境変数で渡す。`CursorProvider` は名前固定の 1 インスタンスに `POST http://agent/structured` を送る
+  - Node のテストで `cloudflare:workers` を読まないよう、`ai/index.ts` は `@cloudflare/containers` を import せず `idFromName` で引く
+- 確かめたこと（この環境）: イメージを作って起動 → `/health` が返る。ダミーのキーで `/structured` → Cursor まで届いて「Invalid User API Key」が 502 で返る。`wrangler dev` で Worker → Durable Object → Container の経路が通る（ローカルの起動は 1.5 秒ほど）
+- まだ確かめていないこと: 本物のキーでの 1 回の時間とトークン数、Cloudflare 上のコールドスタート。キーを入れて最初に使ったときに測って、ここに書く
 
 ## AI に頼む（新機能）
 

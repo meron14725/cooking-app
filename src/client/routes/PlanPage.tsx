@@ -225,7 +225,8 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
     setError(null)
     try {
       const draft = await suggest.mutateAsync({
-        leftovers: leftovers.map((l) => ({ ingredientId: l.ingredientId, quantity: l.quantity })),
+        // API は 30 件まで（優先順の先頭から）
+        leftovers: leftovers.slice(0, 30).map((l) => ({ ingredientId: l.ingredientId, quantity: l.quantity })),
       })
       navigate('/recipes/new', { state: { draft, returnTo: '/plan' } })
     } catch (err) {
@@ -244,7 +245,7 @@ function AiSuggest({ proposal }: { proposal: ProposalView | undefined }) {
             {leftovers.map((l) => l.name).join('、')}）で AI に 1 品提案してもらえます。
           </p>
           <Button variant="secondary" onClick={onSuggest} disabled={suggest.isPending} className="w-full">
-            {suggest.isPending ? 'AI が考えています…（30 秒ほど）' : '余る食材で AI に 1 品提案してもらう'}
+            {suggest.isPending ? 'AI が考えています…（1 分ほど）' : '余る食材で AI に 1 品提案してもらう'}
           </Button>
           <p className="mt-1 text-xs text-sky-700">下書きを確認して保存すると、提案を計算し直します</p>
         </>

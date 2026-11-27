@@ -27,5 +27,20 @@
       "migrations_dir": "migrations"
     }
   ],
+  // AI（Cursor SDK）を動かす Container（docs/design/08-agent.md）
+  "containers": [
+    {
+      "class_name": "AgentContainer",
+      "image": "./container/Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "AGENT", "class_name": "AgentContainer" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AgentContainer"] }],
+  // vite dev では Container を作らない（.dev.vars で AI_PROVIDER=fake にする）。本物で試すときは wrangler dev
+  "dev": { "enable_containers": false },
   "observability": { "enabled": true }
 }
