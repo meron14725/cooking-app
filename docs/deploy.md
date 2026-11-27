@@ -58,10 +58,29 @@ Cloudflare ダッシュボード → **Workers & Pages → cooking-app → Setti
 }
 ```
 
-## 4. 確認
+## 4. AI の API キーを入れる
+
+URL 取り込みとカロリー推定で Gemini API を使います。
+
+1. [Google AI Studio](https://aistudio.google.com/apikey) で API キーを作る
+2. Worker のシークレットに入れる（リポジトリには入れない）
+
+```sh
+npx wrangler secret put GEMINI_API_KEY
+```
+
+- 使うモデルは `src/server/ai/gemini.ts` の既定値です。変えたいときは `wrangler.jsonc` の `vars` に `GEMINI_MODEL` を足します
+- キーが入っていないと、取り込みと推定のボタンは「AI の API キーが設定されていません」と出ます（ほかの機能は使えます）
+
+## 5. 確認
 
 - スマホで `https://cooking-app.<サブドメイン>.workers.dev` を開く → メールのコードでログイン → ホームに「API: OK」と出る
 - シークレットウィンドウで開くと、ログイン画面が出る（自分のメール以外ではコードが届かない）
+
+## 初期データについて
+
+- マイグレーション `0001_seed_ingredients.sql`（食材）と `0002_seed_recipes.sql`（レシピ）は、本番に最初に流したときだけ入ります（同じ名前・同じ id は何もしない）
+- レシピの材料は食材を**名前**で引いて入れます。`0002` を流す前に食材マスタの名前を変えたり削除したりすると、その材料の行は入りません。最初のデプロイで両方まとめて流れるので、通常は気にしなくて大丈夫です
 
 ## 入口について
 

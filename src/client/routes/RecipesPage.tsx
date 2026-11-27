@@ -18,6 +18,13 @@ export function RecipesPage() {
         </Link>
       </div>
 
+      <Link
+        to="/recipes/import"
+        className="mb-4 flex min-h-11 items-center justify-center rounded-lg border border-orange-300 bg-white font-bold text-orange-700"
+      >
+        🔗 URL から取り込む
+      </Link>
+
       <input
         type="search"
         value={q}

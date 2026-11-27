@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { normalizeUnit, toBaseQuantity, toGrams, type UnitMaster } from '../../shared/domain/units'
 import { CATEGORY_OPTIONS, type Ingredient } from '../../shared/schemas/ingredient'
 import {
@@ -11,11 +11,13 @@ import {
   STEP_PHASES,
   type StepPhase,
 } from '../../shared/schemas/recipe'
+import type { RecipeDraft } from '../../shared/schemas/recipeDraft'
 import { ApiRequestError } from '../api/client'
 import { useIngredients } from '../api/ingredients'
-import { useDeleteRecipe, useRecipe, useSaveRecipe } from '../api/recipes'
+import { aiErrorMessage, useDeleteRecipe, useEstimateCalories, useRecipe, useSaveRecipe } from '../api/recipes'
 import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
 import { PageHeader } from '../components/PageHeader'
+import { QuickAddIngredient } from '../components/QuickAddIngredient'
 
 type IngredientRow = {
   key: string
@@ -26,6 +28,9 @@ type IngredientRow = {
   displayText: string
   cutStyle: string
   addOrder: string
+  /** URL 取り込みでマスタと照合できなかった食材の候補名と単位 */
+  suggestedName?: string
+  suggestedUnit?: string | null
 }
 
 type StepRow = { key: string; phase: StepPhase; text: string }
@@ -40,6 +45,8 @@ type FormState = {
   packSeasonings: boolean
   sourceUrl: string
   notes: string
+  /** 作成時だけ使う（更新では変わらない） */
+  sourceType: 'manual' | 'url' | 'ai'
   ingredients: IngredientRow[]
   steps: StepRow[]
 }
@@ -67,6 +74,7 @@ const emptyForm = (): FormState => ({
   packSeasonings: false,
   sourceUrl: '',
   notes: '',
+  sourceType: 'manual',
   ingredients: [newIngredientRow()],
   steps: [],
 })
@@ -84,6 +92,7 @@ function toForm(r: Recipe): FormState {
     packSeasonings: r.packSeasonings,
     sourceUrl: r.sourceUrl ?? '',
     notes: r.notes ?? '',
+    sourceType: 'manual',
     ingredients: r.ingredients.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId,
@@ -94,6 +103,32 @@ function toForm(r: Recipe): FormState {
       addOrder: i.addOrder ? String(i.addOrder) : '',
     })),
     steps: r.steps.map((s) => ({ key: newKey(), phase: s.phase, text: s.text })),
+  }
+}
+
+/** URL 取り込みの下書きからフォームを作る。マスタにない食材は候補名を残して、その場で追加できるようにする */
+function fromDraft(d: RecipeDraft, masters: Map<string, UnitMaster>): FormState {
+  return {
+    ...emptyForm(),
+    title: d.title,
+    servings: String(d.servings),
+    caloriesKcal: str(d.caloriesKcal),
+    hotcookMode: d.hotcookMode ?? '',
+    maxServings1_6l: str(d.maxServings1_6l),
+    sourceUrl: d.sourceUrl ?? '',
+    sourceType: 'url',
+    ingredients: d.ingredients.map((i) => ({
+      key: newKey(),
+      ingredientId: i.ingredientId ?? '',
+      quantity: str(i.quantity),
+      unit: i.ingredientId ? (masters.get(i.ingredientId)?.unit ?? '') : '',
+      displayText: i.displayText,
+      cutStyle: i.cutStyle ?? '',
+      addOrder: '',
+      suggestedName: i.ingredientId ? undefined : i.suggestedName,
+      suggestedUnit: i.ingredientId ? undefined : i.suggestedUnit,
+    })),
+    steps: d.steps.map((s) => ({ key: newKey(), phase: s.phase, text: s.text })),
   }
 }
 
@@ -148,6 +183,7 @@ function toInput(f: FormState, masters: Map<string, UnitMaster>): Converted {
       packSeasonings: f.packSeasonings,
       sourceUrl: f.sourceUrl.trim() || null,
       notes: f.notes,
+      sourceType: f.sourceType,
       ingredients,
       steps: f.steps.map((s) => ({ phase: s.phase, text: s.text })),
     },
@@ -166,7 +202,12 @@ function move<T>(list: T[], index: number, delta: number): T[] {
 export function RecipeEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  /** URL 取り込み（S11）から来たときの下書き */
+  const draft = id ? undefined : (location.state as { draft?: RecipeDraft } | null)?.draft
   const existing = useRecipe(id)
+  const estimate = useEstimateCalories()
+  const [estimateError, setEstimateError] = useState<string | null>(null)
   const masterList = useIngredients()
   const save = useSaveRecipe(id)
   const remove = useDeleteRecipe()
@@ -179,6 +220,14 @@ export function RecipeEditPage() {
   useEffect(() => {
     if (existing.data) setForm(toForm(existing.data))
   }, [existing.data])
+
+  // 下書きは食材マスタを読んでから 1 回だけフォームに入れる（基準単位を決めるため）
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  useEffect(() => {
+    if (!draft || draftLoaded || !masterList.data) return
+    setForm(fromDraft(draft, new Map(masterList.data.map((m) => [m.id, m]))))
+    setDraftLoaded(true)
+  }, [draft, draftLoaded, masterList.data])
 
   /** 選べる食材（マスタ）と、このレシピで使っている削除済みの食材 */
   const masters = useMemo(() => {
@@ -224,6 +273,23 @@ export function RecipeEditPage() {
     }
   }
 
+  async function onEstimate() {
+    setEstimateError(null)
+    const { input } = toInput(form, masters)
+    const servings = parseNumber(form.servings)
+    const ingredients = input.ingredients.filter((i) => i.displayText).map((i) => ({ displayText: i.displayText }))
+    if (!servings || ingredients.length === 0) {
+      setEstimateError('人数と材料を入れてから推定してください')
+      return
+    }
+    try {
+      const { caloriesKcal } = await estimate.mutateAsync({ servings, ingredients })
+      setForm((f) => ({ ...f, caloriesKcal: String(caloriesKcal), caloriesEstimated: true }))
+    } catch (err) {
+      setEstimateError(aiErrorMessage(err))
+    }
+  }
+
   async function onDelete() {
     if (!id) return
     setDeleteError(null)
@@ -245,6 +311,18 @@ export function RecipeEditPage() {
       <PageHeader title={id ? 'レシピを編集' : 'レシピを追加'} />
       {existing.data && (
         <p className="-mt-3 text-xs text-stone-500">作成元: {SOURCE_TYPE_LABELS[existing.data.sourceType]}</p>
+      )}
+      {draft && (
+        <div className="-mt-1 space-y-1 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
+          <p className="font-bold text-amber-800">AI が作った下書きです。確認してから保存してください</p>
+          {draft.warnings.length > 0 && (
+            <ul className="list-disc space-y-0.5 pl-5 text-amber-900">
+              {draft.warnings.map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       <Field label="料理名" error={errors.title}>
@@ -278,18 +356,23 @@ export function RecipeEditPage() {
 
       <Field
         label="1人前のカロリー（kcal）"
-        hint={form.caloriesEstimated ? '目安（推定値）。数値を直すと推定の印は外れます' : undefined}
-        error={errors.caloriesKcal}
+        hint={form.caloriesEstimated ? '目安（AI推定）。数値を直すと推定の印は外れます' : undefined}
+        error={errors.caloriesKcal ?? estimateError ?? undefined}
       >
-        <input
-          type="number"
-          inputMode="numeric"
-          min={0}
-          step={1}
-          value={form.caloriesKcal}
-          onChange={(e) => setForm((f) => ({ ...f, caloriesKcal: e.target.value, caloriesEstimated: false }))}
-          className={inputClass}
-        />
+        <div className="flex gap-2">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={form.caloriesKcal}
+            onChange={(e) => setForm((f) => ({ ...f, caloriesKcal: e.target.value, caloriesEstimated: false }))}
+            className={`${inputBaseClass} min-w-0 flex-1`}
+          />
+          <Button variant="secondary" onClick={onEstimate} disabled={estimate.isPending} className="shrink-0">
+            {estimate.isPending ? '推定中…' : 'AIで推定'}
+          </Button>
+        </div>
       </Field>
 
       <Field label="ホットクックの設定" hint="例: 手動 > 煮物を作る > まぜる > 20分" error={errors.hotcookMode}>
@@ -305,7 +388,7 @@ export function RecipeEditPage() {
       <fieldset className="min-w-0 space-y-3 rounded-xl border border-stone-200 bg-white p-4">
         <legend className="px-1 text-sm font-bold text-stone-700">材料（{form.servings || '?'}人前）</legend>
         <p className="text-xs text-stone-500">
-          量は空にすると「少々・適量」の扱いです。マスタにない食材は先に
+          量は空にすると「少々・適量」の扱いです。量を変えると表示の文字列は作り直されます。マスタにない食材は先に
           <Link to="/ingredients/new" className="mx-1 text-orange-700 underline">
             食材マスタ
           </Link>
@@ -371,6 +454,25 @@ export function RecipeEditPage() {
                   ×
                 </Button>
               </div>
+              {!row.ingredientId && row.suggestedName && (
+                <div className="space-y-2">
+                  <p className="text-xs text-amber-800">
+                    「{row.suggestedName}」は食材マスタにありません。上で選ぶか、マスタに追加してください。
+                  </p>
+                  <QuickAddIngredient
+                    suggestedName={row.suggestedName}
+                    suggestedUnit={row.suggestedUnit ?? null}
+                    onAdded={(added) =>
+                      setRow(row.key, {
+                        ingredientId: added.id,
+                        unit: added.unit,
+                        suggestedName: undefined,
+                        suggestedUnit: undefined,
+                      })
+                    }
+                  />
+                </div>
+              )}
               {err('ingredientId') && <p className="text-xs text-red-600">{err('ingredientId')}</p>}
 
               <div className="flex gap-2">
