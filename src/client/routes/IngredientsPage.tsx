@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { CATEGORY_OPTIONS, type Category, type Ingredient, locationLabel } from '../../shared/schemas/ingredient'
+import { representativeLabel } from '../../shared/domain/cost'
+import {
+  CATEGORY_OPTIONS,
+  type Category,
+  type Ingredient,
+  locationLabel,
+  type PriceFilter,
+} from '../../shared/schemas/ingredient'
 import { useIngredients } from '../api/ingredients'
 import { inputBaseClass } from '../components/form'
 import { Icon } from '../components/Icon'
@@ -13,10 +20,26 @@ function shelfLife(i: Ingredient): string {
   return parts.join(' / ')
 }
 
+const PRICE_FILTER_OPTIONS: { value: PriceFilter | ''; label: string }[] = [
+  { value: '', label: 'すべて' },
+  { value: 'missing', label: '価格未設定' },
+  { value: 'stale', label: '価格が古い' },
+]
+
+function priceText(i: Ingredient): string {
+  if (i.priceYen === null) return '価格未設定'
+  return `${representativeLabel(i)} ${i.priceYen.toLocaleString('ja-JP')}円${i.priceSource === 'default' ? '（目安）' : ''}`
+}
+
 export function IngredientsPage() {
   const [q, setQ] = useState('')
   const [category, setCategory] = useState<Category | ''>('')
-  const { data, isPending, isError } = useIngredients({ q: q.trim() || undefined, category: category || undefined })
+  const [price, setPrice] = useState<PriceFilter | ''>('')
+  const { data, isPending, isError } = useIngredients({
+    q: q.trim() || undefined,
+    category: category || undefined,
+    price: price || undefined,
+  })
 
   return (
     <>
@@ -58,6 +81,22 @@ export function IngredientsPage() {
         </select>
       </div>
 
+      <fieldset className="-mt-2 mb-4 flex gap-2" aria-label="価格で絞り込む">
+        {PRICE_FILTER_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={price === o.value}
+            onClick={() => setPrice(o.value)}
+            className={`min-h-9 rounded-full px-3 text-sm ${
+              price === o.value ? 'bg-accent font-bold text-white' : 'bg-surface text-ink-soft shadow-card'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </fieldset>
+
       {isPending && <p className="text-ink-muted">読み込み中…</p>}
       {isError && <p className="text-danger">読み込めませんでした</p>}
       {data && data.length === 0 && <p className="text-ink-muted">見つかりませんでした</p>}
@@ -83,6 +122,7 @@ export function IngredientsPage() {
                         {i.isStaple ? '常備品' : shelfLife(i)}
                         {i.packageUnits.length > 0 && ` ・ ${i.packageUnits.map((u) => u.label).join('、')}`}
                       </div>
+                      {!i.isStaple && <div className="mt-0.5 text-xs text-ink-muted">{priceText(i)}</div>}
                       {i.beforeCookTask && <div className="mt-0.5 text-xs text-warn">直前: {i.beforeCookTask}</div>}
                     </Link>
                   </li>

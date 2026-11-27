@@ -115,9 +115,6 @@ class Tally {
   get buyRaw() {
     return this.raw.buy
   }
-  get leftoverRaw() {
-    return this.raw.leftover
-  }
 }
 
 /** 提案（evaluate の結果）の金額 */
@@ -149,7 +146,8 @@ export type ShoppingCost = Cost & {
 /**
  * 買い物リストの金額。確定後に個数を直したり手で行を足したりできるので、今の行から計算し直す。
  * - 手で足した行は買う分に入れ、余りには入れない
- * - 食べる分は献立の料理の材料（食数で倍率）から出し、冷蔵庫から使う分 = 食べる分 − (料理の行の買う分 − 余り)
+ * - 食べる分は献立の料理の材料（食数で倍率）から出し、冷蔵庫から使う分 = 食べる分 − 不足量（買う必要があった分）。
+ *   個数を不足量より減らしても、減らした分を冷蔵庫から使う分には数えない
  */
 export function costOfShopping(input: {
   rows: ShoppingCostRow[]
@@ -170,15 +168,15 @@ export function costOfShopping(input: {
     line.buy += row.buyQuantity
     recipeLines.set(row.ingredientId, line)
   }
-  // 冷蔵庫から使う分の計算には、手で足した行を除いた買う分を使う
-  const recipeBuy = new Tally(input.ingredients)
+  // 不足量は確定のときに在庫で足りなかった分。手で足した行は入れない
+  const shortfall = new Tally(input.ingredients)
   for (const [ingredientId, line] of recipeLines) {
-    recipeBuy.add('buy', ingredientId, line.buy)
+    shortfall.add('buy', ingredientId, line.need)
     t.addLeftover(ingredientId, line.buy - line.need)
   }
   for (const [ingredientId, quantity] of input.eatQuantities) t.add('eat', ingredientId, quantity)
   const eat = t.eatRaw
-  const fromFridge = Math.max(0, eat - (recipeBuy.buyRaw - t.leftoverRaw))
+  const fromFridge = Math.max(0, eat - shortfall.buyRaw)
   const cost = t.result(input.totalMeals, eat)
   return { ...cost, fromFridgeYen: roundYen(fromFridge), remainingYen: roundYen(remaining.buyRaw) }
 }
