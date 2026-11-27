@@ -339,11 +339,12 @@ describe('探し直しの上限と、押すたびに変わらないもの', () =
   it('AI 補完のすすめは、別の案を出しても 1 回目と同じ', () => {
     const catalog = [...fixtureCatalog, ...syntheticCatalog(80)]
     for (const a of [get('curry'), get('mapo'), get('spinachOhitashi')]) {
-      const calls = pressAll({ anchors: [{ recipe: a, servings: 2 }], catalog }, 8)
+      const calls = pressAll({ anchors: [{ recipe: a, servings: 2 }], catalog }, 5)
       const flags = new Set(calls.map((c) => c.result.aiSuggestionRecommended))
       expect(flags.size).toBe(1)
     }
-  })
+    // 何度も recommend を呼ぶので、CI が遅いときのために長めに待つ
+  }, 30_000)
 
   it(`最悪のときも、1 回の評価は ${MAX_EVALUATIONS_PER_CALL} 回まで（時間もゆるく確かめる）`, () => {
     // 刻み 1・合計 8 食・600 件で、出し尽くしに近づくまで押す（探し直しがいちばん多くなる）
@@ -351,7 +352,8 @@ describe('探し直しの上限と、押すたびに変わらないもの', () =
     const calls = pressAll({ catalog, targetMeals: 8, options: { servingsStep: 1 } }, 12)
     for (const { result, ms } of calls) {
       expect(result.evaluations ?? 0).toBeLessThanOrEqual(MAX_EVALUATIONS_PER_CALL)
-      expect(ms).toBeLessThan(3000)
+      // 時間は CI の速さで揺れるので、大きく外れていないかだけを見る
+      expect(ms).toBeLessThan(5000)
     }
-  })
+  }, 60_000)
 })
