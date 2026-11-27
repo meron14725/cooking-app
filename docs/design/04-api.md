@@ -118,6 +118,7 @@ COCORO KITCHEN の URL（`https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/{�
 | GET | `/api/plans/:id` | 詳細（レシピ、状態） |
 | POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals?, exclude? }`。`exclude` はもう出した案のレシピ ID（案ごとの配列）で、それらの組み合わせを除いた次点を返す（「別の案を出す」） |
 | GET | `/api/plans/:id/evaluation` | いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。形は提案 1 件と同じ。draft のみ |
+| POST | `/api/plans/:id/evaluation` | 保存していない並び（`{ recipes: [{ recipeId, role, servings, dayIndex }] }`、PUT recipes と同じ形）を評価する。提案カードで食分を変えたとき用。献立は変えない。形は提案 1 件と同じ。draft のみ |
 | PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える。`{ recipes: [{ recipeId, role, servings, dayIndex }] }`。料理と dayIndex はそれぞれ重複不可（1 日 1 品） |
 | POST | `/api/plans/:id/confirm` | 確定。`{ startsOn }`（今日以降）。その時点の在庫で買い物リストを生成（同じ batch）。draft → shopping |
 | POST | `/api/plans/:id/shopping/complete` | 買い物完了。shopping → prepping。チェックしていない行は残す（買わなかったもの） |
@@ -131,7 +132,7 @@ COCORO KITCHEN の URL（`https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/{�
     kitLocations: { recipeId: string, location: 'fridge' | 'freezer' }[]   // 食べる順から決まる袋の保存場所
     score: number
     shopping: { ingredientId, name, needQuantity, packageUnitId, packageLabel, packageCount, buyQuantity }[]
-    leftovers: { ingredientId, name, quantity, unit, perishable: boolean }[]
+    leftovers: { ingredientId, name, quantity, unit, perishable: boolean, packs: number }[]  // packs = 代表量の何個分が余るか
     usesInventory: { inventoryItemId, name, quantity, expiresOn, isExpiringSoon }[]
     totalCaloriesKcal: number | null  // Σ 1人前カロリー × 食数。不明なレシピがあれば null
     warnings: string[]                // 「1.6L に収まるか未確認」など

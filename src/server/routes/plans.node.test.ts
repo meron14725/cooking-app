@@ -151,6 +151,29 @@ describe('献立 API', () => {
     expect((await api.call('POST', url, { exclude: 'x' })).status).toBe(400)
   })
 
+  it('保存していない並びを評価する（食分を変えたとき）。献立は変わらない', async () => {
+    const plan = (await createPlan([{ recipeId: anchor.id }])).body
+    const recipes = [
+      { recipeId: anchor.id, role: 'anchor', servings: 1, dayIndex: 1 },
+      { recipeId: partner.id, role: 'added', servings: 1, dayIndex: 2 },
+    ]
+    const url = `/plans/${plan.id}/evaluation`
+    const one = await api.call<ProposalView>('POST', url, { recipes })
+    expect(one.status).toBe(200)
+    const three = await api.call<ProposalView>('POST', url, {
+      recipes: recipes.map((r) => (r.recipeId === partner.id ? { ...r, servings: 3 } : r)),
+    })
+    expect(three.body.recipes.find((r) => r.recipeId === partner.id)?.servings).toBe(3)
+    expect(three.body.totalCaloriesKcal).not.toBe(one.body.totalCaloriesKcal)
+    for (const l of three.body.leftovers) expect(typeof l.packs).toBe('number')
+    // 献立は保存されていない
+    const saved = await api.call<Plan>('GET', `/plans/${plan.id}`)
+    expect(saved.body.recipes.map((r) => r.recipeId)).toEqual([anchor.id])
+    // 知らないレシピは 400
+    const unknown = await api.call('POST', url, { recipes: [{ ...recipes[0], recipeId: 'nope' }] })
+    expect(unknown.status).toBe(400)
+  })
+
   it('提案は在庫を先に使う（確保分を超えた量は使わない）', async () => {
     await api.call('POST', '/inventory', {
       ingredientId: pork.id,

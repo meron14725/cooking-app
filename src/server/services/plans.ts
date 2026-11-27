@@ -6,6 +6,7 @@ import {
   type Proposal,
   type RecIngredient,
   type RecRecipe,
+  type Role,
   recommend,
 } from '../../shared/domain/recommend'
 import type {
@@ -221,17 +222,26 @@ function toView(p: Proposal, byId: Map<string, RecRecipe>): ProposalView {
 }
 
 /** 保存済みの献立を、食べる順・食数そのままで評価する。削除済みのレシピも材料は残っているので含める */
-async function evaluateSaved(db: Db, plan: Plan, today: string): Promise<ProposalView> {
+function evaluateSaved(db: Db, plan: Plan, today: string): Promise<ProposalView> {
+  return evaluateRecipes(db, plan.recipes, today)
+}
+
+/** 料理・食数・食べる順の並びを評価する。削除済みのレシピも材料は残っているので含める */
+async function evaluateRecipes(
+  db: Db,
+  list: { recipeId: string; role: Role; servings: number; dayIndex: number }[],
+  today: string,
+): Promise<ProposalView> {
   const [ingredientMap, catalog, available] = await Promise.all([
     loadRecIngredients(db),
     loadRecRecipes(
       db,
-      plan.recipes.map((r) => r.recipeId),
+      list.map((r) => r.recipeId),
     ),
     loadAvailable(db, today),
   ])
   const byId = new Map(catalog.map((r) => [r.id, r]))
-  const items = plan.recipes.flatMap((r) => {
+  const items = list.flatMap((r) => {
     const recipe = byId.get(r.recipeId)
     return recipe ? [{ recipe, servings: r.servings, role: r.role, dayIndex: r.dayIndex }] : []
   })
@@ -245,6 +255,25 @@ export async function evaluatePlanById(db: Db, id: string, today: string): Promi
   const plan = await getPlan(db, id)
   assertDraft(plan.status)
   return evaluateSaved(db, plan, today)
+}
+
+/**
+ * 保存していない並び（提案カードで食分を変えたとき）を評価する。献立は変えない。
+ * 料理は削除されていないものだけ受け付ける
+ */
+export async function evaluateDraftRecipes(
+  db: Db,
+  id: string,
+  input: PlanRecipesInput,
+  today: string,
+): Promise<ProposalView> {
+  const plan = await getPlan(db, id)
+  assertDraft(plan.status)
+  await assertRecipesExist(
+    db,
+    input.recipes.map((r) => r.recipeId),
+  )
+  return evaluateRecipes(db, input.recipes, today)
 }
 
 /** 確定前に献立のレシピを置き換える（提案を選んだとき、入れ替え・食べる順・食数を変えたとき） */

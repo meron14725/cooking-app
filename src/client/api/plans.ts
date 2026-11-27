@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   Plan,
   PlanCreateInput,
@@ -43,6 +43,23 @@ export function usePlanEvaluation(planId: string | undefined, enabled = true) {
     queryKey: keys.evaluation(planId ?? ''),
     queryFn: () => apiFetch<ProposalView>(`/plans/${planId}/evaluation`),
     enabled: Boolean(planId) && enabled,
+  })
+}
+
+/**
+ * 提案カードで食分を変えた案を評価し直す（保存しない）。recipes が null の案は取らない。
+ * 押している間は前の結果を出したままにする
+ */
+export function useProposalEvaluations(planId: string, list: (PlanRecipesInput['recipes'] | null)[]) {
+  return useQueries({
+    queries: list.map((recipes, i) => ({
+      // 取らない案もキーが重ならないように、番号を入れる
+      queryKey: ['plans', planId, 'proposal-evaluation', recipes ?? i] as const,
+      queryFn: () =>
+        apiFetch<ProposalView>(`/plans/${planId}/evaluation`, { method: 'POST', body: JSON.stringify({ recipes }) }),
+      enabled: recipes !== null,
+      placeholderData: keepPreviousData,
+    })),
   })
 }
 

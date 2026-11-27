@@ -71,7 +71,15 @@ export type ShoppingLine = {
   buyQuantity: number
 }
 
-export type Leftover = { ingredientId: string; name: string; quantity: number; unit: string; perishable: boolean }
+export type Leftover = {
+  ingredientId: string
+  name: string
+  quantity: number
+  unit: string
+  perishable: boolean
+  /** 代表量（ふだん買うパック）の何個分が余るか。多めに余るものを目立たせるのに使う */
+  packs: number
+}
 
 export type InventoryUse = {
   inventoryItemId: string
@@ -253,7 +261,14 @@ export function evaluate(items: { recipe: RecRecipe; servings: number }[], ctx: 
       if (leftover > EPS) {
         const weight = perishability(ing)
         const perishable = weight >= SCORE_WEIGHTS.perishability.fridgeOnly
-        leftovers.push({ ingredientId, name: ing.name, quantity: leftover, unit: ing.unit, perishable })
+        leftovers.push({
+          ingredientId,
+          name: ing.name,
+          quantity: leftover,
+          unit: ing.unit,
+          perishable,
+          packs: round(leftover / rep),
+        })
         score += (leftover / rep) * weight
         if (perishable) maxPerishableLeftoverPacks = Math.max(maxPerishableLeftoverPacks, leftover / rep)
       }
