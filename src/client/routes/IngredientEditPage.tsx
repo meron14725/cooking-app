@@ -1,0 +1,391 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router'
+import {
+  CATEGORY_OPTIONS,
+  type Category,
+  type Ingredient,
+  type IngredientInput,
+  ingredientInputSchema,
+  LOCATION_OPTIONS,
+  type StorageLocation,
+} from '../../shared/schemas/ingredient'
+import { ApiRequestError } from '../api/client'
+import { useDeleteIngredient, useIngredient, useSaveIngredient } from '../api/ingredients'
+import { Button, Checkbox, Field, inputBaseClass, inputClass, parseNumber } from '../components/form'
+import { PageHeader } from '../components/PageHeader'
+
+type UnitForm = { key: string; id?: string; label: string; quantity: string; isDefault: boolean }
+
+type FormState = {
+  name: string
+  aliases: string
+  category: Category
+  unit: string
+  gramsPerUnit: string
+  canFreeze: boolean
+  fridgeDays: string
+  freezerDays: string
+  pantryDays: string
+  preppedFridgeDays: string
+  preppedFreezerDays: string
+  defaultLocation: StorageLocation
+  beforeCookTask: string
+  frozenCookNote: string
+  isStaple: boolean
+  packageUnits: UnitForm[]
+}
+
+let unitKey = 0
+const newUnitKey = () => `u${++unitKey}`
+
+const emptyForm: FormState = {
+  name: '',
+  aliases: '',
+  category: 'vegetable',
+  unit: '個',
+  gramsPerUnit: '',
+  canFreeze: true,
+  fridgeDays: '7',
+  freezerDays: '30',
+  pantryDays: '',
+  preppedFridgeDays: '',
+  preppedFreezerDays: '',
+  defaultLocation: 'fridge',
+  beforeCookTask: '',
+  frozenCookNote: '',
+  isStaple: false,
+  packageUnits: [],
+}
+
+const str = (n: number | null) => (n === null ? '' : String(n))
+
+function toForm(i: Ingredient): FormState {
+  return {
+    name: i.name,
+    aliases: i.aliases.join('、'),
+    category: i.category,
+    unit: i.unit,
+    gramsPerUnit: str(i.gramsPerUnit),
+    canFreeze: i.canFreeze,
+    fridgeDays: String(i.fridgeDays),
+    freezerDays: str(i.freezerDays),
+    pantryDays: str(i.pantryDays),
+    preppedFridgeDays: str(i.preppedFridgeDays),
+    preppedFreezerDays: str(i.preppedFreezerDays),
+    defaultLocation: i.defaultLocation,
+    beforeCookTask: i.beforeCookTask ?? '',
+    frozenCookNote: i.frozenCookNote ?? '',
+    isStaple: i.isStaple,
+    packageUnits: i.packageUnits.map((u) => ({
+      key: newUnitKey(),
+      id: u.id,
+      label: u.label,
+      quantity: String(u.quantity),
+      isDefault: u.isDefault,
+    })),
+  }
+}
+
+function toInput(f: FormState): IngredientInput {
+  return {
+    name: f.name,
+    aliases: f.aliases
+      .split(/[、,，\s]+/)
+      .map((a) => a.trim())
+      .filter(Boolean),
+    category: f.category,
+    unit: f.unit,
+    gramsPerUnit: parseNumber(f.gramsPerUnit),
+    canFreeze: f.canFreeze,
+    fridgeDays: parseNumber(f.fridgeDays) ?? Number.NaN,
+    freezerDays: f.canFreeze ? parseNumber(f.freezerDays) : null,
+    pantryDays: parseNumber(f.pantryDays),
+    preppedFridgeDays: parseNumber(f.preppedFridgeDays),
+    preppedFreezerDays: f.canFreeze ? parseNumber(f.preppedFreezerDays) : null,
+    defaultLocation: f.defaultLocation,
+    beforeCookTask: f.beforeCookTask,
+    frozenCookNote: f.frozenCookNote,
+    isStaple: f.isStaple,
+    packageUnits: f.packageUnits.map((u) => ({
+      id: u.id,
+      label: u.label,
+      quantity: parseNumber(u.quantity) ?? Number.NaN,
+      isDefault: u.isDefault,
+    })),
+  }
+}
+
+const UNIT_SUGGESTIONS = ['個', '本', '枚', '袋', 'パック', '丁', '株', '切れ', '缶', 'g', 'ml']
+
+export function IngredientEditPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const existing = useIngredient(id)
+  const save = useSaveIngredient(id)
+  const remove = useDeleteIngredient()
+
+  const [form, setForm] = useState<FormState>(emptyForm)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    if (existing.data) setForm(toForm(existing.data))
+  }, [existing.data])
+
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }))
+  const setUnit = (key: string, patch: Partial<UnitForm>) =>
+    setForm((f) => ({
+      ...f,
+      packageUnits: f.packageUnits.map((u) =>
+        u.key === key
+          ? { ...u, ...patch }
+          : patch.isDefault
+            ? { ...u, isDefault: false } // 代表は 1 つだけ
+            : u,
+      ),
+    }))
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const input = toInput(form)
+    const parsed = ingredientInputSchema.safeParse(input)
+    if (!parsed.success) {
+      const next: Record<string, string> = {}
+      for (const issue of parsed.error.issues) {
+        const key = String(issue.path[0] ?? 'form')
+        next[key] ??= issue.message
+      }
+      setErrors(next)
+      return
+    }
+    setErrors({})
+    try {
+      await save.mutateAsync(input)
+      navigate('/ingredients')
+    } catch (err) {
+      setErrors({ form: err instanceof ApiRequestError ? err.message : '保存できませんでした' })
+    }
+  }
+
+  async function onDelete() {
+    if (!id) return
+    await remove.mutateAsync(id)
+    navigate('/ingredients')
+  }
+
+  if (id && existing.isPending) return <p className="text-stone-500">読み込み中…</p>
+  if (id && existing.isError) return <p className="text-red-600">食材が見つかりませんでした</p>
+
+  const numberField = (key: keyof FormState, label: string, opts: { hint?: string; disabled?: boolean } = {}) => (
+    <Field label={label} hint={opts.hint} error={errors[key]}>
+      <input
+        type="number"
+        inputMode="decimal"
+        min={0}
+        step="any"
+        value={form[key] as string}
+        disabled={opts.disabled}
+        onChange={(e) => set(key, e.target.value as never)}
+        className={inputClass}
+      />
+    </Field>
+  )
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      <PageHeader title={id ? '食材を編集' : '食材を追加'} />
+
+      <Field label="名前" error={errors.name}>
+        <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} required />
+      </Field>
+      <Field label="別名" hint="URL取り込みの照合に使います。「、」区切り" error={errors.aliases}>
+        <input value={form.aliases} onChange={(e) => set('aliases', e.target.value)} className={inputClass} />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="売り場" error={errors.category}>
+          <select
+            value={form.category}
+            onChange={(e) => set('category', e.target.value as Category)}
+            className={inputClass}
+          >
+            {CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="基準単位" hint="量はすべてこの単位" error={errors.unit}>
+          <input
+            value={form.unit}
+            onChange={(e) => set('unit', e.target.value)}
+            list="unit-suggestions"
+            className={inputClass}
+          />
+          <datalist id="unit-suggestions">
+            {UNIT_SUGGESTIONS.map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
+        </Field>
+      </div>
+      {form.unit !== 'g' &&
+        numberField('gramsPerUnit', `1${form.unit}あたりの重さ（g）`, {
+          hint: 'レシピの「100g」をこの単位に直すときに使います',
+        })}
+
+      <fieldset className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
+        <legend className="px-1 text-sm font-bold text-stone-700">保存と日持ち（目安）</legend>
+        <Field label="買ったときの保存場所" error={errors.defaultLocation}>
+          <select
+            value={form.defaultLocation}
+            onChange={(e) => set('defaultLocation', e.target.value as StorageLocation)}
+            className={inputClass}
+          >
+            {LOCATION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value} disabled={o.value === 'freezer' && !form.canFreeze}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Checkbox label="冷凍できる" checked={form.canFreeze} onChange={(v) => set('canFreeze', v)} />
+        <div className="grid grid-cols-3 gap-3">
+          {numberField('fridgeDays', '冷蔵（日）')}
+          {numberField('freezerDays', '冷凍（日）', { disabled: !form.canFreeze })}
+          {numberField('pantryDays', '常温（日）', { hint: '空 = 常温不可' })}
+        </div>
+        <p className="text-xs text-stone-500">切った後の日持ち（空なら冷蔵 2日・冷凍 21日）</p>
+        <div className="grid grid-cols-2 gap-3">
+          {numberField('preppedFridgeDays', '切った後・冷蔵（日）')}
+          {numberField('preppedFreezerDays', '切った後・冷凍（日）', { disabled: !form.canFreeze })}
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
+        <legend className="px-1 text-sm font-bold text-stone-700">調理のときの注意</legend>
+        <Field
+          label="入れる直前の作業"
+          hint="例: 入れる直前に切る、水で戻す。空なら直前作業なし"
+          error={errors.beforeCookTask}
+        >
+          <input
+            value={form.beforeCookTask}
+            onChange={(e) => set('beforeCookTask', e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        <Field label="冷凍のまま入れるときの注意" error={errors.frozenCookNote}>
+          <input
+            value={form.frozenCookNote}
+            onChange={(e) => set('frozenCookNote', e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        <Checkbox
+          label="常備品（調味料など。使い切りの計算に入れない）"
+          checked={form.isStaple}
+          onChange={(v) => set('isStaple', v)}
+        />
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-xl border border-stone-200 bg-white p-4">
+        <legend className="px-1 text-sm font-bold text-stone-700">販売単位</legend>
+        {errors.packageUnits && <p className="text-xs text-red-600">{errors.packageUnits}</p>}
+        {form.packageUnits.length === 0 && <p className="text-sm text-stone-500">なし（量り売り扱い）</p>}
+        {form.packageUnits.map((u) => (
+          <div key={u.key} className="flex items-end gap-2">
+            <Field label="名前">
+              <input
+                value={u.label}
+                placeholder="3個入り"
+                onChange={(e) => setUnit(u.key, { label: e.target.value })}
+                className={inputClass}
+              />
+            </Field>
+            <Field label={`量（${form.unit}）`}>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                value={u.quantity}
+                onChange={(e) => setUnit(u.key, { quantity: e.target.value })}
+                className={`${inputBaseClass} w-20`}
+              />
+            </Field>
+            <label className="flex min-h-11 shrink-0 items-center gap-1 text-xs">
+              <input
+                type="radio"
+                name="default-unit"
+                checked={u.isDefault}
+                onChange={() => setUnit(u.key, { isDefault: true })}
+                className="size-4 accent-orange-600"
+              />
+              代表
+            </label>
+            <button
+              type="button"
+              aria-label={`${u.label || '販売単位'}を削除`}
+              onClick={() =>
+                set(
+                  'packageUnits',
+                  form.packageUnits.filter((x) => x.key !== u.key),
+                )
+              }
+              className="min-h-11 shrink-0 px-2 text-stone-400"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <Button
+          variant="secondary"
+          onClick={() =>
+            set('packageUnits', [
+              ...form.packageUnits,
+              { key: newUnitKey(), label: '', quantity: '', isDefault: form.packageUnits.length === 0 },
+            ])
+          }
+        >
+          ＋ 販売単位を追加
+        </Button>
+      </fieldset>
+
+      {errors.form && <p className="text-sm text-red-600">{errors.form}</p>}
+      {Object.keys(errors).length > 0 && !errors.form && (
+        <p className="text-sm text-red-600">入力内容を確認してください</p>
+      )}
+
+      <div className="flex gap-3">
+        <Button type="submit" disabled={save.isPending} className="flex-1">
+          {save.isPending ? '保存中…' : '保存'}
+        </Button>
+        <Button variant="secondary" onClick={() => navigate('/ingredients')}>
+          戻る
+        </Button>
+      </div>
+
+      {id && (
+        <div className="border-t border-stone-200 pt-5">
+          {confirmDelete ? (
+            <div className="flex items-center gap-3">
+              <span className="flex-1 text-sm">一覧から消します。よいですか？</span>
+              <Button variant="danger" onClick={onDelete} disabled={remove.isPending}>
+                削除する
+              </Button>
+              <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
+                やめる
+              </Button>
+            </div>
+          ) : (
+            <Button variant="danger" onClick={() => setConfirmDelete(true)}>
+              この食材を削除
+            </Button>
+          )}
+        </div>
+      )}
+    </form>
+  )
+}

@@ -1,25 +1,10 @@
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
+import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { createTestD1 } from '../testing/d1'
 
 // Node で動かすテスト（*.node.test.ts は tsconfig.node.json で型チェックする）
 // マイグレーションの SQL を SQLite（D1 と同じエンジン）に当てて、制約が効くことを確かめる
-const MIGRATIONS_DIR = join(import.meta.dirname, '../../../migrations')
-
-function migrate(): DatabaseSync {
-  const db = new DatabaseSync(':memory:')
-  db.exec('PRAGMA foreign_keys = ON') // D1 は外部キー制約が常に有効
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith('.sql'))
-    .sort()
-  for (const file of files) {
-    for (const stmt of readFileSync(join(MIGRATIONS_DIR, file), 'utf8').split('--> statement-breakpoint')) {
-      if (stmt.trim()) db.exec(stmt)
-    }
-  }
-  return db
-}
+const migrate = () => createTestD1({ seed: false }).sqlite
 
 let db: DatabaseSync
 

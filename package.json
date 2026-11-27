@@ -13,9 +13,11 @@
     "test": "vitest run",
     "cf-typegen": "wrangler types --include-env=false src/server/worker-configuration.d.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply cooking-app --local"
+    "db:migrate:local": "wrangler d1 migrations apply cooking-app --local",
+    "seed:sql": "tsx scripts/generate-seed-sql.ts"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.1",
     "@tanstack/react-query": "^5.108.4",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.23",
@@ -35,6 +37,7 @@
     "@vitejs/plugin-react": "^6.3.0",
     "drizzle-kit": "^0.31.11",
     "tailwindcss": "^4.3.5",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^8.4.0",
     "vitest": "^5.1.2",
