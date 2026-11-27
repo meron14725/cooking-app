@@ -138,6 +138,8 @@ export const recipes = sqliteTable(
     cookCount: integer('cook_count'),
     /** 取り込み元の score。今のデータは全件同じなので並べ替えには使わない */
     score: integer('score'),
+    /** 自分のお気に入り。画面のお気に入り数は取り込み元の数にこれ（1）を足して出す */
+    isFavorite: bool('is_favorite').notNull().default(false),
     archivedAt: text('archived_at'),
     ...timestamps,
   },

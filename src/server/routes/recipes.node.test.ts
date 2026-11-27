@@ -200,6 +200,30 @@ describe('レシピ API', () => {
     expect((await api.call('GET', '/recipes?sort=score')).status).toBe(400)
   })
 
+  it('自分のお気に入りを付け外しでき、人気順は取り込み元の数に 1 を足して並べる。編集しても残る', async () => {
+    const a = (await api.call<Recipe>('POST', '/recipes', curry({ title: 'あ', favoriteCount: 10 }))).body
+    await api.call('POST', '/recipes', curry({ title: 'い', favoriteCount: 10 }))
+    const u = (await api.call<Recipe>('POST', '/recipes', curry({ title: 'う' }))).body
+    expect(a.isFavorite).toBe(false)
+    const titles = async () =>
+      (await api.call<{ items: RecipeSummary[] }>('GET', '/recipes?sort=popular')).body.items.map((r) => r.title)
+    expect(await titles()).toEqual(['あ', 'い', 'う'])
+
+    const on = await api.call<Recipe>('PUT', `/recipes/${u.id}/favorite`, { favorite: true })
+    expect(on.status).toBe(200)
+    expect(on.body.isFavorite).toBe(true)
+    await api.call('PUT', `/recipes/${a.id}/favorite`, { favorite: true })
+    // あ = 11、い = 10、う = 1（取り込み元の数がなくても自分のお気に入りがあれば数のないレシピより前）
+    expect(await titles()).toEqual(['あ', 'い', 'う'])
+    await api.call('PUT', `/recipes/${a.id}/favorite`, { favorite: false })
+    await api.call('PUT', `/recipes/${a.id}/favorite`, { favorite: true })
+    const edited = await api.call<Recipe>('PUT', `/recipes/${a.id}`, curry({ title: 'あ', favoriteCount: 10 }))
+    expect(edited.body.isFavorite).toBe(true)
+
+    expect((await api.call('PUT', `/recipes/${a.id}/favorite`, { favorite: 'yes' })).status).toBe(400)
+    expect((await api.call('PUT', '/recipes/nope/favorite', { favorite: true })).status).toBe(404)
+  })
+
   it('存在しないレシピは 404', async () => {
     expect((await api.call('GET', '/recipes/nope')).status).toBe(404)
     expect((await api.call('PUT', '/recipes/nope', curry())).status).toBe(404)

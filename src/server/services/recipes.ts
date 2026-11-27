@@ -58,7 +58,13 @@ function orderFor(sort: RecipeSort | undefined) {
     desc(col),
     asc(recipes.title),
   ]
-  if (sort === 'popular') return byCount(recipes.favoriteCount)
+  // お気に入り数は取り込み元の数に自分のお気に入り（1）を足した数
+  if (sort === 'popular')
+    return [
+      sql`(${recipes.favoriteCount} IS NULL AND ${recipes.isFavorite} = 0)`,
+      desc(sql`COALESCE(${recipes.favoriteCount}, 0) + ${recipes.isFavorite}`),
+      asc(recipes.title),
+    ]
   if (sort === 'cooked') return byCount(recipes.cookCount)
   return [asc(recipes.title)]
 }
@@ -108,6 +114,7 @@ export async function listRecipes(
     officialMenuNo: r.officialMenuNo,
     imageKey: r.imageKey,
     favoriteCount: r.favoriteCount,
+    isFavorite: r.isFavorite,
     cookCount: r.cookCount,
     ingredientNames: [...new Set(names.filter((n) => n.recipeId === r.id).map((n) => n.name))],
   }))
@@ -129,6 +136,7 @@ function toRecipe(row: RecipeRow, items: RecipeIngredient[], steps: RecipeStep[]
     officialMenuNo: row.officialMenuNo,
     imageKey: row.imageKey,
     favoriteCount: row.favoriteCount,
+    isFavorite: row.isFavorite,
     cookCount: row.cookCount,
     score: row.score,
     ingredients: items,
@@ -176,6 +184,13 @@ export async function createRecipe(db: Db, input: RecipeInputParsed): Promise<Re
  * レシピを丸ごと更新する。材料と手順は全部入れ替える。作成元（sourceType）は変えない。
  * 公式レシピの情報（imageKey・件数など）は入力で省略されたら今の値を残す（drizzle は undefined を set しない）
  */
+/** 自分のお気に入りを付ける・外す。レシピの中身は変えない */
+export async function setRecipeFavorite(db: Db, id: string, favorite: boolean): Promise<Recipe> {
+  await getRecipe(db, id)
+  await db.update(recipes).set({ isFavorite: favorite }).where(eq(recipes.id, id))
+  return getRecipe(db, id)
+}
+
 export async function updateRecipe(db: Db, id: string, input: RecipeInputParsed): Promise<Recipe> {
   await getRecipe(db, id)
   await assertIngredientsExist(db, input, id)

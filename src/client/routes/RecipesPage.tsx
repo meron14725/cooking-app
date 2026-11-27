@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import type { RecipeSort } from '../../shared/schemas/recipe'
+import { favoriteTotal, type RecipeSort } from '../../shared/schemas/recipe'
 import { aiErrorMessage, useDraftRecipe, useRecipes } from '../api/recipes'
 import { Icon } from '../components/Icon'
 import { RecipePhoto } from '../components/RecipePhoto'
@@ -259,11 +259,11 @@ export function RecipesPage() {
                         .join(' ・ ') || ' '}
                     </span>
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs whitespace-nowrap text-ink-soft">
-                      {r.favoriteCount !== null && (
+                      {favoriteTotal(r) !== null && (
                         <span className="flex items-center gap-1">
                           <Icon name="heart" size={14} strokeWidth={1.6} className="fill-[#e07a5f] text-[#e07a5f]" />
                           <span className="sr-only">お気に入り</span>
-                          {compactCount(r.favoriteCount)}
+                          {compactCount(favoriteTotal(r) ?? 0)}
                         </span>
                       )}
                       {r.cookCount !== null && <span>作った {compactCount(r.cookCount)}回</span>}

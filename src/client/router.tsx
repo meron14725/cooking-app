@@ -9,6 +9,7 @@ import { IngredientsPage } from './routes/IngredientsPage'
 import { MorePage } from './routes/MorePage'
 import { NotFoundPage } from './routes/NotFoundPage'
 import { PlanPage } from './routes/PlanPage'
+import { RecipeDetailPage } from './routes/RecipeDetailPage'
 import { RecipeEditPage } from './routes/RecipeEditPage'
 import { RecipesPage } from './routes/RecipesPage'
 
@@ -22,7 +23,8 @@ export const router = createBrowserRouter([
       { path: 'kits/:id/cook', element: <CookPage /> },
       { path: 'recipes', element: <RecipesPage /> },
       { path: 'recipes/new', element: <RecipeEditPage /> },
-      { path: 'recipes/:id', element: <RecipeEditPage /> },
+      { path: 'recipes/:id', element: <RecipeDetailPage /> },
+      { path: 'recipes/:id/edit', element: <RecipeEditPage /> },
       { path: 'more', element: <MorePage /> },
       { path: 'agent', element: <AgentPage /> },
       { path: 'ingredients', element: <IngredientsPage /> },
