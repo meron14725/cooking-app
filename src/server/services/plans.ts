@@ -278,7 +278,8 @@ export async function confirmPlan(db: Db, id: string, startsOn: string, today: s
       .update(plans)
       .set({ status: 'shopping', startsOn, confirmedAt: new Date().toISOString() })
       .where(and(eq(plans.id, id), eq(plans.status, 'draft'))),
-    ...(rows.length > 0 ? [db.insert(shoppingItems).values(rows)] : []),
+    // 複数行を 1 つの INSERT にするとバインド変数が 100 を超えうるので、1 行ずつ（同じ batch なのでまとめて反映）
+    ...rows.map((r) => db.insert(shoppingItems).values(r)),
   ])
   return getPlan(db, id)
 }

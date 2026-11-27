@@ -71,9 +71,23 @@ async function loadInputs(db: Db, planId: string, startsOn: string) {
           .from(recipeIngredients)
           .where(inArray(recipeIngredients.recipeId, recipeIds))
           .orderBy(asc(recipeIngredients.sortOrder))
-  const ingredientIds = [...new Set(parts.map((p) => p.ingredientId))]
+  // 献立の材料は 100 種を超えうるので、ID を並べずにサブクエリで取る（D1 のバインド変数の上限は 100）
   const masters =
-    ingredientIds.length === 0 ? [] : await db.select().from(ingredients).where(inArray(ingredients.id, ingredientIds))
+    parts.length === 0
+      ? []
+      : await db
+          .select()
+          .from(ingredients)
+          .where(
+            inArray(
+              ingredients.id,
+              db
+                .select({ id: recipeIngredients.ingredientId })
+                .from(recipeIngredients)
+                .innerJoin(planRecipes, eq(planRecipes.recipeId, recipeIngredients.recipeId))
+                .where(eq(planRecipes.planId, planId)),
+            ),
+          )
   const prepIngredients = new Map<string, PrepIngredient>(
     masters.map((m) => [
       m.id,
@@ -223,8 +237,9 @@ export async function saveKits(db: Db, planId: string, input: KitsInput, today: 
         .update(plans)
         .set({ status: 'stored' })
         .where(and(eq(plans.id, planId), eq(plans.status, 'prepping'))),
-      db.insert(mealKits).values(kitRows),
-      ...(itemRows.length > 0 ? [db.insert(mealKitItems).values(itemRows)] : []),
+      // 複数行を 1 つの INSERT にするとバインド変数が 100 を超えうるので、1 行ずつ（同じ batch なのでまとめて反映）
+      ...kitRows.map((r) => db.insert(mealKits).values(r)),
+      ...itemRows.map((r) => db.insert(mealKitItems).values(r)),
       ...updates.map((u) => {
         const quantity = u.quantity + (reserved.get(u.id) ?? 0)
         return db

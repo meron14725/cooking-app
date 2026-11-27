@@ -87,16 +87,13 @@ export async function listRecipes(
     .orderBy(...orderFor(opts.sort))
   if (rows.length === 0) return []
 
+  // ID を IN に並べると D1 のバインド変数の上限（100）を超えるので、同じ条件で recipes と JOIN して取る
   const names = await db
     .select({ recipeId: recipeIngredients.recipeId, name: ingredients.name })
     .from(recipeIngredients)
+    .innerJoin(recipes, eq(recipes.id, recipeIngredients.recipeId))
     .innerJoin(ingredients, eq(ingredients.id, recipeIngredients.ingredientId))
-    .where(
-      inArray(
-        recipeIngredients.recipeId,
-        rows.map((r) => r.id),
-      ),
-    )
+    .where(and(...conditions))
     .orderBy(asc(recipeIngredients.sortOrder))
 
   return rows.map((r) => ({

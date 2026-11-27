@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm'
+import { and, asc, eq, isNull, notInArray, sql } from 'drizzle-orm'
 import type { Ingredient, IngredientInputParsed, PackageUnit } from '../../shared/schemas/ingredient'
 import { ulid } from '../../shared/ulid'
 import type { Db } from '../db/client'
@@ -80,16 +80,15 @@ export async function listIngredients(db: Db, opts: { q?: string; category?: str
     .where(and(...conditions))
     .orderBy(asc(ingredients.category), asc(ingredients.name))
   if (rows.length === 0) return []
-  const units = await db
-    .select()
-    .from(packageUnits)
-    .where(
-      inArray(
-        packageUnits.ingredientId,
-        rows.map((r) => r.id),
-      ),
-    )
-    .orderBy(asc(packageUnits.quantity))
+  // ID を IN に並べると D1 のバインド変数の上限（100）を超えるので、同じ条件で ingredients と JOIN して取る
+  const units = (
+    await db
+      .select({ unit: packageUnits })
+      .from(packageUnits)
+      .innerJoin(ingredients, eq(ingredients.id, packageUnits.ingredientId))
+      .where(and(...conditions))
+      .orderBy(asc(packageUnits.quantity))
+  ).map((r) => r.unit)
   return rows.map((r) =>
     toIngredient(
       r,
