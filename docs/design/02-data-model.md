@@ -93,6 +93,7 @@ ingredients（食材マスタ）──< package_units（販売単位）
 | hotcook_mode | TEXT NULL | 例: 「手動 → 煮物を作る → まぜる → 30分」 |
 | max_servings_1_6l | REAL NULL | 1.6L 機で一度に作れる最大の人数分。NULL = 不明（チェックせず、画面で注意を出す） |
 | pack_seasonings | INTEGER | 1 = 調味料も袋に入れる（下味冷凍）。調理時に入れるものが減る |
+| is_favorite | INTEGER | 1 = 自分のお気に入り。画面のお気に入り数は取り込み元の `favorite_count` にこれを足して出す。既定値 0 |
 | source_type | TEXT | `manual` / `url` / `ai` / `seed` |
 | source_url | TEXT NULL | |
 | notes | TEXT NULL | メモ |

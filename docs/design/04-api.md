@@ -31,6 +31,7 @@ Hono で `/api/*` に REST API を置きます。入出力は JSON、検証は `
 | POST | `/api/recipes` | 作成（材料・手順をまとめて送る） |
 | GET | `/api/recipes/:id` | 詳細 |
 | PUT | `/api/recipes/:id` | 更新（材料・手順は丸ごと置き換え） |
+| PUT | `/api/recipes/:id/favorite` | 自分のお気に入りを付ける・外す（`{ favorite: boolean }`）。人気順（`sort=popular`）は取り込み元のお気に入り数＋自分の 1 で並べる |
 | DELETE | `/api/recipes/:id` | 論理削除 |
 | POST | `/api/recipes/draft` | 「＋」のパネル。`{ text }`（URL・メモ・料理名など何でも、4000 文字まで）。URL を含めばそのページから取り込み（残りの文はメモとして AI に渡す）、なければ AI が文から下書きを作る（保存しない）。COCORO KITCHEN の URL は下記 |
 | POST | `/api/recipes/suggest` | AI に補完レシピの下書きを作らせる（保存しない）。`{ leftovers: [{ ingredientId, quantity }] }`（余りの優先順） |

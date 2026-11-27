@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { addDays, shortDate, todayJst } from '../../shared/domain/date'
 import { PLAN_STATUS_LABELS, type Plan, type PlanRecipesInput, type ProposalView } from '../../shared/schemas/plan'
 import { ApiRequestError } from '../api/client'
@@ -54,9 +54,16 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (v: numb
 
 // ---------- 1. 食べたい料理を選ぶ ----------
 
+type Picked = { recipeId: string; title: string; servings: number }
+
 function AnchorPicker() {
   const [q, setQ] = useState('')
-  const [picked, setPicked] = useState<{ recipeId: string; title: string; servings: number }[]>([])
+  // レシピを見るページの「食べたい料理に追加」から来たら、その料理を選んだ状態で始める
+  const location = useLocation()
+  const [picked, setPicked] = useState<Picked[]>(() => {
+    const pick = (location.state as { pick?: Picked } | null)?.pick
+    return pick ? [pick] : []
+  })
   const recipes = useRecipes({ q: q.trim() || undefined })
   const create = useCreatePlan()
   const [error, setError] = useState<string | null>(null)

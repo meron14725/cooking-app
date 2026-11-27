@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
+import { recipeFavoriteInputSchema, recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
 import {
   draftInputSchema,
   estimateCaloriesInputSchema,
@@ -23,7 +23,14 @@ import {
 } from '../services/cocoro'
 import { listIngredients } from '../services/ingredients'
 import { assertPublicUrl, buildSourceText, fetchPage, normalizeDraft } from '../services/recipeImport'
-import { archiveRecipe, createRecipe, getRecipe, listRecipes, updateRecipe } from '../services/recipes'
+import {
+  archiveRecipe,
+  createRecipe,
+  getRecipe,
+  listRecipes,
+  setRecipeFavorite,
+  updateRecipe,
+} from '../services/recipes'
 import { validate } from '../validation'
 
 const listQuerySchema = z.object({
@@ -116,6 +123,11 @@ export const recipeRoutes = new Hono<AppEnv>()
   .get('/:id', async (c) => c.json(await getRecipe(createDb(c.env.DB), c.req.param('id'))))
   .put('/:id', validate('json', recipeInputSchema), async (c) => {
     const item = await updateRecipe(createDb(c.env.DB), c.req.param('id'), c.req.valid('json'))
+    return c.json(item)
+  })
+  // 自分のお気に入りを付ける・外す
+  .put('/:id/favorite', validate('json', recipeFavoriteInputSchema), async (c) => {
+    const item = await setRecipeFavorite(createDb(c.env.DB), c.req.param('id'), c.req.valid('json').favorite)
     return c.json(item)
   })
   .delete('/:id', async (c) => {

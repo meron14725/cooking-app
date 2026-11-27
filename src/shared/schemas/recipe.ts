@@ -142,6 +142,8 @@ export type Recipe = {
   /** 完成写真の R2 キー（例: img/R4063.jpg）。画面では imagePath(key) で出す */
   imageKey: string | null
   favoriteCount: number | null
+  /** 自分のお気に入り（PUT /api/recipes/:id/favorite で切り替える） */
+  isFavorite: boolean
   cookCount: number | null
   score: number | null
   ingredients: RecipeIngredient[]
@@ -162,8 +164,18 @@ export type RecipeSummary = Pick<
   | 'officialMenuNo'
   | 'imageKey'
   | 'favoriteCount'
+  | 'isFavorite'
   | 'cookCount'
 > & {
   /** 材料の食材名（並び順どおり、重複なし） */
   ingredientNames: string[]
+}
+
+export const recipeFavoriteInputSchema = z.object({ favorite: z.boolean() })
+export type RecipeFavoriteInput = z.infer<typeof recipeFavoriteInputSchema>
+
+/** 画面に出すお気に入り数: 取り込み元の数に自分の 1 を足す。どちらもなければ null（出さない） */
+export function favoriteTotal(r: { favoriteCount: number | null; isFavorite: boolean }): number | null {
+  if (r.favoriteCount === null && !r.isFavorite) return null
+  return (r.favoriteCount ?? 0) + (r.isFavorite ? 1 : 0)
 }

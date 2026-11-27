@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { normalizeUnit, toBaseQuantity, toGrams, type UnitMaster } from '../../shared/domain/units'
 import type { Ingredient } from '../../shared/schemas/ingredient'
 import {
@@ -250,8 +250,9 @@ export function RecipeEditPage() {
   /** URL 取り込み（S11）や AI 補完提案（S03）から来たときの下書き。returnTo は保存・やめたときの戻り先 */
   const state = id ? null : (location.state as { draft?: RecipeDraft; returnTo?: string } | null)
   const draft = state?.draft
-  const back = state?.returnTo ?? '/recipes'
+  const back = state?.returnTo ?? (id ? `/recipes/${id}` : '/recipes')
   const goBack = useGoBack(back)
+  const navigate = useNavigate()
   const existing = useRecipe(id)
   const estimate = useEstimateCalories()
   const [estimateError, setEstimateError] = useState<string | null>(null)
@@ -342,7 +343,8 @@ export function RecipeEditPage() {
     setDeleteError(null)
     try {
       await remove.mutateAsync(id)
-      goBack()
+      // 消したレシピを見るページには戻れないので一覧へ
+      navigate('/recipes', { replace: true })
     } catch (err) {
       setDeleteError(err instanceof ApiRequestError ? err.message : '削除できませんでした')
     }

@@ -51,6 +51,28 @@ export function useSaveRecipe(id: string | undefined) {
   })
 }
 
+/** 自分のお気に入りを切り替える。押した直後に画面へ出し、失敗したら戻す */
+export function useSetRecipeFavorite(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (favorite: boolean) =>
+      apiFetch<Recipe>(`/recipes/${id}/favorite`, { method: 'PUT', body: JSON.stringify({ favorite }) }),
+    onMutate: async (favorite) => {
+      await qc.cancelQueries({ queryKey: keys.detail(id) })
+      const prev = qc.getQueryData<Recipe>(keys.detail(id))
+      if (prev) qc.setQueryData(keys.detail(id), { ...prev, isFavorite: favorite })
+      return { prev }
+    },
+    onError: (_err, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(keys.detail(id), ctx.prev)
+    },
+    onSuccess: (saved) => {
+      qc.setQueryData(keys.detail(id), saved)
+      return qc.invalidateQueries({ queryKey: ['recipes', 'list'] })
+    },
+  })
+}
+
 export function useDeleteRecipe() {
   const qc = useQueryClient()
   return useMutation({
