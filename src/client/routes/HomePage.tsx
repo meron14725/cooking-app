@@ -59,7 +59,13 @@ export function HomePage() {
     <>
       <PageHeader title="ホーム" />
       <ExpiringSoon />
-      <p className="text-sm text-stone-500">「今日はこの袋」と献立づくりは、この先の更新で入ります。</p>
+      <Link
+        to="/plan"
+        className="mb-4 flex min-h-11 items-center justify-center rounded-lg bg-orange-600 font-bold text-white"
+      >
+        食べたい料理を選ぶ
+      </Link>
+      <p className="text-sm text-stone-500">「今日はこの袋」は、この先の更新で入ります。</p>
       <p className="mt-6 text-xs text-stone-400">
         API: {health.isPending ? '確認中…' : health.isError ? '接続できません' : `OK（${health.data.today}）`}
       </p>
