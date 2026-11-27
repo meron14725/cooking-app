@@ -3,6 +3,13 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { normalizeUnit, toBaseQuantity, toGrams, type UnitMaster } from '../../shared/domain/units'
 import type { Ingredient } from '../../shared/schemas/ingredient'
 import {
+  type AttributeSource,
+  CUISINE_LABELS,
+  CUISINES,
+  type Cuisine,
+  DISH_TYPE_LABELS,
+  DISH_TYPES,
+  type DishType,
   type Recipe,
   type RecipeInput,
   recipeInputSchema,
@@ -41,6 +48,28 @@ type IngredientRow = {
 
 type StepRow = { key: string; phase: StepPhase; text: string }
 
+/** 区分・系統・まぜ技・調理時間（献立の提案に使う） */
+type AttributeFields = {
+  dishType: DishType | ''
+  cuisine: Cuisine | ''
+  usesMixingUnit: '' | 'yes' | 'no'
+  cookMinutes: string
+}
+
+/**
+ * auto = 触っていない（送らない。サーバが自動で決めるか、手で直した値を残す）、
+ * manual = この画面で直した（そのまま保存）、reset = 「自動に戻す」を押した
+ */
+type AttributeMode = 'auto' | 'manual' | 'reset'
+
+const emptyAttributes = (): AttributeFields => ({ dishType: '', cuisine: '', usesMixingUnit: '', cookMinutes: '' })
+
+const ATTRIBUTE_SOURCE_NOTES: Record<AttributeSource, string> = {
+  rule: '料理名と材料から自動で決めました',
+  ai: 'AI の推定です',
+  manual: '手で設定しました',
+}
+
 type FormState = {
   title: string
   servings: string
@@ -55,6 +84,8 @@ type FormState = {
   sourceType: 'manual' | 'url' | 'ai'
   /** 公式レシピから取り込んだ下書きの情報（作成時だけ送る。編集では送らず、サーバの値を残す） */
   official: RecipeDraftOfficial | null
+  attributes: AttributeFields
+  attributesMode: AttributeMode
   ingredients: IngredientRow[]
   steps: StepRow[]
 }
@@ -84,6 +115,8 @@ const emptyForm = (): FormState => ({
   notes: '',
   sourceType: 'manual',
   official: null,
+  attributes: emptyAttributes(),
+  attributesMode: 'auto',
   ingredients: [newIngredientRow()],
   steps: [],
 })
@@ -103,6 +136,13 @@ function toForm(r: Recipe): FormState {
     notes: r.notes ?? '',
     sourceType: 'manual',
     official: null,
+    attributes: {
+      dishType: r.dishType ?? '',
+      cuisine: r.cuisine ?? '',
+      usesMixingUnit: r.usesMixingUnit === null ? '' : r.usesMixingUnit ? 'yes' : 'no',
+      cookMinutes: str(r.cookMinutes),
+    },
+    attributesMode: 'auto',
     ingredients: r.ingredients.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId,
@@ -128,6 +168,11 @@ function fromDraft(d: RecipeDraft, masters: Map<string, UnitMaster>): FormState 
     sourceUrl: d.sourceUrl ?? '',
     sourceType: d.sourceType,
     official: d.official,
+    attributes: {
+      ...emptyAttributes(),
+      usesMixingUnit: d.official?.usesMixingUnit == null ? '' : d.official.usesMixingUnit ? 'yes' : 'no',
+      cookMinutes: str(d.official?.cookMinutes ?? null),
+    },
     ingredients: d.ingredients.map((i) => ({
       key: newKey(),
       ingredientId: i.ingredientId ?? '',
@@ -213,9 +258,28 @@ function toInput(f: FormState, masters: Map<string, UnitMaster>): Converted {
       notes: f.notes,
       sourceType: f.sourceType,
       ...f.official,
+      ...attributesInput(f),
       ingredients,
       steps: f.steps.map((s) => ({ phase: s.phase, text: s.text })),
     },
+  }
+}
+
+/**
+ * 区分などの送り方: 直したら manual の印と、空でない欄の値。空の欄は送らず、サーバがルールで決める
+ * （まぜ技・調理時間は今の値を残す）。自動に戻すなら false、触っていなければ何も送らない
+ */
+function attributesInput(f: FormState): Partial<RecipeInput> {
+  if (f.attributesMode === 'reset') return { attributesManual: false }
+  if (f.attributesMode === 'auto') return {}
+  const a = f.attributes
+  const minutes = parseNumber(a.cookMinutes)
+  return {
+    ...(a.dishType ? { dishType: a.dishType } : {}),
+    ...(a.cuisine ? { cuisine: a.cuisine } : {}),
+    ...(a.usesMixingUnit ? { usesMixingUnit: a.usesMixingUnit === 'yes' } : {}),
+    ...(minutes !== null ? { cookMinutes: minutes } : {}),
+    attributesManual: true,
   }
 }
 
@@ -291,6 +355,8 @@ export function RecipeEditPage() {
   }, [masterList.data, existing.data])
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }))
+  const setAttribute = <K extends keyof AttributeFields>(key: K, value: AttributeFields[K]) =>
+    setForm((f) => ({ ...f, attributes: { ...f.attributes, [key]: value }, attributesMode: 'manual' }))
   const setRow = (key: string, patch: Partial<IngredientRow>) =>
     setForm((f) => ({ ...f, ingredients: f.ingredients.map((r) => (r.key === key ? { ...r, ...patch } : r)) }))
   const setStep = (key: string, patch: Partial<StepRow>) =>
@@ -433,6 +499,21 @@ export function RecipeEditPage() {
       <Field label="ホットクックの設定" hint="例: 手動 > 煮物を作る > まぜる > 20分" error={errors.hotcookMode}>
         <input value={form.hotcookMode} onChange={(e) => set('hotcookMode', e.target.value)} className={inputClass} />
       </Field>
+
+      <AttributesFields
+        form={form}
+        source={existing.data?.attributesSource ?? null}
+        error={errors.cookMinutes}
+        onChange={setAttribute}
+        onReset={() =>
+          // 欄も保存されている値に戻す（直した値が残って見えないように）
+          setForm((f) => ({
+            ...f,
+            attributesMode: 'reset',
+            attributes: existing.data ? toForm(existing.data).attributes : emptyAttributes(),
+          }))
+        }
+      />
 
       <Checkbox
         label="調味料も袋に入れる（下味冷凍）"
@@ -700,5 +781,95 @@ export function RecipeEditPage() {
         </div>
       )}
     </form>
+  )
+}
+
+/** 区分・系統・まぜ技・調理時間。空なら保存するときに自動で決める */
+function AttributesFields({
+  form,
+  source,
+  error,
+  onChange,
+  onReset,
+}: {
+  form: FormState
+  source: AttributeSource | null
+  error: string | undefined
+  onChange: <K extends keyof AttributeFields>(key: K, value: AttributeFields[K]) => void
+  onReset: () => void
+}) {
+  const a = form.attributes
+  const note =
+    form.attributesMode === 'reset'
+      ? '保存すると、料理名と材料から自動で決め直します'
+      : form.attributesMode === 'manual'
+        ? '保存すると、この値を手で設定した値として残します。空の欄は自動で決めます'
+        : source
+          ? ATTRIBUTE_SOURCE_NOTES[source]
+          : '空なら、保存するときに料理名と材料から自動で決めます'
+  return (
+    <fieldset className="min-w-0 space-y-3 rounded-card bg-surface shadow-card p-4">
+      <legend className="px-1 text-sm font-bold text-ink-soft">分類（献立の提案に使います）</legend>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs text-ink-muted">{note}</p>
+        {(source === 'manual' || form.attributesMode === 'manual') && form.attributesMode !== 'reset' && (
+          <Button variant="secondary" onClick={onReset} className="shrink-0">
+            自動に戻す
+          </Button>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="区分">
+          <select
+            value={a.dishType}
+            onChange={(e) => onChange('dishType', e.target.value as DishType | '')}
+            className={inputClass}
+          >
+            <option value="">未判定</option>
+            {DISH_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {DISH_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="味の系統">
+          <select
+            value={a.cuisine}
+            onChange={(e) => onChange('cuisine', e.target.value as Cuisine | '')}
+            className={inputClass}
+          >
+            <option value="">未判定</option>
+            {CUISINES.map((c) => (
+              <option key={c} value={c}>
+                {CUISINE_LABELS[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="まぜ技ユニット">
+          <select
+            value={a.usesMixingUnit}
+            onChange={(e) => onChange('usesMixingUnit', e.target.value as AttributeFields['usesMixingUnit'])}
+            className={inputClass}
+          >
+            <option value="">不明</option>
+            <option value="yes">使う</option>
+            <option value="no">使わない</option>
+          </select>
+        </Field>
+        <Field label="調理時間（分）" hint="下ごしらえ込みの目安" error={error}>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            value={a.cookMinutes}
+            onChange={(e) => onChange('cookMinutes', e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+    </fieldset>
   )
 }
