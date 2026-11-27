@@ -50,6 +50,11 @@ export type RecommendInput = {
   available: AvailableStock[]
   ingredients: Map<string, RecIngredient>
   today: string
+  /**
+   * もう出した案（「別の案を出す」）。案ごとのレシピ ID の並び。anchor を除いた追加料理の組み合わせで比べるので、
+   * anchor を含めても含めなくてもよく、順番も問わない
+   */
+  exclude?: string[][]
   options?: { targetCount?: number; maxProposals?: number; defaultServings?: number }
 }
 
@@ -94,7 +99,12 @@ export type Proposal = Evaluation & {
   warnings: string[]
 }
 
-export type RecommendResult = { proposals: Proposal[]; aiSuggestionRecommended: boolean }
+export type RecommendResult = {
+  proposals: Proposal[]
+  aiSuggestionRecommended: boolean
+  /** 今回の案と exclude のほかに、まだ出していない組み合わせが残っているか */
+  hasMore: boolean
+}
 
 // ---------- 小さな関数 ----------
 
@@ -384,6 +394,14 @@ export function evaluatePlan(input: {
   return buildProposal(input.items, evaluate(input.items, ctx), input.ingredients, days)
 }
 
+/** 追加料理の組み合わせを比べるためのキー（anchor を除き、順番によらない） */
+function comboKey(recipeIds: string[], anchorIds: Set<string>): string {
+  return recipeIds
+    .filter((id) => !anchorIds.has(id))
+    .sort()
+    .join('\n')
+}
+
 export function recommend(input: RecommendInput): RecommendResult {
   const targetCount = input.options?.targetCount ?? TARGET_RECIPE_COUNT
   const maxProposals = input.options?.maxProposals ?? MAX_PROPOSALS
@@ -391,19 +409,20 @@ export function recommend(input: RecommendInput): RecommendResult {
   const ctx: Ctx = { available: input.available, ingredients: input.ingredients, today: input.today }
   const anchors = input.anchors.map((a) => ({ ...a, role: 'anchor' as const }))
   const addCount = targetCount - anchors.length
+  const anchorIds = new Set(anchors.map((a) => a.recipe.id))
+  const excluded = new Set((input.exclude ?? []).map((ids) => comboKey(ids, anchorIds)))
+
+  // anchor だけの 1 案（目標の品数に届いている、または足せる候補がない）
+  const anchorsOnly = (aiSuggestionRecommended: boolean): RecommendResult => {
+    const proposals = excluded.has('') ? [] : [buildProposal(anchors, evaluate(anchors, ctx), input.ingredients)]
+    return { proposals, aiSuggestionRecommended, hasMore: false }
+  }
 
   // anchor だけで目標の品数に届いていれば探索しない
-  if (addCount <= 0) {
-    const evaluation = evaluate(anchors, ctx)
-    return { proposals: [buildProposal(anchors, evaluation, input.ingredients)], aiSuggestionRecommended: false }
-  }
+  if (addCount <= 0) return anchorsOnly(false)
 
-  const anchorIds = new Set(anchors.map((a) => a.recipe.id))
   const candidates = input.catalog.filter((r) => !anchorIds.has(r.id) && fitsPot(r, defaultServings))
-  if (candidates.length === 0) {
-    const evaluation = evaluate(anchors, ctx)
-    return { proposals: [buildProposal(anchors, evaluation, input.ingredients)], aiSuggestionRecommended: true }
-  }
+  if (candidates.length === 0) return anchorsOnly(true)
 
   const k = Math.min(addCount, candidates.length)
   const scored: { added: RecRecipe[]; evaluation: Evaluation }[] = []
@@ -419,12 +438,24 @@ export function recommend(input: RecommendInput): RecommendResult {
         .join()
         .localeCompare(b.added.map((r) => r.id).join()),
   )
+  // AI 補完をすすめるかは、出した案によらずいちばん良い組み合わせで決める（「別の案を出す」で変わらない）
+  const overallBest = scored[0]
+  const aiSuggestionRecommended =
+    !overallBest || overallBest.evaluation.maxPerishableLeftoverPacks >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS
+  const isNew = (s: (typeof scored)[number]) =>
+    !excluded.has(
+      comboKey(
+        s.added.map((r) => r.id),
+        anchorIds,
+      ),
+    )
+  const remaining = scored.filter(isNew)
 
   // 似た案（追加料理が 1 品でも同じ）を避けて上位を選び、足りなければ飛ばした案で埋める
   const picked: typeof scored = []
   const skipped: typeof scored = []
   const usedAdded = new Set<string>()
-  for (const s of scored) {
+  for (const s of remaining) {
     if (picked.length >= maxProposals) break
     if (s.added.some((r) => usedAdded.has(r.id))) {
       skipped.push(s)
@@ -446,9 +477,5 @@ export function recommend(input: RecommendInput): RecommendResult {
       input.ingredients,
     ),
   )
-  const best = proposals[0]
-  return {
-    proposals,
-    aiSuggestionRecommended: !best || best.maxPerishableLeftoverPacks >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS,
-  }
+  return { proposals, aiSuggestionRecommended, hasMore: remaining.length > picked.length }
 }

@@ -137,6 +137,20 @@ describe('献立 API', () => {
     expect(best?.totalCaloriesKcal).not.toBeNull()
   })
 
+  it('別の案: 出した案を exclude に渡すと、それ以外の組み合わせを返す', async () => {
+    const plan = (await createPlan([{ recipeId: anchor.id }])).body
+    const url = `/plans/${plan.id}/recommendations`
+    const first = await api.call<RecommendationsResponse>('POST', url, {})
+    const exclude = first.body.proposals.map((p) => p.recipes.map((r) => r.recipeId))
+    const second = await api.call<RecommendationsResponse>('POST', url, { exclude })
+    expect(second.status).toBe(200)
+    const key = (ids: string[]) => [...ids].sort().join()
+    const shown = new Set(exclude.map(key))
+    for (const p of second.body.proposals) expect(shown.has(key(p.recipes.map((r) => r.recipeId)))).toBe(false)
+    expect(typeof second.body.hasMore).toBe('boolean')
+    expect((await api.call('POST', url, { exclude: 'x' })).status).toBe(400)
+  })
+
   it('提案は在庫を先に使う（確保分を超えた量は使わない）', async () => {
     await api.call('POST', '/inventory', {
       ingredientId: pork.id,

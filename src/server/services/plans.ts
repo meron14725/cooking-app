@@ -14,6 +14,7 @@ import type {
   PlanRecipesInput,
   PlanStatus,
   ProposalView,
+  RecommendationsInput,
   RecommendationsResponse,
 } from '../../shared/schemas/plan'
 import type { Db } from '../db/client'
@@ -172,7 +173,7 @@ export async function recommendForPlan(
   db: Db,
   id: string,
   today: string,
-  opts: { maxProposals?: number } = {},
+  opts: RecommendationsInput = {},
 ): Promise<RecommendationsResponse> {
   const plan = await getPlan(db, id)
   assertDraft(plan.status)
@@ -198,10 +199,12 @@ export async function recommendForPlan(
     available,
     ingredients: ingredientMap,
     today,
+    exclude: opts.exclude,
     options: { maxProposals: opts.maxProposals },
   })
   return {
     aiSuggestionRecommended: result.aiSuggestionRecommended,
+    hasMore: result.hasMore,
     proposals: result.proposals.map((p) => toView(p, byId)),
   }
 }

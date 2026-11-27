@@ -24,7 +24,15 @@ export const planCreateSchema = z.object({
 })
 export type PlanCreateInput = z.infer<typeof planCreateSchema>
 
-export const recommendationsInputSchema = z.object({ maxProposals: z.number().int().min(1).max(10).optional() })
+export const recommendationsInputSchema = z.object({
+  maxProposals: z.number().int().min(1).max(10).optional(),
+  /** もう出した案（「別の案を出す」）。案ごとのレシピ ID。これらを除いた次点を返す */
+  exclude: z
+    .array(z.array(z.string().min(1).max(100)).max(10))
+    .max(300)
+    .optional(),
+})
+export type RecommendationsInput = z.infer<typeof recommendationsInputSchema>
 
 export const planRecipesInputSchema = z.object({
   recipes: z
@@ -68,4 +76,9 @@ export type ProposalView = Omit<Proposal, 'recipes'> & {
   recipes: (Proposal['recipes'][number] & { title: string; caloriesKcal: number | null })[]
 }
 
-export type RecommendationsResponse = { proposals: ProposalView[]; aiSuggestionRecommended: boolean }
+export type RecommendationsResponse = {
+  proposals: ProposalView[]
+  aiSuggestionRecommended: boolean
+  /** 今回の案と exclude のほかに、まだ出していない組み合わせが残っているか */
+  hasMore: boolean
+}

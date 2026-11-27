@@ -116,7 +116,7 @@ COCORO KITCHEN の URL（`https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/{�
 | GET | `/api/plans/current` | 進行中（draft / shopping / prepping）の献立。最大 1 つ。なければ `200 { plan: null }`。stored の献立は袋（`/api/kits`）から見る |
 | POST | `/api/plans` | 献立を作る（`{ anchors: [{ recipeId, servings? }] }`）。status = draft。進行中の献立があれば 409 |
 | GET | `/api/plans/:id` | 詳細（レシピ、状態） |
-| POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals? }` |
+| POST | `/api/plans/:id/recommendations` | 提案を計算して返す（保存しない）。`{ maxProposals?, exclude? }`。`exclude` はもう出した案のレシピ ID（案ごとの配列）で、それらの組み合わせを除いた次点を返す（「別の案を出す」） |
 | GET | `/api/plans/:id/evaluation` | いまの献立（食べる順・食数そのまま）の買い物・余り・袋の場所。形は提案 1 件と同じ。draft のみ |
 | PUT | `/api/plans/:id/recipes` | 献立のレシピを確定前に置き換える。`{ recipes: [{ recipeId, role, servings, dayIndex }] }`。料理と dayIndex はそれぞれ重複不可（1 日 1 品） |
 | POST | `/api/plans/:id/confirm` | 確定。`{ startsOn }`（今日以降）。その時点の在庫で買い物リストを生成（同じ batch）。draft → shopping |
@@ -137,7 +137,8 @@ COCORO KITCHEN の URL（`https://cocoroplus.jp.sharp/kitchen/recipe/hotcook/{�
     warnings: string[]                // 「1.6L に収まるか未確認」など
     maxPerishableLeftoverPacks: number // 冷蔵のみの食材の余りの最大（代表量の何パック分か）
   }[]
-  aiSuggestionRecommended: boolean   // 余りが大きく、登録レシピで埋まらない
+  aiSuggestionRecommended: boolean   // 余りが大きく、登録レシピで埋まらない（exclude によらず、いちばん良い組み合わせで決める）
+  hasMore: boolean                   // 今回の案と exclude のほかに、まだ出していない組み合わせがある
 }
 ```
 

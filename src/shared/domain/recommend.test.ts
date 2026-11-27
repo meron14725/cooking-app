@@ -215,6 +215,68 @@ describe('recommend', () => {
     expect(result.proposals[0]?.warnings).toEqual(['unknown: 1.6L に収まるか未確認'])
   })
 
+  describe('別の案（exclude）', () => {
+    const catalog = [anchor, ...['a', 'b', 'c', 'd', 'e'].map((id) => recipe(id, [['onion', 1]]))]
+    const run = (exclude: string[][], targetCount = 3) =>
+      recommend({
+        anchors: [{ recipe: anchor, servings: 1 }],
+        catalog,
+        available: [],
+        ingredients,
+        today,
+        exclude,
+        options: { targetCount },
+      })
+    const keys = (r: ReturnType<typeof recommend>) =>
+      r.proposals.map((p) =>
+        p.recipes
+          .map((x) => x.recipeId)
+          .sort()
+          .join(),
+      )
+
+    it('出した組み合わせを除いた次の案を返す。順番や anchor の有無は問わない', () => {
+      const first = run([])
+      expect(first.proposals).toHaveLength(3)
+      expect(first.hasMore).toBe(true)
+      // 1 つ目は anchor 込み・逆順で、2 つ目以降は追加料理だけで渡す
+      const exclude = first.proposals.map((p, i) => {
+        const ids = p.recipes.map((r) => r.recipeId)
+        return i === 0 ? ids.reverse() : ids.filter((id) => id !== 'anchor')
+      })
+      const second = run(exclude)
+      expect(second.proposals.length).toBeGreaterThan(0)
+      for (const k of keys(second)) expect(keys(first)).not.toContain(k)
+    })
+
+    it('出し尽くすと空で hasMore は false。AI 補完のすすめは出した案によらない', () => {
+      // 候補 5 品から 2 品 = 10 通り
+      const seen: string[][] = []
+      const ai = run([]).aiSuggestionRecommended
+      for (let round = 0; round < 10; round++) {
+        const r = run(seen)
+        expect(r.aiSuggestionRecommended).toBe(ai)
+        if (r.proposals.length === 0) break
+        for (const p of r.proposals) seen.push(p.recipes.map((x) => x.recipeId))
+        if (!r.hasMore) {
+          expect(seen).toHaveLength(10)
+          const last = run(seen)
+          expect(last.proposals).toEqual([])
+          expect(last.hasMore).toBe(false)
+          return
+        }
+      }
+      throw new Error('出し尽くせなかった')
+    })
+
+    it('anchor だけの案も除ける', () => {
+      const r = run([['anchor']], 1)
+      expect(r.proposals).toEqual([])
+      expect(r.hasMore).toBe(false)
+      expect(run([], 1)).toMatchObject({ hasMore: false, proposals: [{ recipes: [{ recipeId: 'anchor' }] }] })
+    })
+  })
+
   it('上位の案どうしで追加料理が重ならない（候補が十分あるとき）', () => {
     const catalog = [anchor, ...['a', 'b', 'c', 'd', 'e', 'f'].map((id) => recipe(id, [['onion', 1]]))]
     const result = recommend({ anchors: [{ recipe: anchor, servings: 1 }], catalog, available: [], ingredients, today })
