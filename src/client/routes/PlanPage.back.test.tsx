@@ -38,9 +38,19 @@ const prepView = { kits: [], prep: { cutNow: [], keepWhole: [], asIs: [] }, shor
 
 /** 献立の状態をサーバ側に持つ API の代わり。確定で shopping、買い物完了で prepping になる */
 function serve(status: 'draft' | 'shopping' | 'prepping') {
-  let plan = { id: 'p1', status, startsOn: status === 'draft' ? null : '2026-11-28', confirmedAt: null, recipes }
+  let plan: Record<string, unknown> | null = {
+    id: 'p1',
+    status,
+    startsOn: status === 'draft' ? null : '2026-11-28',
+    confirmedAt: null,
+    recipes,
+  }
   return mockApi((path) => {
     if (path === '/plans/current') return { plan }
+    if (path === '/plans/p1' && plan) {
+      plan = null
+      return {}
+    }
     if (path === '/plans/p1/evaluation') return evaluation
     if (path === '/plans/p1/confirm') {
       plan = { ...plan, status: 'shopping', startsOn: '2026-11-28' }
@@ -141,5 +151,63 @@ describe('献立の段階の戻るボタン', () => {
     back()
     await waitFor(() => expect(router.state.location.search).toBe('?step=prep'))
     expect(await screen.findByRole('button', { name: '下ごしらえ完了' })).toBeTruthy()
+  })
+})
+
+/** 描かれた見出しと文を、変わるたびに全部覚えておく（一瞬だけ出た画面を見つける） */
+function recordScreens() {
+  const seen: string[] = []
+  const observer = new MutationObserver(() => seen.push(document.body.textContent ?? ''))
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+  return { seen, stop: () => observer.disconnect() }
+}
+
+describe('段階を進めた直後', () => {
+  it('確定した直後に、確定した献立（見るだけ）を一瞬も出さない', async () => {
+    serve('draft')
+    const { router } = renderRoutes(routes, '/plan')
+    const confirm = await screen.findByRole('button', { name: 'この献立で確定' })
+    const rec = recordScreens()
+    fireEvent.click(confirm)
+    expect(await heading('買い物リスト')).toBeTruthy()
+    await waitFor(() => expect(router.state.location.search).toBe('?step=shopping'))
+    rec.stop()
+    expect(rec.seen.some((t) => t.includes('確定した献立です（見るだけ）'))).toBe(false)
+  })
+
+  it('買い物完了の直後に、買い物リスト（見るだけ）を一瞬も出さない', async () => {
+    serve('shopping')
+    const { router } = renderRoutes(routes, '/plan')
+    const complete = await screen.findByRole('button', { name: '買い物完了' })
+    const rec = recordScreens()
+    fireEvent.click(complete)
+    expect(await heading('下ごしらえと袋詰め')).toBeTruthy()
+    await waitFor(() => expect(router.state.location.search).toBe('?step=prep'))
+    rec.stop()
+    expect(rec.seen.some((t) => t.includes('下ごしらえへ'))).toBe(false)
+  })
+})
+
+describe('献立をやめたあと', () => {
+  it('「この献立をやめる」で URL の段階を消し、料理を選ぶところに戻る', async () => {
+    serve('draft')
+    const { router } = renderRoutes(routes, '/plan?step=order')
+    fireEvent.click(await screen.findByRole('button', { name: 'この献立をやめる' }))
+    await waitFor(() => expect(router.state.location.search).toBe(''))
+    expect(router.state.location.pathname).toBe('/plan')
+    expect(await heading('献立を組む')).toBeTruthy()
+  })
+
+  it('買い物中に「この献立を取り消す」でも URL の段階を消す', async () => {
+    serve('shopping')
+    const { router } = renderRoutes(routes, '/plan?step=shopping')
+    fireEvent.click(await screen.findByRole('button', { name: 'この献立を取り消す' }))
+    await waitFor(() => expect(router.state.location.search).toBe(''))
+  })
+
+  it('献立がないのに古い段階の URL を開いたら、段階を消す', async () => {
+    mockApi((path) => (path === '/plans/current' ? { plan: null } : { items: [] }))
+    const { router } = renderRoutes(routes, '/plan?step=prep')
+    await waitFor(() => expect(router.state.location.search).toBe(''))
   })
 })
