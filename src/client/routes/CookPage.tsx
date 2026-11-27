@@ -323,11 +323,16 @@ export function CookPage() {
 
             {step === 'add' && (
               <>
+                {/* 凍ったまま入れる等の注意は入れる前に読む（ホットクックのステップにも出す） */}
+                <FrozenNotes notes={view.frozenNotes} />
                 <ol className="flex flex-col gap-3">
                   {groupAddOrder(view.addOrder).map((g, i) => {
                     const style = FROM_STYLE[g.from]
                     return (
-                      <li key={g.items[0]?.ingredientId ?? g.from} className={`flex items-start gap-4 rounded-item p-5 ${style.card}`}>
+                      <li
+                        key={g.items[0]?.ingredientId ?? g.from}
+                        className={`flex items-start gap-4 rounded-item p-5 ${style.card}`}
+                      >
                         <span
                           className={`flex size-10 shrink-0 items-center justify-center rounded-full font-display text-xl font-bold ${style.num}`}
                         >
@@ -383,19 +388,7 @@ export function CookPage() {
                     ))}
                   </ol>
                 )}
-                {view.frozenNotes.length > 0 && (
-                  <section className="rounded-item bg-frozen-soft px-5 py-4 text-sm text-frozen">
-                    <h2 className="mb-1 flex items-center gap-1.5 font-bold">
-                      <Icon name="frozen" size={18} />
-                      冷凍の袋を使うとき
-                    </h2>
-                    <ul className="space-y-1">
-                      {view.frozenNotes.map((n) => (
-                        <li key={n}>・{n}</li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
+                <FrozenNotes notes={view.frozenNotes} />
                 {view.notes && <p className="text-sm text-ink-muted">{view.notes}</p>}
               </>
             )}
@@ -433,5 +426,23 @@ function Minutes({ value, size }: { value: number; size: 'md' | 'lg' }) {
       {value}
       <span className="text-[15px] text-ink-soft">分</span>
     </p>
+  )
+}
+
+/** 冷凍の袋を使うときの注意（入れる前とホットクックの設定の 2 か所に出す） */
+function FrozenNotes({ notes }: { notes: string[] }) {
+  if (notes.length === 0) return null
+  return (
+    <section className="rounded-item bg-frozen-soft px-5 py-4 text-sm text-frozen">
+      <h2 className="mb-1 flex items-center gap-1.5 font-bold">
+        <Icon name="frozen" size={18} />
+        冷凍の袋を使うとき
+      </h2>
+      <ul className="space-y-1">
+        {notes.map((n) => (
+          <li key={n}>・{n}</li>
+        ))}
+      </ul>
+    </section>
   )
 }
