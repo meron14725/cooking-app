@@ -1,6 +1,8 @@
 import type {
   IngredientClassifyItem,
   IngredientClassifyResult,
+  PriceEstimateItem,
+  PriceEstimateResult,
   RecipeClassifyItem,
   RecipeClassifyResult,
 } from '../../shared/schemas/attributes'
@@ -27,6 +29,8 @@ export interface AiProvider {
   estimateCalories(input: EstimateCaloriesInput): Promise<{ caloriesKcal: number }>
   /** 食材の分類と 1 つあたりの重さ（まとめて推定） */
   classifyIngredients(items: IngredientClassifyItem[]): Promise<IngredientClassifyResult>
+  /** 食材の価格の目安（まとめて推定） */
+  estimatePrices(items: PriceEstimateItem[]): Promise<PriceEstimateResult>
   /** レシピの区分と味の系統（まとめて推定） */
   classifyRecipes(items: RecipeClassifyItem[]): Promise<RecipeClassifyResult>
 }

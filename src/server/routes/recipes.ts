@@ -122,10 +122,9 @@ export const recipeRoutes = new Hono<AppEnv>()
     const result = await getProvider(c.env).estimateCalories(c.req.valid('json'))
     return c.json(result)
   })
-  // 食材の分類・重さとレシピの区分・系統をまとめて推定して保存する（docs/design/09-recommendation-v2.md）
+  // 食材の分類・重さ・価格とレシピの区分・系統をまとめて推定して保存する（docs/design/09-recommendation-v2.md・10-cost.md）
   .post('/attributes/estimate', validate('json', estimateAttributesInputSchema), async (c) => {
-    const { limit } = c.req.valid('json')
-    return c.json(await estimateAttributes(createDb(c.env.DB), () => getProvider(c.env), limit))
+    return c.json(await estimateAttributes(createDb(c.env.DB), () => getProvider(c.env), c.req.valid('json')))
   })
   .get('/:id', async (c) => c.json(await getRecipe(createDb(c.env.DB), c.req.param('id'))))
   .put('/:id', validate('json', recipeInputSchema), async (c) => {
