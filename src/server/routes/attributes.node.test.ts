@@ -331,6 +331,64 @@ describe('POST /api/recipes/attributes/estimate: 日持ち', () => {
     expect(storageSource(sugar.id)).toBe('manual')
   })
 
+  it('分類だけを変えたら、手入力でない日持ちは未見直しに戻り、次の推定で新しい分類で入れ直す', async () => {
+    const katsuo = await addIngredient('かつおぶし', 'vegetable')
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'rule' WHERE id = '${katsuo.id}'`)
+    const res = await api.call<Ingredient>('PUT', `/ingredients/${katsuo.id}`, {
+      ...base,
+      name: 'かつおぶし',
+      category: 'dry',
+      unit: 'g',
+    })
+    expect(res.status).toBe(200)
+    // 前の分類の値はいったん残るが、未見直しになる
+    expect(res.body).toMatchObject({ category: 'dry', fridgeDays: 3, storageSource: null })
+    expect((await estimate()).body.storage).toEqual({ updated: 1, remaining: 0 })
+    expect(await ingredient(katsuo.id)).toMatchObject({
+      defaultLocation: 'pantry',
+      pantryDays: 180,
+      storageSource: 'rule',
+    })
+  })
+
+  it('ai の日持ちも分類を変えたら未見直しに戻す。分類を変えなければそのまま', async () => {
+    const x = await addIngredient('謎の食材', 'vegetable', '個', 100)
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'ai' WHERE id = '${x.id}'`)
+    const put = (category: IngredientInput['category']) =>
+      api.call('PUT', `/ingredients/${x.id}`, { ...base, name: '謎の食材', category, unit: '個', gramsPerUnit: 100 })
+    await put('vegetable')
+    expect(storageSource(x.id)).toBe('ai')
+    await put('other')
+    expect(storageSource(x.id)).toBe(null)
+  })
+
+  it('手で入れた日持ちは、分類を変えても残す', async () => {
+    const pickles = await addIngredient('自家製ピクルス', 'vegetable')
+    expect(storageSource(pickles.id)).toBe('manual')
+    await api.call('PUT', `/ingredients/${pickles.id}`, {
+      ...base,
+      name: '自家製ピクルス',
+      category: 'other',
+      unit: 'g',
+    })
+    expect(await ingredient(pickles.id)).toMatchObject({ category: 'other', fridgeDays: 3, storageSource: 'manual' })
+    expect((await estimate()).body.storage).toEqual({ updated: 0, remaining: 0 })
+    expect((await ingredient(pickles.id)).fridgeDays).toBe(3)
+  })
+
+  it('分類と日持ちを一緒に変えたら、手入力になる', async () => {
+    const x = await addIngredient('謎の食材', 'vegetable')
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'rule' WHERE id = '${x.id}'`)
+    await api.call('PUT', `/ingredients/${x.id}`, {
+      ...base,
+      name: '謎の食材',
+      category: 'other',
+      unit: 'g',
+      fridgeDays: 10,
+    })
+    expect(await ingredient(x.id)).toMatchObject({ category: 'other', fridgeDays: 10, storageSource: 'manual' })
+  })
+
   it('取り込みのままの食材を辞書で入れ直し、決まらないものを AI に聞く。手入力は変えない', async () => {
     const sugar = await addIngredient('グラニュー糖', 'seasoning')
     const katsuo = await addIngredient('かつおぶし', 'dry')
