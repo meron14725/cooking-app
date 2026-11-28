@@ -1,86 +1,38 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
-import type { EstimateAttributesResponse } from '../../shared/schemas/attributes'
-import { apiFetch } from '../api/client'
+import { useEffect, useRef } from 'react'
+import { ESTIMATE_STAGES, type EstimateJob, type EstimateJobProgress } from '../../shared/schemas/estimateJob'
+import { useEstimateJob, useStartEstimateJob, useStopEstimateJob } from '../api/estimateJobs'
 import { aiErrorMessage } from '../api/recipes'
 import { Button } from './form'
 
-type Totals = { ingredients: number; storage: number; prices: number; recipes: number }
-
-const ZERO: Totals = { ingredients: 0, storage: 0, prices: 0, recipes: 0 }
-type Status =
-  | { kind: 'idle' }
-  | { kind: 'running'; updated: Totals; remaining: Totals | null }
-  | { kind: 'done'; updated: Totals }
-  | { kind: 'stopped'; updated: Totals; remaining: Totals | null }
-  | { kind: 'error'; updated: Totals; message: string }
-
-/** AI の 1 回の呼び出しより長く待つ（画面の他の AI と同じく 90 秒で打ち切る） */
-const CALL_TIMEOUT_MS = 90_000
+const STAGE_LABELS = { ingredients: '食材', storage: '日持ち', prices: '価格', recipes: 'レシピ' } as const
 
 /**
- * 食材の分類・重さ・日持ち・価格の目安とレシピの区分・系統を「まとめて推定」する（docs/design/09-recommendation-v2.md・10-cost.md・11-storage-days.md）。
- * 残りが 0 になるまで API を呼び続ける。止めたり画面を離れたりしたら、そこで止まる（保存済みの分は残る）。
- * 「古い目安を見直す」は、最初の 1 回だけ refreshStalePrices を付けて、1 年より前の目安の価格を入れ直す
+ * 食材の分類・重さ・日持ち・価格の目安とレシピの区分・系統を「まとめて推定」する
+ * （docs/design/09-recommendation-v2.md・10-cost.md・11-storage-days.md・12-estimate-jobs.md）。
+ * 推定はサーバー側のジョブで最後まで進むので、画面を閉じても続く。画面はジョブの状態を読み直して出すだけ。
+ * 「古い目安を見直す」は、最初の 1 回だけ 1 年より前の目安の価格を入れ直すジョブ
  */
-export function EstimateAttributesPanel() {
+export function EstimateAttributesPanel({ pollMs }: { pollMs?: number } = {}) {
   const qc = useQueryClient()
-  const [status, setStatus] = useState<Status>({ kind: 'idle' })
-  const stopRef = useRef<AbortController | null>(null)
+  const { data: job, isPending } = useEstimateJob(pollMs)
+  const startJob = useStartEstimateJob()
+  const stopJob = useStopEstimateJob()
 
-  useEffect(() => () => stopRef.current?.abort(), [])
-
-  async function run(refreshStalePrices: boolean) {
-    const controller = new AbortController()
-    stopRef.current = controller
-    const updated: Totals = { ...ZERO }
-    let remaining: Totals | null = null
-    setStatus({ kind: 'running', updated: { ...updated }, remaining })
-    try {
-      let first = true
-      while (!controller.signal.aborted) {
-        const body = first && refreshStalePrices ? { refreshStalePrices: true } : {}
-        first = false
-        const res = await apiFetch<EstimateAttributesResponse>('/recipes/attributes/estimate', {
-          method: 'POST',
-          body: JSON.stringify(body),
-          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(CALL_TIMEOUT_MS)]),
-        })
-        updated.ingredients += res.ingredients.updated
-        updated.storage += res.storage.updated
-        updated.prices += res.prices.updated
-        updated.recipes += res.recipes.updated
-        remaining = {
-          ingredients: res.ingredients.remaining,
-          storage: res.storage.remaining,
-          prices: res.prices.remaining,
-          recipes: res.recipes.remaining,
-        }
-        if (Object.values(remaining).every((n) => n === 0)) {
-          setStatus({ kind: 'done', updated: { ...updated } })
-          return
-        }
-        setStatus({ kind: 'running', updated: { ...updated }, remaining })
-      }
-    } catch (err) {
-      if (!controller.signal.aborted) {
-        setStatus({ kind: 'error', updated: { ...updated }, message: aiErrorMessage(err) })
-        return
-      }
-    } finally {
-      stopRef.current = null
+  // 実行中から終わりに変わったら、推定した値を使う画面を読み直す
+  const previous = useRef<EstimateJob['status'] | undefined>(undefined)
+  useEffect(() => {
+    const status = job?.status
+    if (previous.current === 'running' && status !== 'running') {
       void qc.invalidateQueries({ queryKey: ['recipes'] })
       void qc.invalidateQueries({ queryKey: ['ingredients'] })
       void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'plans' && q.queryKey[2] === 'recommendations' })
     }
-    setStatus({ kind: 'stopped', updated: { ...updated }, remaining })
-  }
+    previous.current = status
+  }, [job?.status, qc])
 
-  function stop() {
-    stopRef.current?.abort()
-  }
-
-  const running = status.kind === 'running'
+  const running = job?.status === 'running'
+  const startError = startJob.error && !startJob.isPending ? aiErrorMessage(startJob.error) : null
   return (
     <section className="space-y-3 rounded-card bg-surface p-4 shadow-card">
       <div>
@@ -89,18 +41,26 @@ export function EstimateAttributesPanel() {
           食材の分類と 1
           つあたりの重さ、日持ちと保存場所、価格の目安、レシピの区分（主菜・副菜など）と味の系統を、名前と材料から決めます。
           決まらないものだけ AI に聞きます。手で直したものは変えません。献立の提案と金額に使います。
+          サーバーで最後まで進めるので、画面を閉じても続きます。
         </p>
       </div>
-      {status.kind !== 'idle' && <p className="text-sm">{statusText(status)}</p>}
-      {status.kind === 'error' && <p className="text-sm text-danger">{status.message}</p>}
+      {job && <p className="text-sm">{statusText(job)}</p>}
+      {job?.status === 'failed' && job.error && <p className="text-sm text-danger">{job.error}</p>}
+      {startError && <p className="text-sm text-danger">{startError}</p>}
       {running ? (
-        <Button variant="secondary" onClick={stop}>
+        <Button variant="secondary" onClick={() => stopJob.mutate(job.id)} disabled={stopJob.isPending}>
           止める
         </Button>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => run(false)}>{status.kind === 'idle' ? '推定を始める' : 'もう一度推定する'}</Button>
-          <Button variant="secondary" onClick={() => run(true)}>
+          <Button onClick={() => startJob.mutate({})} disabled={isPending || startJob.isPending}>
+            {job ? 'もう一度推定する' : '推定を始める'}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => startJob.mutate({ refreshStalePrices: true })}
+            disabled={isPending || startJob.isPending}
+          >
             古い目安を見直す
           </Button>
         </div>
@@ -114,19 +74,21 @@ export function EstimateAttributesPanel() {
   )
 }
 
-function statusText(status: Exclude<Status, { kind: 'idle' }>): string {
-  const counts = (t: Totals) =>
-    `食材 ${t.ingredients} 件、日持ち ${t.storage} 件、価格 ${t.prices} 件、レシピ ${t.recipes} 件`
-  const done = `${counts(status.updated)}を直しました`
-  const rest = (r: Totals | null) => (r ? `。残りは${counts(r)}です` : '')
-  switch (status.kind) {
+const counts = (p: EstimateJobProgress, pick: (s: EstimateJobProgress[keyof EstimateJobProgress]) => number) =>
+  ESTIMATE_STAGES.map((s) => `${STAGE_LABELS[s]} ${pick(p[s])} 件`).join('、')
+
+function statusText(job: EstimateJob): string {
+  const done = `${counts(job.progress, (s) => s.updated)}を直しました`
+  const known = ESTIMATE_STAGES.every((s) => job.progress[s].remaining !== null)
+  const rest = known ? `。残りは${counts(job.progress, (s) => s.remaining ?? 0)}です` : ''
+  switch (job.status) {
     case 'running':
-      return `推定しています…${status.remaining ? ` ${done}${rest(status.remaining)}` : ''}`
+      return job.rounds > 0 ? `推定しています… ${done}${rest}` : '推定しています…'
     case 'done':
       return `${done}。すべて終わりました`
     case 'stopped':
-      return `止めました。${done}${rest(status.remaining)}`
-    case 'error':
-      return `途中で止まりました。${done}`
+      return `止めました。${done}${rest}`
+    case 'failed':
+      return `途中で止まりました。${done}${rest}`
   }
 }

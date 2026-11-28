@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { estimateAttributesInputSchema } from '../../shared/schemas/attributes'
+import { startEstimateJobInputSchema } from '../../shared/schemas/estimateJob'
 import { recipeFavoriteInputSchema, recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
 import {
   draftInputSchema,
@@ -23,6 +24,7 @@ import {
   fetchCocoroRecipe,
   parseCocoroUrl,
 } from '../services/cocoro'
+import { currentEstimateJob, startEstimateJob, stopEstimateJob } from '../services/estimateJobs'
 import { listIngredients } from '../services/ingredients'
 import { assertPublicUrl, buildSourceText, fetchPage, normalizeDraft } from '../services/recipeImport'
 import {
@@ -122,10 +124,21 @@ export const recipeRoutes = new Hono<AppEnv>()
     const result = await getProvider(c.env).estimateCalories(c.req.valid('json'))
     return c.json(result)
   })
-  // 食材の分類・重さ・価格とレシピの区分・系統をまとめて推定して保存する（docs/design/09-recommendation-v2.md・10-cost.md）
+  // 1 回分だけ進める（ジョブの中身と同じ。スクリプトやテスト向けに残す）。食材の分類・重さ・価格とレシピの区分・系統をまとめて推定して保存する（docs/design/09-recommendation-v2.md・10-cost.md）
   .post('/attributes/estimate', validate('json', estimateAttributesInputSchema), async (c) => {
     return c.json(await estimateAttributes(createDb(c.env.DB), () => getProvider(c.env), c.req.valid('json')))
   })
+  // まとめて推定をサーバー側のジョブで最後まで進める（docs/design/12-estimate-jobs.md）。画面はこちらを使う
+  .post('/attributes/jobs', validate('json', startEstimateJobInputSchema), async (c) => {
+    const job = await startEstimateJob(createDb(c.env.DB), c.env.ESTIMATE_WORKFLOW, c.req.valid('json'))
+    return c.json(job, 202)
+  })
+  .get('/attributes/jobs/current', async (c) =>
+    c.json({ job: await currentEstimateJob(createDb(c.env.DB), c.env.ESTIMATE_WORKFLOW) }),
+  )
+  .post('/attributes/jobs/:jobId/stop', async (c) =>
+    c.json(await stopEstimateJob(createDb(c.env.DB), c.env.ESTIMATE_WORKFLOW, c.req.param('jobId'))),
+  )
   .get('/:id', async (c) => c.json(await getRecipe(createDb(c.env.DB), c.req.param('id'))))
   .put('/:id', validate('json', recipeInputSchema), async (c) => {
     const item = await updateRecipe(createDb(c.env.DB), c.req.param('id'), c.req.valid('json'))

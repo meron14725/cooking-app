@@ -1,10 +1,14 @@
 import { createApp } from '../app'
 import { createTestD1 } from './d1'
 import { createTestR2 } from './r2'
+import { createTestWorkflow } from './workflow'
 
 /** ローカル扱い（認証スキップ）の Env と、それで API を叩くヘルパー */
-export function createTestApi(opts: { seed?: boolean; env?: Partial<Env> } = {}) {
+export function createTestApi(
+  opts: { seed?: boolean; env?: Partial<Env>; workflow?: Parameters<typeof createTestWorkflow>[0] } = {},
+) {
   const DB = createTestD1({ seed: opts.seed ?? false })
+  const workflow = createTestWorkflow(opts.workflow)
   const env: Env = {
     DB,
     ASSETS: { fetch: async () => new Response('') } as unknown as Fetcher,
@@ -13,8 +17,10 @@ export function createTestApi(opts: { seed?: boolean; env?: Partial<Env> } = {})
     ACCESS_AUD: '',
     ENVIRONMENT: 'local',
     AI_PROVIDER: 'fake',
+    ESTIMATE_WORKFLOW: workflow.binding as unknown as Env['ESTIMATE_WORKFLOW'],
     ...opts.env,
   }
+  workflow.attach(env)
   const app = createApp()
 
   async function call<T = unknown>(method: string, path: string, body?: unknown) {
@@ -36,5 +42,5 @@ export function createTestApi(opts: { seed?: boolean; env?: Partial<Env> } = {})
     return app.request(`/api${path}`, {}, env)
   }
 
-  return { env, sqlite: DB.sqlite, call, raw }
+  return { env, sqlite: DB.sqlite, call, raw, workflow }
 }

@@ -84,6 +84,14 @@ npx wrangler secret put CURSOR_API_KEY
 - スマホで `https://cooking-app.<サブドメイン>.workers.dev` を開く → メールのコードでログイン → ホームに「API: OK」と出る
 - シークレットウィンドウで開くと、ログイン画面が出る（自分のメール以外ではコードが届かない）
 
+## まとめて推定のジョブ（Workflows）
+
+「分類と価格をまとめて推定」は、Cloudflare Workflows のジョブでサーバー側で最後まで進めます（[設計 12](./design/12-estimate-jobs.md)）。
+
+- `wrangler.jsonc` の `workflows`（`cooking-app-estimate`、binding `ESTIMATE_WORKFLOW`）を `wrangler deploy` が作るので、ダッシュボードでの作成はいりません
+- ジョブの表は migration 0011（`estimate_jobs`）。`wrangler d1 migrations apply cooking-app --remote` を先に流します
+- 初回のデプロイで Workflows の権限が足りないと言われたら、上の API トークンに Workflows の編集権限を足してください（必要な権限名は未確認です）
+
 ## レシピ写真（R2）
 
 レシピの完成写真は R2 バケット `cooking-app-images` に置き、Worker の `GET /api/images/<キー>` からだけ返します（`/api` の下なので Access の内側。未ログインでは見えません）。写真も公式レシピのデータもリポジトリには入れません。
