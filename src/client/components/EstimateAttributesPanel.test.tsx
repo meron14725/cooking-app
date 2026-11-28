@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { EstimateJob, EstimateJobStatus } from '../../shared/schemas/estimateJob'
+import { type EstimateJob, type EstimateJobStatus, STUCK_HINT_MS } from '../../shared/schemas/estimateJob'
 import { mockApi, renderRoutes } from '../testing/render'
 import { EstimateAttributesPanel } from './EstimateAttributesPanel'
 
@@ -28,7 +28,7 @@ const job = (
     rounds: remaining ? 1 : 0,
     error: null,
     createdAt: '2026-11-28T00:00:00.000Z',
-    updatedAt: '2026-11-28T00:00:00.000Z',
+    updatedAt: new Date().toISOString(),
     finishedAt: status === 'running' ? null : '2026-11-28T00:01:00.000Z',
     ...extra,
   }
@@ -88,6 +88,39 @@ describe('分類と価格をまとめて推定（ジョブ）', () => {
     ).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '止める' }))
     await waitFor(() => expect(posts(fetch).map((p) => p.url)).toEqual(['/api/recipes/attributes/jobs/job1/stop']))
+  })
+
+  it('しばらく更新のない実行中のジョブは、固まっているかもと出し、止めると新しく始められる', async () => {
+    const old = new Date(Date.now() - STUCK_HINT_MS - 60_000).toISOString()
+    const stuck = job('running', [5, 0, 0, 0], [10, 3, 0, 2], { updatedAt: old })
+    const stopped = job('stopped', [5, 0, 0, 0], [10, 3, 0, 2], { updatedAt: new Date().toISOString() })
+    let current: EstimateJob = stuck
+    const fetch = mockApi((path) => {
+      if (path === '/recipes/attributes/jobs/current') return { job: current }
+      if (path.endsWith('/stop')) {
+        current = stopped
+        return stopped
+      }
+      current = job('done', [1, 0, 0, 0], [0, 0, 0, 0], { id: 'job2' })
+      return { ...current, status: 'running' }
+    })
+    renderRoutes({ '/': <EstimateAttributesPanel pollMs={60_000} /> }, '/')
+    expect(await screen.findByText(/しばらく進んでいません/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '止める' }))
+    await clickWhenEnabled('もう一度推定する')
+    expect(await screen.findByText(/すべて終わりました/)).toBeTruthy()
+    expect(screen.queryByText(/しばらく進んでいません/)).toBeNull()
+    expect(posts(fetch).map((p) => p.url)).toEqual([
+      '/api/recipes/attributes/jobs/job1/stop',
+      '/api/recipes/attributes/jobs',
+    ])
+  })
+
+  it('更新の新しい実行中のジョブには、固まっているかもとは出さない', async () => {
+    api([job('running', [5, 0, 0, 0], [10, 3, 0, 2])])
+    renderRoutes({ '/': <EstimateAttributesPanel pollMs={60_000} /> }, '/')
+    expect(await screen.findByText(/^推定しています…/)).toBeTruthy()
+    expect(screen.queryByText(/しばらく進んでいません/)).toBeNull()
   })
 
   it('失敗したジョブは理由とそこまでの件数を出す', async () => {

@@ -1,6 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
-import { ESTIMATE_STAGES, type EstimateJob, type EstimateJobProgress } from '../../shared/schemas/estimateJob'
+import {
+  ESTIMATE_STAGES,
+  type EstimateJob,
+  type EstimateJobProgress,
+  STUCK_HINT_MS,
+} from '../../shared/schemas/estimateJob'
 import { useEstimateJob, useStartEstimateJob, useStopEstimateJob } from '../api/estimateJobs'
 import { aiErrorMessage } from '../api/recipes'
 import { Button } from './form'
@@ -32,7 +37,10 @@ export function EstimateAttributesPanel({ pollMs }: { pollMs?: number } = {}) {
   }, [job?.status, qc])
 
   const running = job?.status === 'running'
+  // しばらく更新のない実行中のジョブ（固まっているかもしれない）。止めれば新しく始められる
+  const stuck = running && Date.now() - Date.parse(job.updatedAt) > STUCK_HINT_MS
   const startError = startJob.error && !startJob.isPending ? aiErrorMessage(startJob.error) : null
+  const stopError = stopJob.error && !stopJob.isPending ? aiErrorMessage(stopJob.error) : null
   return (
     <section className="space-y-3 rounded-card bg-surface p-4 shadow-card">
       <div>
@@ -46,7 +54,13 @@ export function EstimateAttributesPanel({ pollMs }: { pollMs?: number } = {}) {
       </div>
       {job && <p className="text-sm">{statusText(job)}</p>}
       {job?.status === 'failed' && job.error && <p className="text-sm text-danger">{job.error}</p>}
+      {stuck && (
+        <p className="text-sm text-danger">
+          しばらく進んでいません。固まっているかもしれないので、止めてからもう一度始めてください。
+        </p>
+      )}
       {startError && <p className="text-sm text-danger">{startError}</p>}
+      {stopError && <p className="text-sm text-danger">{stopError}</p>}
       {running ? (
         <Button variant="secondary" onClick={() => stopJob.mutate(job.id)} disabled={stopJob.isPending}>
           止める

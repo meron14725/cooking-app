@@ -12,6 +12,7 @@ import {
   type EstimateJobParams,
   type EstimateJobStatus,
   emptyProgress,
+  STALE_JOB_MS,
   type StartEstimateJobInput,
 } from '../../shared/schemas/estimateJob'
 import { ulid } from '../../shared/ulid'
@@ -111,23 +112,21 @@ export async function startEstimateJob(
 /** Workflow のインスタンスがもう動いていない状態 */
 const DEAD_STATUSES = new Set(['errored', 'terminated', 'complete'])
 
-/**
- * インスタンスの状態が分からないまま、ジョブの行がこれだけ更新されていなければ止まったとみなす。
- * 1 回分は step の時間切れ 10 分 × (1 + リトライ 3 回) と待ち時間で 45 分ほどかかりうるので、それより長く
- */
-export const STALE_JOB_MS = 60 * 60 * 1000
-
 /** Workflow の get / status の失敗のうち、インスタンスが見つからない（消えた）もの */
 const isNotFound = (err: unknown) => err instanceof Error && /not[_ ]?found/i.test(err.message)
 
-/** インスタンスがもう動いていないか。一時的に状態を読めないだけなら、行が長く更新されていないときだけ止まったとみなす */
+/**
+ * インスタンスがもう動いていないか。
+ * 状態が分からない（読み失敗・unknown）ときは、ジョブの行が STALE_JOB_MS より長く更新されていなければ止まったとみなす
+ */
 async function isDead(workflow: EstimateWorkflowBinding, row: Row, now: Date): Promise<boolean> {
+  const stale = now.getTime() - Date.parse(row.updatedAt) > STALE_JOB_MS
   try {
     const { status } = await (await workflow.get(row.id)).status()
-    return DEAD_STATUSES.has(status)
+    if (DEAD_STATUSES.has(status)) return true
+    return status === 'unknown' && stale
   } catch (err) {
-    if (isNotFound(err)) return true
-    return now.getTime() - Date.parse(row.updatedAt) > STALE_JOB_MS
+    return isNotFound(err) || stale
   }
 }
 

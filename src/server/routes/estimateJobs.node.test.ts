@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { EstimateJob } from '../../shared/schemas/estimateJob'
+import { type EstimateJob, STALE_JOB_MS } from '../../shared/schemas/estimateJob'
 import type { Ingredient, IngredientInput } from '../../shared/schemas/ingredient'
 import { FakeProvider } from '../ai/fake'
 import { AiError } from '../ai/provider'
+import { createDb } from '../db/client'
 import { ApiError } from '../errors'
-import { isPermanentJobError, STALE_JOB_MS } from '../services/estimateJobs'
+import { isPermanentJobError, runEstimateJob } from '../services/estimateJobs'
 import { createTestApi } from '../testing/app'
 import { TEST_STEP_RETRIES } from '../testing/workflow'
 
@@ -168,6 +169,36 @@ describe('まとめて推定のジョブ', () => {
       expect(await current()).toMatchObject({ id: 'j1', status: 'failed' })
     })
 
+    it('Workflow が unknown を返すときも、更新が新しければ実行中のまま、60 分より古ければ失敗にする', async () => {
+      insertRunning(60_000)
+      api.workflow.reportStatus('unknown')
+      expect(await current()).toMatchObject({ id: 'j1', status: 'running' })
+      api.sqlite
+        .prepare("UPDATE estimate_jobs SET updated_at = ? WHERE id = 'j1'")
+        .run(new Date(Date.now() - STALE_JOB_MS - 60_000).toISOString())
+      expect(await current()).toMatchObject({ id: 'j1', status: 'failed' })
+      // 失敗にしたので、新しいジョブを始められる
+      api.workflow.reportStatus(null)
+      expect((await start()).status).toBe(202)
+    })
+
+    it('動いている（running）と返すあいだは、更新が古くても失敗にしない', async () => {
+      insertRunning(STALE_JOB_MS + 60_000)
+      api.workflow.reportStatus('running')
+      expect(await current()).toMatchObject({ id: 'j1', status: 'running' })
+    })
+
+    it('固まったジョブも止められ、止めたら新しく始められる', async () => {
+      insertRunning(60_000)
+      api.workflow.reportStatus('unknown')
+      expect((await start()).status).toBe(409)
+      const stopped = await api.call<EstimateJob>('POST', '/recipes/attributes/jobs/j1/stop')
+      expect(stopped.body.status).toBe('stopped')
+      api.workflow.reportStatus(null)
+      expect((await start()).status).toBe(202)
+      await api.workflow.settled()
+    })
+
     it('インスタンスが見つからなければすぐ失敗にする', async () => {
       insertRunning(60_000)
       api.workflow.failGet('instance.not_found')
@@ -178,9 +209,17 @@ describe('まとめて推定のジョブ', () => {
   it('回を進めるたびと終わったときに updatedAt が進む', async () => {
     await addIngredient('謎A')
     resetSources()
-    const job = (await start()).body
-    api.sqlite.prepare("UPDATE estimate_jobs SET updated_at = '2000-01-01T00:00:00.000Z' WHERE id = ?").run(job.id)
-    await api.workflow.settled()
+    // 裏で走る Workflow と競らないよう、ジョブの行を古い updated_at で作って直接進める
+    api.sqlite.exec(
+      "INSERT INTO estimate_jobs (id, status, progress, created_at, updated_at) VALUES ('j1', 'running', '{}', '2000-01-01T00:00:00.000Z', '2000-01-01T00:00:00.000Z')",
+    )
+    const status = await runEstimateJob(
+      createDb(api.env.DB),
+      () => new FakeProvider(),
+      { jobId: 'j1', limit: 20, refreshStalePrices: false },
+      { do: (_name, fn) => fn() },
+    )
+    expect(status).toBe('done')
     const done = await current()
     expect(done?.status).toBe('done')
     expect(done?.updatedAt).not.toBe('2000-01-01T00:00:00.000Z')

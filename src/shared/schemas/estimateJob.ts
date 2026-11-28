@@ -58,3 +58,12 @@ export function addProgress(
   }
   return next
 }
+
+/**
+ * 状態が分からないまま（Workflow の読み失敗・unknown）、ジョブの行がこれだけ更新されていなければ止まったとみなす。
+ * 1 回分は step の時間切れ 10 分 × (1 + リトライ 3 回) と待ち時間で 45 分ほどかかりうるので、それより長く
+ */
+export const STALE_JOB_MS = 60 * 60 * 1000
+
+/** 画面で「しばらく進んでいません」と出すまでの時間。ふだんの 1 回分は数十秒〜数分で終わる */
+export const STUCK_HINT_MS = 10 * 60 * 1000
