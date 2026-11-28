@@ -35,9 +35,16 @@
 
 | ファイル | 件数 | 日持ちを反映 | 価格を反映 |
 |---|---|---|---|
-| `ingredients/vegetable.csv`（野菜） | 135 | 33 | 39 |
+| `ingredients/vegetable.csv`（野菜） | 135 | 33 | 15 |
 | `ingredients/meat.csv`（肉） | 69 | 31 | 8 |
 | `ingredients/fish.csv`（魚） | 53 | 15 | 6 |
+| `ingredients/tofu_egg_dairy.csv`（豆腐・卵・乳製品） | 44 | 0 | 4 |
+| `ingredients/dry.csv`（乾物・缶詰） | 91 | 2 | 11 |
+| `ingredients/seasoning.csv`（調味料） | 198 | 0 | 9 |
+| `ingredients/other.csv`（その他） | 82 | 2 | 4 |
+| 合計 | 672 | 83 | 57 |
+
+統計が重さあたりで食材が個数単位（枚・本・個・パックなど）のものは、1 個の重さに出典がない限り価格を入れていない（アプリの 1 個あたりの重さは根拠にしない）。メモに統計の単価を残しているので、販売単位の重さに出典があれば足せる。開封後の日数は冷蔵日数に入れずメモだけに書く。端数は四捨五入。
 
 ## 手順
 
