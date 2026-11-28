@@ -169,12 +169,12 @@ function priceNote(i: Ingredient | undefined): { text: string; stale: boolean } 
   return { text: `${PRICE_SOURCE_LABELS[i.priceSource ?? 'default']} · ${date}`, stale }
 }
 
-/** AI がウェブで調べた値の出典（docs/design/06-ai.md「ウェブ検索」）。手で直すと消える */
+/** ウェブで調べた値の出典（まとめて推定の AI・researched）（docs/design/06-ai.md「ウェブ検索」）。手で直すと消える */
 function SourceLinks({ urls, label }: { urls: string[] | undefined; label: string }) {
   if (!urls || urls.length === 0) return null
   return (
     <div className="text-xs text-ink-muted">
-      <p>{label}の出典（AI が調べたページ。値を直すと消えます）</p>
+      <p>{label}の出典（調べたページ。値を直すと消えます）</p>
       <ul className="mt-1 space-y-1">
         {urls.map((url) => (
           <li key={url} className="break-all">
