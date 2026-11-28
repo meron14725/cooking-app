@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { useNavigate } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { TabBar } from '../components/TabBar'
 import { mockApi, renderRoutes } from '../testing/render'
 import { PlanPage } from './PlanPage'
 
@@ -209,5 +210,73 @@ describe('献立をやめたあと', () => {
     mockApi((path) => (path === '/plans/current' ? { plan: null } : { items: [] }))
     const { router } = renderRoutes(routes, '/plan?step=prep')
     await waitFor(() => expect(router.state.location.search).toBe(''))
+  })
+})
+
+describe('タブバーで献立タブを開いたとき（本番で再現した件）', () => {
+  // 冷蔵庫タブ → 献立タブ → 戻る で冷蔵庫に飛んでいた。タブで開いた画面はそのタブの始まりとして、段階の親へ戻る
+  const withTabs = {
+    '/': (
+      <>
+        <p>ホーム画面</p>
+        <TabBar />
+      </>
+    ),
+    '/fridge': (
+      <>
+        <p>冷蔵庫</p>
+        <TabBar />
+      </>
+    ),
+    '/plan': (
+      <>
+        <PlanPage />
+        <TabBar />
+      </>
+    ),
+  }
+  const tab = (name: string) => fireEvent.click(screen.getByRole('link', { name }))
+
+  it('冷蔵庫 → 献立タブ（買い物リスト）→ 戻るで、冷蔵庫ではなく確定した献立へ。もう一度戻るとホーム', async () => {
+    serve('shopping')
+    const { router } = renderRoutes(withTabs, '/fridge')
+    tab('献立')
+    expect(await heading('買い物リスト')).toBeTruthy()
+
+    back()
+    expect(await heading('献立')).toBeTruthy()
+    expect(router.state.location.search).toBe('?step=plan')
+    expect(screen.getByText('確定した献立です（見るだけ）')).toBeTruthy()
+
+    back()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  })
+
+  it('冷蔵庫 → 献立タブ（下ごしらえ）→ 戻るを続けると、買い物リスト → 献立 → ホームの順', async () => {
+    serve('prepping')
+    const { router } = renderRoutes(withTabs, '/fridge')
+    tab('献立')
+    expect(await screen.findByRole('button', { name: '下ごしらえ完了' })).toBeTruthy()
+
+    back()
+    expect(await heading('買い物リスト')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: '買い物完了' })).toBeNull()
+    back()
+    expect(await heading('献立')).toBeTruthy()
+    back()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  })
+
+  it('献立タブから先へ進んだら、戻るは履歴どおり（買い物完了 → 下ごしらえ → 戻るで買い物リスト）', async () => {
+    serve('shopping')
+    const { router } = renderRoutes(withTabs, '/fridge')
+    tab('献立')
+    fireEvent.click(await screen.findByRole('button', { name: '買い物完了' }))
+    await waitFor(() => expect(router.state.location.search).toBe('?step=prep'))
+    back()
+    expect(await heading('買い物リスト')).toBeTruthy()
+    expect(router.state.location.search).toBe('?step=shopping')
+    back()
+    expect(await heading('献立')).toBeTruthy()
   })
 })

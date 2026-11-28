@@ -115,12 +115,12 @@ export function usePlanStepNav() {
       goTo(step)
     },
     /** 段階を URL から消す（献立がなくなったとき。履歴は増やさない） */
-    clear: useCallback(() => navigate('/plan', { replace: true }), [navigate]),
+    clear: useCallback(() => navigate('/plan', { replace: true, state: location.state }), [navigate, location.state]),
     /** 前の段階へ。履歴の 1 つ前がその段階ならそこへ戻り、そうでなければ置き換える */
     backTo: (step: PlanStep) => {
       const from = (location.state as { fromStep?: unknown } | null)?.fromStep
       if (from !== undefined) navigate(-1)
-      else navigate(`/plan?step=${step}`, { replace: true })
+      else navigate(`/plan?step=${step}`, { replace: true, state: location.state })
     },
   }
 }

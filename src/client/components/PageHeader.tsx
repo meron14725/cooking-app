@@ -17,14 +17,26 @@ type Props = {
   backTo?: string
 }
 
+/** タブバーから開いた履歴に付ける印。印を付けたまま置き換えるので、親へ戻り続けても別のタブには戻らない */
+export const TAB_ROOT_STATE = { tabRoot: true } as const
+
+/** タブバーから開いた画面か（戻る先は別のタブではなく、この画面の親） */
+export function isTabRoot(state: unknown): boolean {
+  return (state as { tabRoot?: unknown } | null)?.tabRoot === true
+}
+
 /**
- * 来た画面へ戻る関数。アプリの中から来たなら履歴で 1 つ前へ、直接開いた画面なら fallback へ。
+ * 来た画面へ戻る関数。アプリの中から来たなら履歴で 1 つ前へ、直接開いた画面やタブバーで開いた画面なら fallback へ。
  * 保存・削除のあとに一覧へ戻るときも、これを使うと戻るボタンで入力画面に戻ってしまわない
  */
 export function useGoBack(fallback: string): () => void {
   const navigate = useNavigate()
   const location = useLocation()
-  return () => (isFirstEntry(location.key) ? navigate(fallback, { replace: true }) : navigate(-1))
+  return () => {
+    if (isTabRoot(location.state)) navigate(fallback, { replace: true, state: TAB_ROOT_STATE })
+    else if (isFirstEntry(location.key)) navigate(fallback, { replace: true })
+    else navigate(-1)
+  }
 }
 
 /**
