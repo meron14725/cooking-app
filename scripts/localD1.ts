@@ -21,7 +21,7 @@ export function loadLocalD1(): {
   available: AvailableStock[]
 } {
   const ingRows = query<Row>(
-    'SELECT id, name, unit, category, grams_per_unit, is_staple, can_freeze, pantry_days, prepped_fridge_days, price_yen FROM ingredients',
+    'SELECT id, name, unit, category, grams_per_unit, is_staple, can_freeze, pantry_days, prepped_fridge_days, price_yen, archived_at FROM ingredients',
   )
   const units = query<Row>(
     'SELECT id, ingredient_id, label, quantity, is_default FROM package_units ORDER BY created_at, id',
@@ -50,6 +50,7 @@ export function loadLocalD1(): {
         pantryDays: num(r.pantry_days),
         preppedFridgeDays: num(r.prepped_fridge_days),
         priceYen: num(r.price_yen),
+        archived: r.archived_at !== null,
         packageUnits: units
           .filter((u) => u.ingredient_id === r.id)
           .map((u) => ({
