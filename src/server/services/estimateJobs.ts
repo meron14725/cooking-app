@@ -109,7 +109,27 @@ export async function startEstimateJob(
 }
 
 /** Workflow のインスタンスがもう動いていない状態 */
-const DEAD_STATUSES = new Set(['errored', 'terminated', 'complete', 'unknown'])
+const DEAD_STATUSES = new Set(['errored', 'terminated', 'complete'])
+
+/**
+ * インスタンスの状態が分からないまま、ジョブの行がこれだけ更新されていなければ止まったとみなす。
+ * 1 回分は step の時間切れ 10 分 × (1 + リトライ 3 回) と待ち時間で 45 分ほどかかりうるので、それより長く
+ */
+export const STALE_JOB_MS = 60 * 60 * 1000
+
+/** Workflow の get / status の失敗のうち、インスタンスが見つからない（消えた）もの */
+const isNotFound = (err: unknown) => err instanceof Error && /not[_ ]?found/i.test(err.message)
+
+/** インスタンスがもう動いていないか。一時的に状態を読めないだけなら、行が長く更新されていないときだけ止まったとみなす */
+async function isDead(workflow: EstimateWorkflowBinding, row: Row, now: Date): Promise<boolean> {
+  try {
+    const { status } = await (await workflow.get(row.id)).status()
+    return DEAD_STATUSES.has(status)
+  } catch (err) {
+    if (isNotFound(err)) return true
+    return now.getTime() - Date.parse(row.updatedAt) > STALE_JOB_MS
+  }
+}
 
 /**
  * いちばん新しいジョブ。実行中なのに Workflow のインスタンスが終わっていれば（落ちた・消えた）失敗にする
@@ -118,19 +138,13 @@ const DEAD_STATUSES = new Set(['errored', 'terminated', 'complete', 'unknown'])
 export async function currentEstimateJob(
   db: Db,
   workflow: EstimateWorkflowBinding | undefined,
+  now = new Date(),
 ): Promise<EstimateJob | null> {
   const row = await db.query.estimateJobs.findFirst({ orderBy: [desc(estimateJobs.createdAt), desc(estimateJobs.id)] })
   if (!row) return null
-  if (row.status === 'running' && workflow) {
-    const status = await workflow
-      .get(row.id)
-      .then((i) => i.status())
-      .then((s) => s.status)
-      .catch(() => 'unknown')
-    if (DEAD_STATUSES.has(status)) {
-      await finish(db, row.id, 'failed', 'サーバーのジョブが途中で止まりました。もう一度始めてください')
-      return getJob(db, row.id)
-    }
+  if (row.status === 'running' && workflow && (await isDead(workflow, row, now))) {
+    await finish(db, row.id, 'failed', 'サーバーのジョブが途中で止まりました。もう一度始めてください')
+    return getJob(db, row.id)
   }
   return toJob(row)
 }
@@ -158,6 +172,13 @@ async function recordRound(db: Db, id: string, round: EstimateAttributesResponse
     .set({ progress: addProgress(job.progress, round), rounds: job.rounds + 1 })
     .where(eq(estimateJobs.id, id))
 }
+
+/**
+ * やり直しても同じ結果になる失敗（設定がない・入力が悪い）。Workflow はこれをリトライしない。
+ * AI の一時的な 503（起動中・Container の不調）はリトライする
+ */
+export const isPermanentJobError = (err: unknown) =>
+  err instanceof ApiError && (err.code === 'AI_NOT_CONFIGURED' || (err.status >= 400 && err.status < 500))
 
 const errorMessage = (err: unknown) =>
   err instanceof Error && err.message ? err.message : '推定中にエラーが発生しました'

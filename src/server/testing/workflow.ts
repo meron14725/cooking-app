@@ -13,6 +13,7 @@ export const TEST_STEP_RETRIES = 3
 export function createTestWorkflow(opts: { ai?: () => AiProvider } = {}) {
   let env: Env | null = null
   const runs = new Map<string, { status: string; done: Promise<void> }>()
+  let statusError: string | null = null
   const step: JobStep = {
     async do(_name, fn) {
       for (let attempt = 0; ; attempt++) {
@@ -42,6 +43,7 @@ export function createTestWorkflow(opts: { ai?: () => AiProvider } = {}) {
       runs.set(id, run)
     },
     async get(id) {
+      if (statusError) throw new Error(statusError)
       const run = runs.get(id)
       if (!run) throw new Error('instance not found')
       return {
@@ -59,6 +61,10 @@ export function createTestWorkflow(opts: { ai?: () => AiProvider } = {}) {
     },
     /** 走っているジョブが全部終わるまで待つ */
     settled: () => Promise.all([...runs.values()].map((r) => r.done)),
+    /** get がこのメッセージで失敗するようにする（null で戻す） */
+    failGet(message: string | null) {
+      statusError = message
+    },
     /** インスタンスの状態を直接変える（落ちたときの確かめ用） */
     setStatus(id: string, status: string) {
       const run = runs.get(id)
