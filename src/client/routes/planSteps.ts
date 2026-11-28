@@ -1,4 +1,4 @@
-import { createContext, createElement, type ReactNode, useCallback, useContext, useState } from 'react'
+import { createContext, createElement, type ReactNode, startTransition, useCallback, useContext, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import type { Plan, PlanStatus } from '../../shared/schemas/plan'
 
@@ -67,7 +67,9 @@ export function parentOf(step: PlanStep): string {
 /**
  * 確定・買い物完了のように献立の状態を変えて先へ進むとき、進む先の段階。
  * 献立の状態は URL より先に変わるので、URL が追いつくまでの間に前の段階（見るだけ）が一瞬出ないよう、
- * この段階を URL の段階の代わりに使う
+ * この段階を URL の段階の代わりに使う。
+ * 進み終わったら advance の中で消す（URL が進む先に追いついたかを画面側で待つと、進んだ直後に戻ったときに
+ * 進む先の段階の画面が一度も描かれず、消す機会がないまま残ってしまう）
  */
 const PendingStep = createContext<{ pending: PlanStep | null; setPending: (step: PlanStep | null) => void } | null>(
   null,
@@ -93,16 +95,17 @@ export function usePlanStepNav() {
   return {
     /** URL に書いてある段階 */
     requested,
-    /** 進む途中の段階（URL が追いついたら消す） */
+    /** 進む途中の段階（進み終わったら消える） */
     pending: pendingCtx?.pending ?? null,
-    settle: useCallback(() => pendingCtx?.setPending(null), [pendingCtx]),
     /** いまの履歴に段階を書く（置き換え。履歴は増やさない） */
     mark,
     /** 次の段階へ進む */
     goTo,
     /**
      * 献立の状態を変える操作（run）をしてから次の段階へ進む。
-     * 状態が変わった瞬間から進む先の段階を出し、失敗したら元に戻す
+     * 状態が変わった瞬間から進む先の段階を出し、失敗したら元に戻す。
+     * 進み終わったら進む途中の段階を消す。ルーターは画面の更新を transition で描くので、消すのも transition にして
+     * URL の更新と同じ回か後の回で描く（先に描くと、URL が古いまま前の段階（見るだけ）が一瞬出る）
      */
     advance: async (step: PlanStep, run: () => Promise<unknown>) => {
       pendingCtx?.setPending(step)
@@ -112,7 +115,11 @@ export function usePlanStepNav() {
         pendingCtx?.setPending(null)
         throw err
       }
-      goTo(step)
+      try {
+        await goTo(step)
+      } finally {
+        startTransition(() => pendingCtx?.setPending(null))
+      }
     },
     /** 段階を URL から消す（献立がなくなったとき。履歴は増やさない） */
     clear: useCallback(() => navigate('/plan', { replace: true, state: location.state }), [navigate, location.state]),
