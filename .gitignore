@@ -5,3 +5,6 @@ dist/
 !.dev.vars.example
 *.log
 .DS_Store
+
+# 食材の調べた値の反映で使う、本番 D1 の書き出し・バックアップ・反映 SQL（docs/data/README.md）。公開しない
+.research/

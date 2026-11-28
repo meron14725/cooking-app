@@ -105,7 +105,8 @@ export type IngredientInputParsed = z.output<typeof ingredientInputSchema>
 
 export const PRICE_FILTERS = ['missing', 'stale'] as const
 export type PriceFilter = (typeof PRICE_FILTERS)[number]
-export type PriceSource = 'default' | 'manual'
+/** researched = ウェブで調べた値（docs/data/README.md） */
+export type PriceSource = 'default' | 'manual' | 'researched'
 
 export type PackageUnit = {
   id: string
@@ -133,8 +134,11 @@ export type Ingredient = {
   isStaple: boolean
   /** 分類と重さをどう決めたか（rule / ai / manual）。null = 取り込みのまま */
   attributesSource: 'rule' | 'ai' | 'manual' | null
-  /** 日持ちと保存場所をどう決めたか（rule / ai / manual）。null = 取り込みのまま（docs/design/11-storage-days.md） */
-  storageSource: 'rule' | 'ai' | 'manual' | null
+  /**
+   * 日持ちと保存場所をどう決めたか（rule / ai / manual / researched = ウェブで調べた値）。
+   * null = 取り込みのまま（docs/design/11-storage-days.md）
+   */
+  storageSource: 'rule' | 'ai' | 'manual' | 'researched' | null
   /** 代表量あたりの価格（円）。未設定は null */
   priceYen: number | null
   priceSource: PriceSource | null
