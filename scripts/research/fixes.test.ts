@@ -15,6 +15,7 @@ type Row = {
   category: string
   attributes_source: string | null
   storage_source: string | null
+  storage_source_urls: string
   price_yen: number | null
   price_source: string | null
   archived_at: string | null
@@ -24,8 +25,8 @@ function setup(rows: (Partial<Row> & Pick<Row, 'id' | 'name' | 'category'>)[]) {
   const db = createTestD1({ seed: false }).sqlite
   const insert = db.prepare(
     `INSERT INTO ingredients (id, name, aliases, category, unit, can_freeze, fridge_days, default_location,
-       attributes_source, storage_source, price_yen, price_source, archived_at)
-     VALUES (?, ?, ?, ?, 'g', 1, 3, 'fridge', ?, ?, ?, ?, ?)`,
+       attributes_source, storage_source, storage_source_urls, price_yen, price_source, archived_at)
+     VALUES (?, ?, ?, ?, 'g', 1, 3, 'fridge', ?, ?, ?, ?, ?, ?)`,
   )
   for (const r of rows) {
     insert.run(
@@ -35,6 +36,7 @@ function setup(rows: (Partial<Row> & Pick<Row, 'id' | 'name' | 'category'>)[]) {
       r.category,
       r.attributes_source === undefined ? 'rule' : r.attributes_source,
       r.storage_source === undefined ? 'rule' : r.storage_source,
+      r.storage_source_urls ?? '["https://example.com/storage"]',
       r.price_yen ?? null,
       r.price_source ?? null,
       r.archived_at ?? null,
@@ -94,7 +96,7 @@ describe('2026-11-28-names-categories.sql', () => {
     expect(t.get('cocoro-ing-86f9291b03fada7c')).toMatchObject({ name: 'たこ', aliases: '[]' })
   })
 
-  it('分類を直し、手直しの印（manual）を付ける。rule・ai の日持ちは未見直しに戻し、manual・researched と価格は残す', () => {
+  it('分類を直し、手直しの印（manual）を付ける。rule・ai の日持ちは未見直しに戻して出典を空にし、manual・researched（出典ごと）と価格は残す', () => {
     const t = setup([
       // はごろもフーズ シーチキンL（肉 → 魚）
       {
@@ -135,20 +137,27 @@ describe('2026-11-28-names-categories.sql', () => {
       category: 'fish',
       attributes_source: 'manual',
       storage_source: null,
+      storage_source_urls: '[]',
       price_yen: 200,
       price_source: 'default',
     })
     expect(t.get('cocoro-ing-a82ea8c2a576bcac')).toMatchObject({
       category: 'tofu_egg_dairy',
       storage_source: 'researched',
+      storage_source_urls: '["https://example.com/storage"]',
       price_source: 'researched',
       price_yen: 250,
     })
-    expect(t.get('cocoro-ing-ad648b690e61443d')).toMatchObject({ category: 'seasoning', storage_source: 'manual' })
+    expect(t.get('cocoro-ing-ad648b690e61443d')).toMatchObject({
+      category: 'seasoning',
+      storage_source: 'manual',
+      storage_source_urls: '["https://example.com/storage"]',
+    })
     expect(t.get('cocoro-ing-32d8c87c762eecd0')).toMatchObject({
       category: 'vegetable',
       attributes_source: 'manual',
       storage_source: null,
+      storage_source_urls: '[]',
     })
   })
 
@@ -159,7 +168,11 @@ describe('2026-11-28-names-categories.sql', () => {
       { id: 'cocoro-ing-ad648b690e61443d', name: '梅肉', category: 'meat', archived_at: '2026-11-01T00:00:00.000Z' },
     ])
     t.run(file)
-    expect(t.get('cocoro-ing-ddf0221dc4ddb6c0')).toMatchObject({ category: 'meat', storage_source: 'rule' })
+    expect(t.get('cocoro-ing-ddf0221dc4ddb6c0')).toMatchObject({
+      category: 'meat',
+      storage_source: 'rule',
+      storage_source_urls: '["https://example.com/storage"]',
+    })
     expect(t.get('cocoro-ing-a82ea8c2a576bcac')).toMatchObject({ category: 'other', attributes_source: 'rule' })
     expect(t.get('cocoro-ing-ad648b690e61443d')).toMatchObject({ category: 'meat', storage_source: 'rule' })
   })

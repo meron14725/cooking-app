@@ -111,7 +111,7 @@ npx wrangler d1 time-travel restore cooking-app --bookmark=<3 で控えた bookm
 COCORO の取り込みで崩れた名前（「ゆでだこ」が「だこ」になったなど）と、分類の誤り（ツナ缶が肉、牛乳が肉など）を直す SQL を `docs/data/fixes/` に置く。リポジトリには直す行だけを書く。
 
 - 名前: `WHERE name = <直す前の名前>` で当てる。手で名前を変えた食材と、直したあとの名前の食材がもうあるものは変えない。前の名前は別名（aliases）に足す（取り込みで同じ名前が来ても当たるように）
-- 分類: `WHERE category = <直す前の分類>` で当て、手で分類を直した食材（`attributes_source = 'manual'`）は変えない。直したら画面で分類を変えたときと同じく `attributes_source = 'manual'` にし、日持ちは `manual`・`researched` なら残し、それ以外（`rule`・`ai`）は未見直し（NULL）に戻して次のまとめて推定で入れ直す。価格は変えない
+- 分類: `WHERE category = <直す前の分類>` で当て、手で分類を直した食材（`attributes_source = 'manual'`）は変えない。直したら画面で分類を変えたときと同じく `attributes_source = 'manual'` にし、日持ちは `manual`・`researched` なら出典 URL（`storage_source_urls`）ごと残し、それ以外（`rule`・`ai`）は未見直し（NULL）に戻して出典 URL を空にし、次のまとめて推定で入れ直す。価格は変えない。`storage_source_urls`（migration 0012）が本番にあることが前提
 - 削除済みの食材は変えない。バインド変数は使わない。何度流しても同じ結果になる
 
 調べた値の反映（上の手順 4）とはどちらが先でもよい（反映は id で当て、CSV の分類列は check にしか使わない）。直したあとの check では、分類を直した行に「分類が本番と違う」の警告が出る。
