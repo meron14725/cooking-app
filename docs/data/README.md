@@ -36,6 +36,8 @@
 | ファイル | 件数 | 日持ちを反映 | 価格を反映 |
 |---|---|---|---|
 | `ingredients/vegetable.csv`（野菜） | 135 | 33 | 39 |
+| `ingredients/tofu_egg_dairy.csv`（豆腐・卵・乳製品） | 44 | 0 | 8 |
+| `ingredients/dry.csv`（乾物・缶詰） | 91 | 2 | 20 |
 
 ## 手順
 
