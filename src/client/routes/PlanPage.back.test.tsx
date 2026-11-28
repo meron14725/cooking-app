@@ -189,6 +189,41 @@ describe('段階を進めた直後', () => {
   })
 })
 
+/** URL が step になった瞬間に、画面が描き終わる前に 1 つ戻る（進んですぐ戻る操作を、描く速さによらず再現する） */
+function backAsSoonAs(router: ReturnType<typeof renderRoutes>['router'], step: string) {
+  const unsubscribe = router.subscribe((state) => {
+    if (state.location.search !== `?step=${step}`) return
+    unsubscribe()
+    void router.navigate(-1)
+  })
+}
+
+describe('進んですぐ戻ったとき', () => {
+  // 進む途中の段階を、画面が進む先を描いてから消していたので、描く前に戻ると進む先の画面のまま残っていた
+  it('確定してすぐ戻ると、確定した献立（見るだけ）になる', async () => {
+    serve('draft')
+    const { router } = renderRoutes(routes, '/plan')
+    const confirm = await screen.findByRole('button', { name: 'この献立で確定' })
+    await waitFor(() => expect(router.state.location.search).toBe('?step=order'))
+    backAsSoonAs(router, 'shopping')
+    fireEvent.click(confirm)
+    expect(await screen.findByText('確定した献立です（見るだけ）')).toBeTruthy()
+    expect(router.state.location.search).toBe('?step=order')
+  })
+
+  it('買い物完了してすぐ戻ると、買い物リスト（見るだけ）になる', async () => {
+    serve('shopping')
+    const { router } = renderRoutes(routes, '/plan')
+    const complete = await screen.findByRole('button', { name: '買い物完了' })
+    await waitFor(() => expect(router.state.location.search).toBe('?step=shopping'))
+    backAsSoonAs(router, 'prep')
+    fireEvent.click(complete)
+    expect(await screen.findByRole('button', { name: '下ごしらえへ' })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: '買い物リスト' })).toBeTruthy()
+    expect(router.state.location.search).toBe('?step=shopping')
+  })
+})
+
 describe('献立をやめたあと', () => {
   it('「この献立をやめる」で URL の段階を消し、料理を選ぶところに戻る', async () => {
     serve('draft')

@@ -1265,11 +1265,7 @@ function PlanPageBody() {
   useEffect(() => {
     if (viewStep && nav.requested === null) nav.mark(viewStep)
   }, [viewStep, nav.requested, nav.mark])
-  // 進む途中の段階は、URL が追いついたら消す
-  const { pending, requested: urlStep, settle, clear } = nav
-  useEffect(() => {
-    if (pending !== null && urlStep === pending) settle()
-  }, [pending, urlStep, settle])
+  const { requested: urlStep, clear } = nav
   // 献立がない（やめた・取り消した、その後の古い履歴）ときは、URL に残った段階を消す
   const noPlan = current.isSuccess && !plan
   useEffect(() => {
