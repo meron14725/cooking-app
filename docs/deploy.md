@@ -22,7 +22,7 @@ Cloudflare ダッシュボード → 右上のアカウント → **My Profile �
 | Token name | `cooking-app GitHub Actions` |
 | Permissions | Account / **Workers Scripts** / Edit |
 | | Account / **D1** / Edit |
-| | Account / **Workers R2 Storage** / Edit（レシピ写真のバケット。既存のトークンに無ければ足す） |
+| | Account / **Workers R2 Storage** / Edit（レシピ写真と DB バックアップのバケット。既存のトークンに無ければ足す） |
 | | Account / **Account Settings** / Read |
 | Account Resources | Include / 自分のアカウント |
 
@@ -125,6 +125,42 @@ npx wrangler r2 object put cooking-app-images/img/R4063.jpg --file=./R4063.jpg -
 - 並べ替えは「人気順」= `favorite_count`、「よく作られる順」= `cook_count` の多い順です。`score` では並べません
 - 画像の応答は `Cache-Control: private, max-age=86400`（ブラウザにだけ 1 日）。認証の後ろなので CDN の共有キャッシュや別の配信サービスは使いません
 - 写真のキーがあってもまだ上がっていないときは、画面ではプレースホルダが出ます
+
+## 本番 DB のバックアップ（R2・非公開）
+
+Deploy はマイグレーションの前に本番 D1 を `wrangler d1 export` で書き出し、R2 バケット `cooking-app-backups` に保存します。キーは `d1/cooking-app-<UTC 日時>-<コミットの先頭 7 桁>.sql` です。
+
+このリポジトリは公開なので、書き出した SQL を GitHub Actions の成果物（artifact）やログには出しません。成果物はログインしている人なら誰でもダウンロードでき、COCORO の公式レシピを含む本番 DB が漏れるためです（`.github/workflows/deploy.yml` に `upload-artifact` が無いことはテスト `scripts/deploy-workflow.test.ts` で確かめています）。
+
+### 1. バケットを作る（一度だけ。次のデプロイより先に）
+
+```sh
+npx wrangler r2 bucket create cooking-app-backups
+```
+
+- 公開アクセスは**付けない**でください。作ったばかりのバケットは非公開です。ダッシュボードの **R2 → cooking-app-backups → Settings** で **Public Development URL** が Disabled、**Custom Domains** が空のままにします
+- Worker からは使わないので、`wrangler.jsonc` の `r2_buckets` には足しません
+- Actions のトークンには上の「2.」の **Workers R2 Storage / Edit** が要ります（写真のバケットと同じ権限です）
+- バケットが無いと Deploy は「R2 バケット cooking-app-backups に保存できませんでした」で止まり、マイグレーションもデプロイもしません
+
+### 2. 古いバックアップを自動で消す（任意）
+
+30 日で消す例です。
+
+```sh
+npx wrangler r2 bucket lifecycle add cooking-app-backups expire-d1-backups d1/ --expire-days 30
+```
+
+### 3. 戻すとき
+
+まず D1 Time Travel（過去 30 日の任意の時点、[設計 01](./design/01-architecture.md)「データの守り」）を検討します。SQL から戻すときは、手元に落として流します。書き出しには `CREATE TABLE` も入っているので、テーブルが残っている DB に流すと失敗します。空の DB に流してください。
+
+```sh
+npx wrangler r2 object get cooking-app-backups/d1/<キー>.sql --file ./backup.sql --remote
+npx wrangler d1 execute cooking-app --remote --file ./backup.sql
+```
+
+落とした SQL は公式レシピを含むので、リポジトリに入れたり共有したりしないでください。
 
 ## 初期データについて
 

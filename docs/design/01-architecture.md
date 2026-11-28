@@ -94,7 +94,7 @@ Access を経由しない経路から偽のヘッダで API を叩かれない�
 | 手段 | 内容 |
 |---|---|
 | D1 Time Travel | 過去 30 日の任意の時点に戻せる（標準機能、設定不要）。ただし DB 自体を消すと使えない |
-| デプロイ前のエクスポート | デプロイのたびに `wrangler d1 export --remote` で SQL を書き出し、GitHub Actions の artifact に残す |
+| デプロイ前のエクスポート | デプロイのたびに `wrangler d1 export --remote` で SQL を書き出し、非公開の R2 バケット `cooking-app-backups` に残す（リポジトリが公開なので Actions の artifact やログには出さない） |
 | 定期エクスポート | 週 1 回 Cron Trigger で全テーブルを JSON にして R2 に保存（あるとよい、MVP後） |
 | 論理削除 | レシピと食材マスタは `archived_at` で論理削除し、誤削除を防ぐ |
 
@@ -112,7 +112,7 @@ Access を経由しない経路から偽のヘッダで API を叩かれない�
 main へのマージで GitHub Actions が次の順に実行します。
 
 1. lint / typecheck / test
-2. `wrangler d1 export <DB> --remote` で本番 DB を書き出し、artifact に保存
+2. `wrangler d1 export <DB> --remote` で本番 DB を書き出し、非公開の R2 バケットに保存（`wrangler r2 object put`）
 3. `wrangler d1 migrations apply <DB> --remote`
 4. `wrangler deploy`
 
