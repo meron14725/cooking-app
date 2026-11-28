@@ -1,3 +1,4 @@
+import type { AiCallOptions } from '../../shared/schemas/attributes'
 import type { RecipeDraftRaw } from '../../shared/schemas/recipeDraft'
 import type { AiProvider } from './provider'
 
@@ -98,17 +99,30 @@ export class FakeProvider implements AiProvider {
     }
   }
 
-  /** 名前に「高級」があれば答えない（null）、ほかは 1 個 100 円 */
-  async estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0]) {
-    return { items: items.map((i) => ({ key: i.key, priceYen: i.name.includes('高級') ? null : 100 })) }
+  /**
+   * 名前に「高級」があれば答えない（null）、ほかは 1 個 100 円。
+   * 調べるとき（webSearch）は出典 URL を付ける。名前に「出典なし」があれば付けない
+   */
+  async estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0], opts: AiCallOptions = {}) {
+    return {
+      items: items.map((i) => ({
+        key: i.key,
+        priceYen: i.name.includes('高級') ? null : 100,
+        ...fakeSources(i, 'price', opts),
+      })),
+    }
   }
 
-  /** 名前に「高級」があれば答えない。「日持ちしない」なら範囲外（冷蔵 999 日）。ほかは冷蔵 4 日・冷凍 30 日 */
-  async estimateStorage(items: Parameters<AiProvider['estimateStorage']>[0]) {
+  /**
+   * 名前に「高級」があれば答えない。「日持ちしない」なら範囲外（冷蔵 999 日）。ほかは冷蔵 4 日・冷凍 30 日。
+   * 出典は estimatePrices と同じ
+   */
+  async estimateStorage(items: Parameters<AiProvider['estimateStorage']>[0], opts: AiCallOptions = {}) {
     return {
       items: items
         .filter((i) => !i.name.includes('高級'))
         .map((i) => ({
+          ...fakeSources(i, 'storage', opts),
           key: i.key,
           canFreeze: true,
           fridgeDays: i.name.includes('日持ちしない') ? 999 : 4,
@@ -131,4 +145,10 @@ export class FakeProvider implements AiProvider {
       })),
     }
   }
+}
+
+/** テスト用の出典 URL（調べるときだけ。名前に「出典なし」があれば空） */
+function fakeSources(item: { key: string; name: string }, kind: string, opts: AiCallOptions) {
+  if (!opts.webSearch) return {}
+  return { sources: item.name.includes('出典なし') ? [] : [`https://example.com/${kind}/${item.key}`] }
 }

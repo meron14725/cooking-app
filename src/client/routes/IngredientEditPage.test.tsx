@@ -30,6 +30,8 @@ const onion: Ingredient = {
   isStaple: false,
   attributesSource: null,
   storageSource: null,
+  storageSourceUrls: [],
+  priceSourceUrls: [],
   priceYen: 198,
   priceSource: 'default',
   priceUpdatedAt: '2024-01-10T00:00:00.000Z',
@@ -90,5 +92,32 @@ describe('食材一覧の価格の絞り込み', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '価格未設定' }))
     await waitFor(() => expect(fetch.mock.calls.some(([url]) => String(url).includes('price=missing'))).toBe(true))
+  })
+})
+
+describe('食材の編集の出典', () => {
+  it('AI がウェブで調べた価格と日持ちの出典をリンクで出す', async () => {
+    mockApi(() => ({
+      ...onion,
+      storageSource: 'ai',
+      storageSourceUrls: ['https://www.maff.go.jp/j/syouan/tamanegi.html'],
+      priceSourceUrls: ['https://example.com/netsuper/onion', 'https://www.stat.go.jp/data/kouri/'],
+    }))
+    renderRoutes({ '/ingredients/:id': <IngredientEditPage />, '/ingredients': <p>一覧</p> }, '/ingredients/onion')
+    expect(await screen.findByText(/^日持ちの出典/)).toBeTruthy()
+    expect(screen.getByText(/^価格の出典/)).toBeTruthy()
+    const storageLink = screen.getByRole('link', { name: 'maff.go.jp/j/syouan/tamanegi.html' })
+    expect(storageLink.getAttribute('href')).toBe('https://www.maff.go.jp/j/syouan/tamanegi.html')
+    expect(storageLink.getAttribute('target')).toBe('_blank')
+    expect(screen.getByRole('link', { name: 'stat.go.jp/data/kouri/' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'example.com/netsuper/onion' })).toBeTruthy()
+  })
+
+  it('出典がなければ何も出さない', async () => {
+    mockApi(() => onion)
+    renderRoutes({ '/ingredients/:id': <IngredientEditPage />, '/ingredients': <p>一覧</p> }, '/ingredients/onion')
+    await screen.findByLabelText(/^3個入り あたり（円）/)
+    expect(screen.queryByText(/の出典/)).toBeNull()
+    expect(screen.queryAllByRole('link').filter((a) => a.getAttribute('target') === '_blank')).toHaveLength(0)
   })
 })

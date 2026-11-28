@@ -13,6 +13,8 @@ interface Env {
   ENVIRONMENT?: string
   /** AI プロバイダ: cursor（既定）/ gemini（予備）/ fake（テスト・ローカル用） */
   AI_PROVIDER?: string
+  /** まとめて推定で AI にウェブ検索をさせるか。off で止める（既定 on。docs/design/06-ai.md「ウェブ検索」） */
+  AI_WEB_SEARCH?: string
   /** Cursor SDK を動かす Container（docs/design/08-agent.md） */
   AGENT?: DurableObjectNamespace<import('./agent/container').AgentContainer>
   /** 「分類と価格をまとめて推定」のジョブを動かす Workflow（docs/design/12-estimate-jobs.md） */

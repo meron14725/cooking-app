@@ -31,8 +31,11 @@ export type EstimateWorkflowBinding = {
 /** 1 回分の処理を、途中で失敗してもやり直せる単位で包む（Workflows の step.do。リトライはこちらの役目） */
 export type JobStep = { do<T>(name: string, fn: () => Promise<T>): Promise<T> }
 
-/** 1 つのジョブで進める回数の上限（Workflows の 1 インスタンスの step 数の上限より十分小さく） */
-export const MAX_ROUNDS = 300
+/**
+ * 1 つのジョブで進める回数の上限。1 回で step を 2 つ使うので、Workflows の 1 インスタンスの step 数の上限（1,024）に収める。
+ * ウェブで調べるときは 1 回 5 件なので、600 件の食材の 3 段で 360 回ほどになる。届かなければ、もう一度始めると続きから進む
+ */
+export const MAX_ROUNDS = 500
 
 type Row = typeof estimateJobs.$inferSelect
 
@@ -84,7 +87,11 @@ function requireWorkflow(workflow: EstimateWorkflowBinding | undefined): Estimat
 export async function startEstimateJob(
   db: Db,
   workflow: EstimateWorkflowBinding | undefined,
-  input: Required<StartEstimateJobInput>,
+  input: Omit<StartEstimateJobInput, 'limit' | 'webSearch' | 'refreshStalePrices'> & {
+    limit: number
+    webSearch: boolean
+    refreshStalePrices: boolean
+  },
 ): Promise<EstimateJob> {
   const wf = requireWorkflow(workflow)
   const id = ulid()
@@ -101,7 +108,15 @@ export async function startEstimateJob(
     throw err
   }
   try {
-    await wf.create({ id, params: { jobId: id, limit: input.limit, refreshStalePrices: input.refreshStalePrices } })
+    await wf.create({
+      id,
+      params: {
+        jobId: id,
+        limit: input.limit,
+        refreshStalePrices: input.refreshStalePrices,
+        webSearch: input.webSearch,
+      },
+    })
   } catch (err) {
     await finish(db, id, 'failed', 'サーバーでジョブを始められませんでした')
     throw err
@@ -200,7 +215,12 @@ export async function runEstimateJob(
         const job = await findJob(db, jobId)
         if (job?.status !== 'running') return null
         // 古い目安の見直しは最初の 1 回だけ（やり直しても、入れ直したばかりの値は古くないので消えない）
-        return estimateAttributes(db, ai, { limit, refreshStalePrices: params.refreshStalePrices && round === 0 })
+        return estimateAttributes(db, ai, {
+          limit,
+          refreshStalePrices: params.refreshStalePrices && round === 0,
+          // 古いジョブ（webSearch のない params）は検索なしで進める
+          webSearch: params.webSearch === true,
+        })
       })
     } catch (err) {
       await step.do('fail', () => finish(db, jobId, 'failed', errorMessage(err)))

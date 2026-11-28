@@ -33,12 +33,14 @@ function toIngredient(row: IngredientRow, units: PackageUnitRow[]): Ingredient {
     defaultLocation: row.defaultLocation,
     attributesSource: row.attributesSource,
     storageSource: row.storageSource,
+    storageSourceUrls: row.storageSourceUrls,
     beforeCookTask: row.beforeCookTask,
     frozenCookNote: row.frozenCookNote,
     isStaple: row.isStaple,
     priceYen: row.priceYen,
     priceSource: row.priceYen === null ? null : row.priceSource,
     priceUpdatedAt: row.priceYen === null ? null : row.priceUpdatedAt,
+    priceSourceUrls: row.priceYen === null ? [] : row.priceSourceUrls,
     packageUnits: units.map(toPackageUnit),
   }
 }
@@ -86,13 +88,13 @@ function ingredientValues(input: IngredientInputParsed) {
   return rest
 }
 
-type PriceColumns = Pick<IngredientRow, 'priceYen' | 'priceSource' | 'priceUpdatedAt'>
+type PriceColumns = Pick<IngredientRow, 'priceYen' | 'priceSource' | 'priceUpdatedAt' | 'priceSourceUrls'>
 
-/** 手で入れた価格の列。null なら 3 列とも未設定に戻す */
+/** 手で入れた価格の列。null なら未設定に戻す。どちらも出典は空にする */
 function manualPrice(priceYen: number | null): PriceColumns {
   return priceYen === null
-    ? { priceYen: null, priceSource: null, priceUpdatedAt: null }
-    : { priceYen, priceSource: 'manual', priceUpdatedAt: new Date().toISOString() }
+    ? { priceYen: null, priceSource: null, priceUpdatedAt: null, priceSourceUrls: [] }
+    : { priceYen, priceSource: 'manual', priceUpdatedAt: new Date().toISOString(), priceSourceUrls: [] }
 }
 
 /**
@@ -107,11 +109,12 @@ export function nextPriceColumns(
   newRepresentative: number,
 ): PriceColumns {
   if (inputPriceYen !== undefined && inputPriceYen !== current.priceYen) return manualPrice(inputPriceYen)
-  if (current.priceYen === null) return { priceYen: null, priceSource: null, priceUpdatedAt: null }
+  if (current.priceYen === null) return { priceYen: null, priceSource: null, priceUpdatedAt: null, priceSourceUrls: [] }
   return {
     priceYen: rescalePrice(current.priceYen, oldRepresentative, newRepresentative),
     priceSource: current.priceSource,
     priceUpdatedAt: current.priceUpdatedAt,
+    priceSourceUrls: current.priceSourceUrls,
   }
 }
 
@@ -205,6 +208,7 @@ export async function createIngredient(db: Db, input: IngredientInputParsed): Pr
           ...(input.priceYen === undefined ? {} : manualPrice(input.priceYen)),
           // 画面で入れた日持ちは手入力（まとめて推定で上書きしない）
           storageSource: 'manual',
+          storageSourceUrls: [],
           archivedAt: null,
         })
         .where(eq(ingredients.id, existing.id)),
@@ -216,9 +220,13 @@ export async function createIngredient(db: Db, input: IngredientInputParsed): Pr
   const id = ulid()
   const units = normalizeDefaultUnit(input.packageUnits)
   await db.batch([
-    db
-      .insert(ingredients)
-      .values({ id, ...ingredientValues(input), ...manualPrice(input.priceYen ?? null), storageSource: 'manual' }),
+    db.insert(ingredients).values({
+      id,
+      ...ingredientValues(input),
+      ...manualPrice(input.priceYen ?? null),
+      storageSource: 'manual',
+      storageSourceUrls: [],
+    }),
     ...units.map(({ id: _, ...u }) => db.insert(packageUnits).values({ ingredientId: id, ...u })),
   ])
   return getIngredient(db, id)
@@ -254,7 +262,8 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
         ...ingredientValues(input),
         ...price,
         ...(edited ? { attributesSource: 'manual' as const } : {}),
-        ...(storageSource !== current.storageSource ? { storageSource } : {}),
+        // 出どころが変わったら（手入力・未見直しに戻す）、前の出典は消す
+        ...(storageSource !== current.storageSource ? { storageSource, storageSourceUrls: [] } : {}),
       })
       .where(eq(ingredients.id, id)),
     db

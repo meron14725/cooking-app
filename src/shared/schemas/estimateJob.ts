@@ -29,16 +29,31 @@ export type EstimateJob = {
   finishedAt: string | null
 }
 
+/** 1 回で AI に聞く件数の既定。ウェブで調べるときは 1 回が遅くなるので少なくする（docs/design/06-ai.md「ウェブ検索」） */
+export const ESTIMATE_LIMIT = 20
+export const RESEARCH_ESTIMATE_LIMIT = 5
+
 export const startEstimateJobInputSchema = z.object({
-  /** 1 回で AI に聞く件数 */
-  limit: z.number().int().min(1).max(40).default(20),
+  /** 1 回で AI に聞く件数。省略したら ESTIMATE_LIMIT（調べるときは RESEARCH_ESTIMATE_LIMIT） */
+  limit: z.number().int().min(1).max(40).optional(),
   /** 最初の 1 回だけ、1 年より前の目安の価格を未設定に戻してから推定する（docs/design/10-cost.md） */
   refreshStalePrices: z.boolean().default(false),
+  /** AI にウェブ検索で調べさせる。省略したら環境変数 AI_WEB_SEARCH（既定 on）に従う */
+  webSearch: z.boolean().optional(),
 })
 export type StartEstimateJobInput = z.input<typeof startEstimateJobInputSchema>
 
 /** Workflow に渡す値 */
-export type EstimateJobParams = { jobId: string; limit: number; refreshStalePrices: boolean }
+export type EstimateJobParams = { jobId: string; limit: number; refreshStalePrices: boolean; webSearch: boolean }
+
+/** 省略した limit と webSearch を決める。webSearchByDefault は環境変数 AI_WEB_SEARCH から */
+export function resolveEstimateOptions(
+  input: { limit?: number; webSearch?: boolean },
+  webSearchByDefault: boolean,
+): { limit: number; webSearch: boolean } {
+  const webSearch = input.webSearch ?? webSearchByDefault
+  return { webSearch, limit: input.limit ?? (webSearch ? RESEARCH_ESTIMATE_LIMIT : ESTIMATE_LIMIT) }
+}
 
 export const emptyProgress = (): EstimateJobProgress => ({
   ingredients: { updated: 0, remaining: null },

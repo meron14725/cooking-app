@@ -13,6 +13,8 @@ export type RunAgent = (input: {
   prompt: string
   tools: Record<string, ToolDef>
   signal: AbortSignal
+  /** 組み込みのウェブ検索・ページ取得を使わせる（まとめて推定。docs/design/06-ai.md「ウェブ検索」） */
+  webSearch?: boolean
 }) => Promise<{ usage?: unknown; text?: string }>
 
 export type Reply = { status: number; body: unknown }
@@ -23,6 +25,8 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 
 /** 1 回の実行の上限。Worker 側（CursorProvider）の待ち時間より少し短くする */
 export const MAX_TIMEOUT_MS = 60_000
+/** ウェブで調べるときの上限。Worker 側（CursorProvider の RESEARCH_ATTEMPT_MS）と同じ */
+export const MAX_RESEARCH_TIMEOUT_MS = 240_000
 
 export function structuredPrompt(system: string, prompt: string): string {
   return `${system}
@@ -34,8 +38,9 @@ ${prompt}
 }
 
 /**
- * POST /structured: { system, prompt, jsonSchema, timeoutMs? } → { result, usage, durationMs }
- * submit_result の 1 回目の引数を結果にする。形の検証は Worker 側（zod）で行う
+ * POST /structured: { system, prompt, jsonSchema, timeoutMs?, webSearch? } → { result, usage, durationMs }
+ * submit_result の 1 回目の引数を結果にする。形の検証は Worker 側（zod）で行う。
+ * webSearch が true なら、組み込みのウェブ検索・ページ取得も使わせる
  */
 export async function handleStructured(body: unknown, runAgent: RunAgent): Promise<Reply> {
   if (
@@ -46,8 +51,10 @@ export async function handleStructured(body: unknown, runAgent: RunAgent): Promi
   ) {
     return error(400, 'BAD_REQUEST', 'system, prompt, jsonSchema が必要です')
   }
+  const webSearch = body.webSearch === true
+  const maxTimeout = webSearch ? MAX_RESEARCH_TIMEOUT_MS : MAX_TIMEOUT_MS
   const timeoutMs =
-    typeof body.timeoutMs === 'number' && body.timeoutMs > 0 ? Math.min(body.timeoutMs, MAX_TIMEOUT_MS) : MAX_TIMEOUT_MS
+    typeof body.timeoutMs === 'number' && body.timeoutMs > 0 ? Math.min(body.timeoutMs, maxTimeout) : maxTimeout
 
   let result: Record<string, unknown> | undefined
   const tools: Record<string, ToolDef> = {
@@ -66,7 +73,7 @@ export async function handleStructured(body: unknown, runAgent: RunAgent): Promi
   const signal = AbortSignal.timeout(timeoutMs)
   try {
     const { usage } = await Promise.race([
-      runAgent({ prompt: structuredPrompt(body.system, body.prompt), tools, signal }),
+      runAgent({ prompt: structuredPrompt(body.system, body.prompt), tools, signal, webSearch }),
       new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true })),
     ])
     if (!result) return error(502, 'NO_RESULT', 'エージェントが結果を返しませんでした')

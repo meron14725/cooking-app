@@ -139,9 +139,13 @@ export type Ingredient = {
    * null = 取り込みのまま（docs/design/11-storage-days.md）
    */
   storageSource: 'rule' | 'ai' | 'manual' | 'researched' | null
+  /** 日持ちの出典 URL（AI がウェブで調べたとき・調べた値）。なければ空 */
+  storageSourceUrls: string[]
   /** 代表量あたりの価格（円）。未設定は null */
   priceYen: number | null
   priceSource: PriceSource | null
   priceUpdatedAt: string | null
+  /** 価格の出典 URL（AI がウェブで調べたとき）。なければ空 */
+  priceSourceUrls: string[]
   packageUnits: PackageUnit[]
 }

@@ -88,6 +88,8 @@ export const ingredients = sqliteTable(
      * manual と researched（ウェブで調べた値）は「まとめて推定」で上書きしない
      */
     storageSource: text('storage_source', { enum: STORAGE_SOURCES }),
+    /** 日持ちの出典（AI がウェブで調べた・調べた値の URL。最大 3 件。手で直したら空。docs/design/11-storage-days.md） */
+    storageSourceUrls: text('storage_source_urls', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
     // 価格の列は CHECK を付けない（CHECK を足すと SQLite はテーブルを作り直すため。値は zod で確かめる）
     /** 代表量（代表の販売単位 → 最初の販売単位 → 基準単位 1 つ。g なら 100g）あたりの価格（円）。NULL = 未設定 */
     priceYen: integer('price_yen'),
@@ -95,6 +97,8 @@ export const ingredients = sqliteTable(
     priceSource: text('price_source', { enum: PRICE_SOURCES }),
     /** 価格を入れた日時（ISO） */
     priceUpdatedAt: text('price_updated_at'),
+    /** 価格の出典（AI がウェブで調べたときの URL。最大 3 件。手で直したら空。docs/design/10-cost.md） */
+    priceSourceUrls: text('price_source_urls', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
     archivedAt: text('archived_at'),
     ...timestamps,
   },

@@ -169,6 +169,37 @@ function priceNote(i: Ingredient | undefined): { text: string; stale: boolean } 
   return { text: `${PRICE_SOURCE_LABELS[i.priceSource ?? 'default']} · ${date}`, stale }
 }
 
+/** ウェブで調べた値の出典（まとめて推定の AI・researched）（docs/design/06-ai.md「ウェブ検索」）。手で直すと消える */
+function SourceLinks({ urls, label }: { urls: string[] | undefined; label: string }) {
+  if (!urls || urls.length === 0) return null
+  return (
+    <div className="text-xs text-ink-muted">
+      <p>{label}の出典（調べたページ。値を直すと消えます）</p>
+      <ul className="mt-1 space-y-1">
+        {urls.map((url) => (
+          <li key={url} className="break-all">
+            <a href={url} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+              {sourceLabel(url)}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** 「maff.go.jp/j/…」のように、ホスト名と道の始まりだけ出す */
+function sourceLabel(url: string): string {
+  try {
+    const u = new URL(url)
+    const path = u.pathname === '/' ? '' : u.pathname
+    const text = `${u.hostname.replace(/^www\./, '')}${path}`
+    return text.length > 60 ? `${text.slice(0, 59)}…` : text
+  } catch {
+    return url
+  }
+}
+
 const UNIT_SUGGESTIONS = ['個', '本', '枚', '袋', 'パック', '丁', '株', '切れ', '缶', 'g', 'ml']
 
 export function IngredientEditPage() {
@@ -321,6 +352,7 @@ export function IngredientEditPage() {
           {numberField('preppedFridgeDays', '切った後・冷蔵（日）')}
           {numberField('preppedFreezerDays', '切った後・冷凍（日）', { disabled: !form.canFreeze })}
         </div>
+        <SourceLinks urls={existing.data?.storageSourceUrls} label="日持ち" />
       </fieldset>
 
       <fieldset className="space-y-3 rounded-card bg-surface shadow-card p-4">
@@ -445,6 +477,7 @@ export function IngredientEditPage() {
             </p>
           )
         })()}
+        <SourceLinks urls={existing.data?.priceSourceUrls} label="価格" />
       </fieldset>
 
       {errors.form && <p className="text-sm text-danger">{errors.form}</p>}

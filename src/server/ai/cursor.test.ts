@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError } from '../errors'
-import { CursorProvider } from './cursor'
+import { CursorProvider, RESEARCH_ATTEMPT_MS } from './cursor'
 import { getProvider } from './index'
 
 const json = (body: unknown, status = 200) =>
@@ -108,5 +108,38 @@ describe('getProvider', () => {
     expect(get({ AGENT: agent, CURSOR_API_KEY: 'k' })).toBe('CursorProvider')
     expect(get({ AI_PROVIDER: 'fake' })).toBe('FakeProvider')
     expect(get({ AI_PROVIDER: 'gemini', GEMINI_API_KEY: 'k' })).toBe('GeminiProvider')
+  })
+})
+
+describe('CursorProvider: ウェブ検索', () => {
+  const item = { key: 'a', name: '鶏むね肉', unit: 'g', basis: '100g' }
+
+  it('webSearch なら Container に webSearch を送り、時間を長く取り、調べ方と出典をスキーマで求める', async () => {
+    const { fetch, calls } = fakeAgent([
+      json({ result: { items: [{ key: 'a', priceYen: 98, sources: ['https://example.com/a'] }] } }),
+    ])
+    const res = await new CursorProvider({ fetch }).estimatePrices([item], { webSearch: true })
+    expect(res.items[0]).toEqual({ key: 'a', priceYen: 98, sources: ['https://example.com/a'] })
+    expect(calls[0]?.webSearch).toBe(true)
+    expect(calls[0]?.timeoutMs).toBe(RESEARCH_ATTEMPT_MS)
+    expect(String(calls[0]?.system)).toContain('小売物価統計')
+    expect(JSON.stringify(calls[0]?.jsonSchema)).toContain('sources')
+  })
+
+  it('webSearch でなければ今までどおり（検索なし・出典なし・45 秒）', async () => {
+    const { fetch, calls } = fakeAgent([json({ result: { items: [{ key: 'a', priceYen: 98 }] } })])
+    await new CursorProvider({ fetch }).estimatePrices([item])
+    expect(calls[0]?.webSearch).toBe(false)
+    expect(calls[0]?.timeoutMs).toBe(45_000)
+    expect(String(calls[0]?.system)).not.toContain('小売物価統計')
+    expect(JSON.stringify(calls[0]?.jsonSchema)).not.toContain('sources')
+  })
+
+  it('日持ちは公的・一次情報を優先するよう指示する', async () => {
+    const { fetch, calls } = fakeAgent([json({ result: { items: [] } })])
+    await new CursorProvider({ fetch }).estimateStorage([{ key: 'a', name: '鶏むね肉', category: 'meat' }], {
+      webSearch: true,
+    })
+    expect(String(calls[0]?.system)).toContain('農林水産省')
   })
 })

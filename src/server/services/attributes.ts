@@ -11,6 +11,7 @@ import { representativeLabel } from '../../shared/domain/cost'
 import { fixIngredientByRule } from '../../shared/domain/ingredientAttributes'
 import { priceByRule } from '../../shared/domain/priceRules'
 import { deriveAttributes } from '../../shared/domain/recipeAttributes'
+import { validSourceUrls } from '../../shared/domain/sources'
 import { type StorageValues, storageByRule, validStorage } from '../../shared/domain/storageRules'
 import type { EstimateAttributesResponse, StageProgress } from '../../shared/schemas/attributes'
 import type { AiProvider } from '../ai/provider'
@@ -30,7 +31,13 @@ async function runInChunks(db: Db, statements: Parameters<Db['batch']>[0][number
 // ---------- 食材 ----------
 
 /** attributes_source が NULL（取り込みのまま）の食材を直す */
-async function ingredientStage(db: Db, ai: () => AiProvider, limit: number, useAi: boolean): Promise<StageProgress> {
+async function ingredientStage(
+  db: Db,
+  ai: () => AiProvider,
+  limit: number,
+  useAi: boolean,
+  webSearch: boolean,
+): Promise<StageProgress> {
   const rows = await db
     .select({
       id: ingredients.id,
@@ -71,6 +78,7 @@ async function ingredientStage(db: Db, ai: () => AiProvider, limit: number, useA
   const batch = pending.slice(0, limit)
   const result = await ai().classifyIngredients(
     batch.map((p) => ({ key: p.row.id, name: p.row.name, unit: p.row.unit, needsGrams: p.needsGrams })),
+    { webSearch },
   )
   const byKey = new Map(result.items.map((i) => [i.key, i]))
   // AI が答えなかった食材も ai にする（同じ食材を何度も聞かないため）。分類は今の値のまま
@@ -95,9 +103,16 @@ async function ingredientStage(db: Db, ai: () => AiProvider, limit: number, useA
 
 /**
  * storage_source が NULL（取り込みのまま）の食材の日持ちと保存場所を、辞書で決め、決まらなければ AI に聞く。
- * AI の答えが範囲外・矛盾していれば今の値を残し、ai にする（同じ食材を何度も聞かない。分類の段と同じ）
+ * AI の答えが範囲外・矛盾していれば今の値を残し、ai にする（同じ食材を何度も聞かない。分類の段と同じ）。
+ * ウェブで調べたとき（webSearch）は、出典 URL のない答えも同じく捨て、出典を storage_source_urls に残す
  */
-async function storageStage(db: Db, ai: () => AiProvider, limit: number, useAi: boolean): Promise<StageProgress> {
+async function storageStage(
+  db: Db,
+  ai: () => AiProvider,
+  limit: number,
+  useAi: boolean,
+  webSearch: boolean,
+): Promise<StageProgress> {
   const rows = await db
     .select({
       id: ingredients.id,
@@ -114,10 +129,10 @@ async function storageStage(db: Db, ai: () => AiProvider, limit: number, useAi: 
   const unsettled = rows.filter((r) => r.attributesSource === null).length
 
   // 推定中に画面で直された値（manual）は上書きしない
-  const save = (id: string, values: StorageValues | null, source: 'rule' | 'ai') =>
+  const save = (id: string, values: StorageValues | null, source: 'rule' | 'ai', urls: string[] = []) =>
     db
       .update(ingredients)
-      .set({ ...(values ?? {}), storageSource: source })
+      .set({ ...(values ?? {}), storageSource: source, storageSourceUrls: values ? urls : [] })
       .where(and(eq(ingredients.id, id), isNull(ingredients.storageSource)))
 
   const updates: Parameters<Db['batch']>[0][number][] = []
@@ -132,11 +147,20 @@ async function storageStage(db: Db, ai: () => AiProvider, limit: number, useAi: 
   if (!useAi || pending.length === 0) return { updated: updates.length, remaining: pending.length + unsettled }
 
   const batch = pending.slice(0, limit)
-  const result = await ai().estimateStorage(batch.map((p) => ({ key: p.id, name: p.name, category: p.category })))
+  const result = await ai().estimateStorage(
+    batch.map((p) => ({ key: p.id, name: p.name, category: p.category })),
+    { webSearch },
+  )
   const byKey = new Map(result.items.map((i) => [i.key, i]))
   await runInChunks(
     db,
-    batch.map((p) => save(p.id, validStorage(byKey.get(p.id)), 'ai')),
+    batch.map((p) => {
+      const answer = byKey.get(p.id)
+      const urls = webSearch ? validSourceUrls(answer?.sources) : []
+      // 調べたのに出典がなければ、答えなしと同じ（今の値を残す）
+      const values = webSearch && urls.length === 0 ? null : validStorage(answer)
+      return save(p.id, values, 'ai', urls)
+    }),
   )
   return { updated: updates.length + batch.length, remaining: pending.length - batch.length + unsettled }
 }
@@ -170,7 +194,7 @@ async function resetStalePrices(db: Db, now: Date) {
   const cutoff = new Date(now.getTime() - PRICE_STALE_DAYS * 24 * 60 * 60 * 1000).toISOString()
   await db
     .update(ingredients)
-    .set({ priceYen: null, priceSource: null, priceUpdatedAt: null })
+    .set({ priceYen: null, priceSource: null, priceUpdatedAt: null, priceSourceUrls: [] })
     .where(
       and(
         lt(ingredients.priceUpdatedAt, cutoff),
@@ -179,7 +203,14 @@ async function resetStalePrices(db: Db, now: Date) {
     )
 }
 
-async function priceStage(db: Db, ai: () => AiProvider, limit: number, useAi: boolean): Promise<StageProgress> {
+/** ウェブで調べたとき（webSearch）は、出典 URL のない答えを捨て、出典を price_source_urls に残す */
+async function priceStage(
+  db: Db,
+  ai: () => AiProvider,
+  limit: number,
+  useAi: boolean,
+  webSearch: boolean,
+): Promise<StageProgress> {
   const target = priceTarget()
   const rows = await db
     .select({
@@ -214,10 +245,15 @@ async function priceStage(db: Db, ai: () => AiProvider, limit: number, useAi: bo
   }
 
   const now = new Date().toISOString()
-  const save = (id: string, priceYen: number | null) =>
+  const save = (id: string, priceYen: number | null, urls: string[] = []) =>
     db
       .update(ingredients)
-      .set({ priceYen, priceSource: priceYen === null ? null : 'default', priceUpdatedAt: now })
+      .set({
+        priceYen,
+        priceSource: priceYen === null ? null : 'default',
+        priceUpdatedAt: now,
+        priceSourceUrls: priceYen === null ? [] : urls,
+      })
       .where(and(eq(ingredients.id, id), isNull(ingredients.priceYen), notManual()))
 
   const updates: Parameters<Db['batch']>[0][number][] = []
@@ -234,19 +270,23 @@ async function priceStage(db: Db, ai: () => AiProvider, limit: number, useAi: bo
   const batch = pending.slice(0, limit)
   const result = await ai().estimatePrices(
     batch.map((p) => ({ key: p.id, name: p.name, unit: p.unit, basis: p.basis })),
+    { webSearch },
   )
-  const byKey = new Map(result.items.map((i) => [i.key, i.priceYen]))
-  // 答えがない・範囲外・整数でない答えは捨て、未設定のまま印だけ付ける（同じ食材を何度も聞かない）
+  const byKey = new Map(result.items.map((i) => [i.key, i]))
+  // 答えがない・範囲外・整数でない答え・（調べたのに）出典のない答えは捨て、未設定のまま印だけ付ける（同じ食材を何度も聞かない）
   await runInChunks(
     db,
     batch.map((p) => {
-      const answer = byKey.get(p.id)
+      const item = byKey.get(p.id)
+      const answer = item?.priceYen
+      const urls = webSearch ? validSourceUrls(item?.sources) : []
       const ok =
         typeof answer === 'number' &&
         Number.isInteger(answer) &&
         answer >= AI_PRICE_MIN_YEN &&
-        answer <= AI_PRICE_MAX_YEN
-      return save(p.id, ok ? answer : null)
+        answer <= AI_PRICE_MAX_YEN &&
+        (!webSearch || urls.length > 0)
+      return save(p.id, ok ? answer : null, urls)
     }),
   )
   return { updated: updates.length + batch.length, remaining: pending.length - batch.length }
@@ -369,19 +409,21 @@ async function recipeStage(db: Db, ai: () => AiProvider, limit: number, useAi: b
 export async function estimateAttributes(
   db: Db,
   ai: () => AiProvider,
-  input: { limit: number; refreshStalePrices: boolean },
+  input: { limit: number; refreshStalePrices: boolean; webSearch?: boolean },
 ): Promise<EstimateAttributesResponse> {
   const { limit } = input
+  const webSearch = input.webSearch === true
   if (input.refreshStalePrices) await resetStalePrices(db, new Date())
-  const ingredientProgress = await ingredientStage(db, ai, limit, true)
+  const ingredientProgress = await ingredientStage(db, ai, limit, true, webSearch)
   // 前の段の AI が残っているあいだは、後の段はルールだけで進めて数える
   // （日持ちの辞書は分類を、価格は g 換算を、レシピの区分は食材の分類を使うため）
-  const storageProgress = await storageStage(db, ai, limit, ingredientProgress.remaining === 0)
+  const storageProgress = await storageStage(db, ai, limit, ingredientProgress.remaining === 0, webSearch)
   const priceProgress = await priceStage(
     db,
     ai,
     limit,
     ingredientProgress.remaining === 0 && storageProgress.remaining === 0,
+    webSearch,
   )
   const recipeProgress = await recipeStage(
     db,

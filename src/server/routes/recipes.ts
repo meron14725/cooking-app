@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { estimateAttributesInputSchema } from '../../shared/schemas/attributes'
-import { startEstimateJobInputSchema } from '../../shared/schemas/estimateJob'
+import { resolveEstimateOptions, startEstimateJobInputSchema } from '../../shared/schemas/estimateJob'
 import { recipeFavoriteInputSchema, recipeInputSchema, recipeSortSchema } from '../../shared/schemas/recipe'
 import {
   draftInputSchema,
@@ -10,7 +10,7 @@ import {
   splitUrl,
   suggestRecipeInputSchema,
 } from '../../shared/schemas/recipeDraft'
-import { getProvider } from '../ai'
+import { getProvider, webSearchByDefault } from '../ai'
 import type { AppEnv } from '../app'
 import type { Db } from '../db/client'
 import { createDb } from '../db/client'
@@ -126,11 +126,15 @@ export const recipeRoutes = new Hono<AppEnv>()
   })
   // 1 回分だけ進める（ジョブの中身と同じ。スクリプトやテスト向けに残す）。食材の分類・重さ・価格とレシピの区分・系統をまとめて推定して保存する（docs/design/09-recommendation-v2.md・10-cost.md）
   .post('/attributes/estimate', validate('json', estimateAttributesInputSchema), async (c) => {
-    return c.json(await estimateAttributes(createDb(c.env.DB), () => getProvider(c.env), c.req.valid('json')))
+    const input = c.req.valid('json')
+    const options = resolveEstimateOptions(input, webSearchByDefault(c.env))
+    return c.json(await estimateAttributes(createDb(c.env.DB), () => getProvider(c.env), { ...input, ...options }))
   })
   // まとめて推定をサーバー側のジョブで最後まで進める（docs/design/12-estimate-jobs.md）。画面はこちらを使う
   .post('/attributes/jobs', validate('json', startEstimateJobInputSchema), async (c) => {
-    const job = await startEstimateJob(createDb(c.env.DB), c.env.ESTIMATE_WORKFLOW, c.req.valid('json'))
+    const input = c.req.valid('json')
+    const options = resolveEstimateOptions(input, webSearchByDefault(c.env))
+    const job = await startEstimateJob(createDb(c.env.DB), c.env.ESTIMATE_WORKFLOW, { ...input, ...options })
     return c.json(job, 202)
   })
   .get('/attributes/jobs/current', async (c) =>

@@ -100,3 +100,35 @@ describe('looseJsonSchema', () => {
     expect(schema).toContain('"prep"')
   })
 })
+
+describe('GeminiProvider: ウェブ検索', () => {
+  const item = { key: 'a', name: '鶏むね肉', category: 'meat' }
+  const storage = {
+    key: 'a',
+    canFreeze: true,
+    fridgeDays: 2,
+    freezerDays: 30,
+    pantryDays: null,
+    defaultLocation: 'fridge',
+    preppedFridgeDays: null,
+    preppedFreezerDays: null,
+  }
+
+  it('webSearch なら Google 検索（grounding）を道具に付け、出典をスキーマで求める', async () => {
+    const answer = { items: [{ ...storage, sources: ['https://www.maff.go.jp/x'] }] }
+    const { fn, calls } = fakeFetch([reply(JSON.stringify(answer))])
+    const res = await new GeminiProvider({ apiKey: 'k', fetch: fn }).estimateStorage([item], { webSearch: true })
+    expect(res.items[0]?.sources).toEqual(['https://www.maff.go.jp/x'])
+    expect(calls[0]?.body.tools).toEqual([{ google_search: {} }])
+    const config = calls[0]?.body.generationConfig as { responseJsonSchema: unknown; thinkingConfig?: unknown }
+    expect(JSON.stringify(config.responseJsonSchema)).toContain('sources')
+    // 考える量を絞ると検索せずに答えることがあったので、調べるときは既定のまま
+    expect(config.thinkingConfig).toBeUndefined()
+  })
+
+  it('webSearch でなければ道具を付けない', async () => {
+    const { fn, calls } = fakeFetch([reply(JSON.stringify({ items: [storage] }))])
+    await new GeminiProvider({ apiKey: 'k', fetch: fn }).estimateStorage([item])
+    expect(calls[0]?.body.tools).toBeUndefined()
+  })
+})

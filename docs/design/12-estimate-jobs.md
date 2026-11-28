@@ -43,7 +43,7 @@
 
 ## Workflow の中身（`EstimateWorkflow` → `runEstimateJob`）
 
-1 回分ごとに次の 2 つの step を進める（最大 `MAX_ROUNDS = 300` 回）。
+1 回分ごとに次の 2 つの step を進める（最大 `MAX_ROUNDS = 500` 回。ウェブ検索ありは 1 回 5 件なので回数が増える。06「ウェブ検索」）。
 
 1. `round-N`: D1 のジョブがまだ `running` か見る（止めていたらここで終わり）。`estimateAttributes` を 1 回呼ぶ。「古い目安を見直す」は N = 0 のときだけ
 2. `record-N`: 直した件数を足し、残りを入れる（件数を足すのを AI の呼び出しと分け、リトライで二重に足さない）

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { handleAgent, handleStructured, MAX_OPERATIONS, type RunAgent } from './app'
+import {
+  handleAgent,
+  handleStructured,
+  MAX_OPERATIONS,
+  MAX_RESEARCH_TIMEOUT_MS,
+  MAX_TIMEOUT_MS,
+  type RunAgent,
+} from './app'
 
 const body = { system: 'sys', prompt: 'p', jsonSchema: { type: 'object' } }
 
@@ -16,6 +23,19 @@ describe('handleStructured', () => {
     expect(res.status).toBe(200)
     expect(res.body).toMatchObject({ result: { caloriesKcal: 480 }, usage: { inputTokens: 10 } })
     expect(prompt).toContain('submit_result')
+  })
+
+  it('webSearch のときだけ検索ありで動かし、時間の上限を長くする', async () => {
+    const seen: { webSearch?: boolean; aborted: boolean }[] = []
+    const run: RunAgent = async ({ tools, webSearch, signal }) => {
+      seen.push({ webSearch, aborted: signal.aborted })
+      await tools.submit_result?.execute({ ok: true })
+      return {}
+    }
+    await handleStructured(body, run)
+    await handleStructured({ ...body, webSearch: true }, run)
+    expect(seen.map((s) => s.webSearch)).toEqual([false, true])
+    expect(MAX_RESEARCH_TIMEOUT_MS).toBeGreaterThan(MAX_TIMEOUT_MS)
   })
 
   it('道具に渡す JSON スキーマはそのまま', async () => {
