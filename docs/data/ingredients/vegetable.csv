@@ -1,0 +1,136 @@
+id,名前,分類,冷蔵日数,冷凍可否,冷凍日数,常温日数,保存場所,価格,価格の単位,出典URL,メモ
+cocoro-ing-9a6f22d2d1c11d96,[好みのきのこ],野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-d4671649dd9b1617,「Cook Do®」<白菜のクリーム煮用>3~4人前,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-c53cce4b3f0a9f47,「Cook Do®」<麻婆茄子用>3~4人前,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-ff080705492a0885,いも類・根菜:じゃがいも、さつまいも、にんじん、大根など,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-5059191412611f3c,いんげん,野菜,,,,,,24,1本,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「さやいんげん」東京都区部2026年1〜10月平均 2979円/kg×8g/本で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-0dbbafbb6bb43027,いんげん豆,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-65ae6f76bad193ef,うすいえんどう,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JNMWDEQZZ3STM1TPTC,えのき,野菜,,,,,,133,1パック,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「えのきたけ」東京都区部2026年1〜10月平均 667円/kg×200g/パックで換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-a72bcddefcd098d2,おろしにんにく、おろししょうが,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-ac2ded32461b1486,お好みのきのこ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-788b3456ea76e4f8,かぶ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JM04FECTF31RKSEPDE,かぼちゃ,野菜,,可,30,30,常温,856,1個,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 丸ごと冷暗所1〜2か月の下限。加熱して冷凍1〜2か月の下限（松山市）／価格: 小売物価統計「かぼちゃ」東京都区部2026年1〜10月平均 713円/kg×1200g/個で換算
+cocoro-ing-7efa03c5fd5bd04e,かぼちゃ※,野菜,4,可,30,,冷蔵,71,100g,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: カットしたもの冷蔵4〜5日の下限・加熱して冷凍1〜2か月の下限（松山市）／価格: 小売物価統計「かぼちゃ」東京都区部2026年1〜10月平均 713円/kgを100gに換算
+cocoro-ing-a3c87bdbae1f39af,きぬさや,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-8e850752dcc5daa2,きのこ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-622b2d4ab7d6fbd2,きゅうり,野菜,10,可,30,,冷蔵,76,1本,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 切っていないもの冷蔵約10日・冷凍約1か月（目黒区）／価格: 小売物価統計「きゅうり」東京都区部2026年1〜10月平均 765円/kg×100g/本で換算
+01M8DVZ2JNA6RK63AG67M7A6BE,ごぼう,野菜,7,可,30,,冷蔵,173,1本,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 土のないもの冷蔵約1週間・冷凍約1か月（目黒区）／価格: 小売物価統計「ごぼう」東京都区部2026年1〜10月平均 1155円/kg×150g/本で換算
+01M8DVZ2JMWVHSYDHPEWDW3R5V,さつまいも,野菜,,,,,,168,1本,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「さつまいも」東京都区部2026年1〜10月平均 674円/kg×250g/本で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-f9955b8e91cdf358,さやいんげん,野菜,,,,,,298,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「さやいんげん」東京都区部2026年1〜10月平均 2979円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-b5ed99e7d3a6a34b,しいたけ,野菜,,,,,,56,1枚,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「生しいたけ」東京都区部2026年1〜10月平均 1859円/kg×30g/枚で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-3a592b576ca34488,しいたけのもどし汁,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-ebdb3bb3e8341cc1,しいたけの戻し汁,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-e2363d744510e96d,ししとう,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JN6R7D54786NV23A8G,しめじ,野菜,,,,,,84,1パック,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しめじ」東京都区部2026年1〜10月平均 841円/kg×100g/パックで換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-23504d4ddedd2d21,しめじ、まいたけ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+01M8DVZ2JNHF02CHBAPQ82AEQH,しょうが,野菜,,,,,,253,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-bf0d6e12fe07369c,しょうが(市販のチューブ入りでも可),野菜,,,,,,253,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算、生のしょうがの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-29886cb5a30ca80d,しょうが、にんにく,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-8b34a66e2b93c56d,しょうが、白ねぎの青い部分,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-4486340117e03a4a,しょうがの絞り汁,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JK9P8YPYP8TV5GQNZG,じゃがいも,野菜,60,可,21,60,常温,86,1個,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 常温・冷蔵とも約2か月（目黒区）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「じゃがいも」東京都区部2026年1〜10月平均 571円/kg×150g/個で換算
+cocoro-ing-de8ba495a0cc31b8,すりおろしにんにく、すりおろししょうが,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-e19787dac1460997,たけのこ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-6ca8757c04dd0204,たけのこの水煮,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-805f098baf856ecc,たオクラ(飾り用),野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: オクラとして。冷蔵1週間・冷凍2か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-ef781ae9bdc5c90e,とうがらし,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-70b1fe80f269783b,とうもろこし,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JNM7DMHH18GJ3T08SG,なす,野菜,7,可,60,,冷蔵,64,1本,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵1週間・冷凍2か月（農水省）／価格: 小売物価統計「なす」東京都区部2026年1〜10月平均 795円/kg×80g/本で換算
+cocoro-ing-8adda62e5a0126b3,にら,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JKX11CE2ZZ8M450CPP,にんじん,野菜,7,可,21,,冷蔵,74,1本,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵1〜2週間の下限（松山市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「にんじん」東京都区部2026年1〜10月平均 492円/kg×150g/本で換算
+01M8DVZ2JNQCETKMMN4FVQVPRK,にんにく,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-01b2db0b6254b067,にんにく、しょうが,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-f9f21f9f34487540,はごろもフーズ シャキッと!コーン,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JMPVR0ZJ4ED3F65CCY,ほうれん草,野菜,7,可,21,,冷蔵,220,1袋,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵7日・茹でて冷凍3〜4週間の下限（東広島市）／価格: 小売物価統計「ほうれんそう」東京都区部2026年1〜10月平均 1098円/kg×200g/袋で換算
+cocoro-ing-921c1003e8dc1f6e,ほうれん草、小松菜,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+01M8DVZ2JN21KW1XS86BBXBPCT,まいたけ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-a5b78c935f5ac4e8,みつ葉,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JNNGBFFKEQTJ74PM8M,もやし,野菜,,,,,,36,1袋,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「もやし」東京都区部2026年1〜10月平均 179円/kg×200g/袋で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+01M8DVZ2JNAFHG4DYNYW03VED7,れんこん,野菜,,,,,,134,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「れんこん」東京都区部2026年1〜10月平均 1337円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-0c4e76f328ac7efd,れんこん、にんじん,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-8f0cd6f738b88777,れんこんまたはじゃがいも,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-43885bcda9e9c940,アクが少なく、煮くずれしにくい旬の野菜,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-f1b7d0945d86f301,アスパラガス,野菜,,,,,,51,1本,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「アスパラガス」東京都区部2026年1〜10月平均 2537円/kg×20g/本で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-a81e024ee9b7a97c,イタリアンパセリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-acbc6443784638d8,エリンギ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-d5e27e0e6a0c7390,オクラ,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵1週間・冷凍2か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-6536e8325213a282,カットトマト,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-8bb2414190571d48,カリフラワー,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-51a6eaa8aa8b56b6,キムチ,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「キムチ」東京都区部2026年1〜10月平均 1092円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+01M8DVZ2JM7D7Z4G8WCNEMCRBY,キャベツ,野菜,14,可,30,,冷蔵,223,1個,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵約2週間・冷凍約1か月（目黒区）／価格: 小売物価統計「キャベツ」東京都区部2026年1〜10月平均 223円/kg×1000g/個で換算
+cocoro-ing-4f22244280449a7e,キャベツ、白菜など,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-8fdeea17283e59df,コーンスターチ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-8d109f1bf2b5dc7d,ゴーヤ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵1週間・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-0bc50ec1c523f44f,サラダ菜、ラディッシュ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-c9751663dc725a44,サンチュ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-81b351a5bd3f5614,スイートコーン,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-9c15e288c622c0ce,ズッキーニ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-38c5480bd9dfd749,セロリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JMK9KN3XM2Y3BSXNXS,チンゲン菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JNE5N3PBNC5VE8378C,トマト,野菜,7,可,60,,冷蔵,132,1個,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵7〜10日の下限・冷凍2か月（農水省）／価格: 小売物価統計「トマト」東京都区部2026年1〜10月平均 880円/kg×150g/個で換算
+cocoro-ing-3d502f44d0109e97,トマトジュース,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-c20c7b8476a94b21,トマトピューレ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-24c150950eb7dbd7,ドライパセリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-debdd15325d7b61c,ニラ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-8ccf7ef9facb436a,パクチー,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-9f7305594a9ed5a6,パセリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-99bf59e2ab485e32,パセリのみじん切り,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-5536b7c8ea41bad6,パプリカ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-c5cbb9c00446eb6e,ビーツ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JN998209MMS5NC175Y,ピーマン,野菜,14,可,60,,冷蔵,42,1個,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵2週間・冷凍2か月（農水省）／価格: 小売物価統計「ピーマン」東京都区部2026年1〜10月平均 1199円/kg×35g/個で換算
+cocoro-ing-8fef4c952878b3b0,ピーマンまたはパプリカ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-e64fb8490cadade6,フリルレタス,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JMZPDQKJ9H3PKZQT0E,ブロッコリー,野菜,2,可,30,,冷蔵,215,1個,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵2〜3日の下限。茹でて冷凍約1か月（松山市）／価格: 小売物価統計「ブロッコリー」東京都区部2026年1〜10月平均 718円/kg×300g/個で換算
+cocoro-ing-7fe35a15f6801ae6,ブロッコリー など,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-1e8c651b884311f6,プチトマト,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: トマトの冷蔵7〜10日の下限・ミニトマトも丸ごと冷凍2か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-069cc10a39b924a8,ホクト ブナシメジ,野菜,,,,,,84,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しめじ」東京都区部2026年1〜10月平均 841円/kgを100gに換算、しめじの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-417ba90f837ea638,ホクト ブナピー,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-49b72564a528c343,ホクト マイタケ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-e517f607b798b598,ホワイトアスパラガス,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-0757b8b4444f255d,ホールトマト,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-c1244cbff0cafc9b,レタス,野菜,14,可,21,,冷蔵,155,1個,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵約2週間・冷凍約3週間（目黒区。冷凍は加熱料理用）／価格: 小売物価統計「レタス」東京都区部2026年1〜10月平均 517円/kg×300g/個で換算
+cocoro-ing-b8075fa09d9cbc68,万能ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青ねぎとして冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-57ae721cfce4fcb6,八尾若ごぼう,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-15128d5904a62a3f,冬瓜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-413457893a2a5508,冷凍枝豆,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JM904287YKFYFNYZ3S,大根,野菜,10,可,21,,冷蔵,220,1本,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵約10日・冷凍約3週間（目黒区）／価格: 小売物価統計「だいこん」東京都区部2026年1〜10月平均 220円/kg×1000g/本で換算
+cocoro-ing-28ab5d716d6ba71c,好みのきのこ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-dfdc679e5d1622d7,好みの野菜,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+01M8DVZ2JMA66AZKGR067AYSSJ,小松菜,野菜,3,可,21,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 冷蔵約3日・冷凍約3週間（目黒区）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-d9a670b00ad507f7,小玉ねぎ,野菜,14,可,21,30,常温,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 玉ねぎとして。常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-a9df68f8214b5be2,山菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-0f28e084caf9ff4a,春キャベツ,野菜,,,,,,22,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「キャベツ」東京都区部2026年1〜10月平均 223円/kgを100gに換算、キャベツの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-2f75bf4a87ccb55e,枝豆,野菜,,,,,,167,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「えだまめ」東京都区部2026年1〜10月平均 1672円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-53561cad861ac4e0,炒め玉ねぎペースト,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+01M8DVZ2JJD608EATBWFHHVV0F,玉ねぎ,野菜,14,可,21,30,常温,89,1個,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「たまねぎ」東京都区部2026年1〜10月平均 447円/kg×200g/個で換算
+01M8DVZ2JM8EMEEJ8Z3C70X74W,白菜,野菜,14,可,21,,冷蔵,530,1個,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵2〜3週間の下限（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「はくさい」東京都区部2026年1〜10月平均 265円/kg×2000g/個で換算
+cocoro-ing-69d3c5acab76f493,白菜、にんじん、しいたけなど,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-90f473f2463eb569,白菜、生しいたけなど,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-40afaad99ddb0112,白菜キムチ,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「キムチ」東京都区部2026年1〜10月平均 1092円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-77572ef793c8e328,白髪ねぎ,野菜,,,,,,84,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ねぎ」東京都区部2026年1〜10月平均 835円/kgを100gに換算、ねぎの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-5459926f9054734a,糸みつ葉,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-1648bcddbffbb8a1,紅しょうが,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-688593f29f0f3d5b,細ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青ねぎとして冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-5e74f06a187dae10,絹さや,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-cc72dd7abda886e0,緑豆もやし,野菜,,,,,,36,1袋,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「もやし」東京都区部2026年1〜10月平均 179円/kg×200g/袋で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-da6ad41378f036b5,緑黄色野菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-7ba55ac3a50289f2,芽キャベツ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-27c2f1e85a1d4931,葉つきのかぶ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-e0bc52cd2eeb33e5,葉・果菜:ほうれん草、小松菜、ブロッコリー、かぼちゃ、白菜、キャベツなど,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-2a887a1009c5f32a,蒸しブロッコリー,野菜,3,可,30,,冷蔵,72,100g,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 茹でたもの冷蔵3〜4日の下限・冷凍約1か月（松山市）／価格: 小売物価統計「ブロッコリー」東京都区部2026年1〜10月平均 718円/kgを100gに換算、生のブロッコリーの価格
+cocoro-ing-5a1827466b58503a,豆もやし,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-93620b77644a5c15,豆苗,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-0560b5d9a2274849,貝割れ菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-886eca4171f7ef53,赤パプリカ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-31a5dca9b96b0f8e,赤玉ねぎ,野菜,14,可,21,30,常温,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 玉ねぎとして。常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-3376ee6b68479fda,里いも,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「さといも」東京都区部2026年1〜10月平均 1093円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-dac5927ab5177f69,野菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-6aec7bba9edf4200,野菜(キャベツ、大根、にんじんなど),野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
+cocoro-ing-2db2905129dc7ed6,針生姜,野菜,,,,,,253,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算、しょうがの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-6d0c9671e03a8231,長いも,野菜,,,,,,95,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ながいも」東京都区部2026年1〜10月平均 952円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+01M8DVZ2JMZ4Q718HMVBK0DXBH,長ねぎ,野菜,14,可,30,,冷蔵,84,1本,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 冷蔵は青い部分2週間・白い部分3週間の短いほう、冷凍1か月（東広島市）／価格: 小売物価統計「ねぎ」東京都区部2026年1〜10月平均 835円/kg×100g/本で換算
+cocoro-ing-b65fa3cdc0696053,青じそ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-0d8577b2ebf759ae,青ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-21d19dea08edbe02,青菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-7da2119e9bf58db6,黄パプリカ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄

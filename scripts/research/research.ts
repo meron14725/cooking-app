@@ -323,6 +323,10 @@ export const MAX_SOURCE_URLS = 3
  * 手入力（manual）の値は WHERE で除く。削除済みの食材も除く。切った後の日持ち（prepped_*）は触らない
  */
 export function buildSql(rows: CsvRow[], exported: ExportedIngredient[], opts: SqlOptions): string[] {
+  if (exported.some((e) => !('package_units' in e))) {
+    // 販売単位がないと代表量が分からず、価格を基準単位あたりのまま入れてしまう
+    throw new Error('書き出しに package_units がありません。docs/data/README.md の SELECT で書き出し直してください')
+  }
   const { parsed, issues } = checkRows(rows, exported)
   const bad = new Set(issues.filter((i) => i.level === 'error').map((i) => i.id))
   if (bad.size > 0) throw new Error(`エラーのある行があります（${bad.size} 件）。先に research:check で直してください`)
