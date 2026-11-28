@@ -32,6 +32,7 @@ function toIngredient(row: IngredientRow, units: PackageUnitRow[]): Ingredient {
     preppedFreezerDays: row.preppedFreezerDays,
     defaultLocation: row.defaultLocation,
     attributesSource: row.attributesSource,
+    storageSource: row.storageSource,
     beforeCookTask: row.beforeCookTask,
     frozenCookNote: row.frozenCookNote,
     isStaple: row.isStaple,
@@ -51,6 +52,17 @@ export function normalizeDefaultUnit<T extends { isDefault: boolean }>(units: T[
   )
   return units.map((u, i) => ({ ...u, isDefault: i === defaultIndex }))
 }
+
+/** 日持ちと保存場所の列（まとめて推定の「保存日数」の段で決める列） */
+const STORAGE_FIELDS = [
+  'canFreeze',
+  'fridgeDays',
+  'freezerDays',
+  'pantryDays',
+  'preppedFridgeDays',
+  'preppedFreezerDays',
+  'defaultLocation',
+] as const
 
 function ingredientValues(input: IngredientInputParsed) {
   const { packageUnits: _, priceYen: __, ...rest } = input
@@ -174,6 +186,8 @@ export async function createIngredient(db: Db, input: IngredientInputParsed): Pr
         .set({
           ...ingredientValues(input),
           ...(input.priceYen === undefined ? {} : manualPrice(input.priceYen)),
+          // 画面で入れた日持ちは手入力（まとめて推定で上書きしない）
+          storageSource: 'manual',
           archivedAt: null,
         })
         .where(eq(ingredients.id, existing.id)),
@@ -185,7 +199,9 @@ export async function createIngredient(db: Db, input: IngredientInputParsed): Pr
   const id = ulid()
   const units = normalizeDefaultUnit(input.packageUnits)
   await db.batch([
-    db.insert(ingredients).values({ id, ...ingredientValues(input), ...manualPrice(input.priceYen ?? null) }),
+    db
+      .insert(ingredients)
+      .values({ id, ...ingredientValues(input), ...manualPrice(input.priceYen ?? null), storageSource: 'manual' }),
     ...units.map(({ id: _, ...u }) => db.insert(packageUnits).values({ ingredientId: id, ...u })),
   ])
   return getIngredient(db, id)
@@ -211,6 +227,8 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
 
   // 分類か重さを画面で変えたら manual（まとめて推定で上書きしない）
   const edited = input.category !== current.category || (input.gramsPerUnit ?? null) !== current.gramsPerUnit
+  // 日持ちか保存場所を画面で変えたら manual（docs/design/11-storage-days.md）
+  const storageEdited = STORAGE_FIELDS.some((k) => (input[k] ?? null) !== current[k])
   await db.batch([
     db
       .update(ingredients)
@@ -218,6 +236,7 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
         ...ingredientValues(input),
         ...price,
         ...(edited ? { attributesSource: 'manual' as const } : {}),
+        ...(storageEdited ? { storageSource: 'manual' as const } : {}),
       })
       .where(eq(ingredients.id, id)),
     db

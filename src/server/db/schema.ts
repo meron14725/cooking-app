@@ -78,6 +78,11 @@ export const ingredients = sqliteTable(
      * manual は「まとめて推定」で上書きしない
      */
     attributesSource: text('attributes_source', { enum: ATTRIBUTE_SOURCES }),
+    /**
+     * 日持ちと保存場所（can_freeze・fridge/freezer/pantry_days・prepped_*_days・default_location）をどう決めたか
+     * （rule / ai / manual。docs/design/11-storage-days.md）。NULL = 取り込みのまま（未見直し）。manual は「まとめて推定」で上書きしない
+     */
+    storageSource: text('storage_source', { enum: ATTRIBUTE_SOURCES }),
     // 価格の列は CHECK を付けない（CHECK を足すと SQLite はテーブルを作り直すため。値は zod で確かめる）
     /** 代表量（代表の販売単位 → 最初の販売単位 → 基準単位 1 つ。g なら 100g）あたりの価格（円）。NULL = 未設定 */
     priceYen: integer('price_yen'),

@@ -15,6 +15,7 @@ const master = (m: Partial<Ingredient> & Pick<Ingredient, 'id' | 'name' | 'unit'
   aliases: [],
   category: 'vegetable',
   attributesSource: null,
+  storageSource: null,
   gramsPerUnit: null,
   priceYen: null,
   priceSource: null,

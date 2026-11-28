@@ -2,7 +2,8 @@
  * 「まとめて推定」（docs/design/09-recommendation-v2.md「区分・系統の推定」「食材マスタの手直し」）。
  * 段ごとに、ルールで決めてから、決まらなかったものだけを limit 件ずつ AI に聞く。
  * 1 回の呼び出しでは、AI に聞く必要が残っている最初の段だけ AI を使う（画面は remaining が 0 になるまで呼び続ける）。
- * 段の順: 食材の分類・重さ → 食材の価格（docs/design/10-cost.md。g 換算を使うため）→ レシピの区分・系統（区分の判定に食材の分類を使うため）
+ * 段の順: 食材の分類・重さ → 食材の日持ち（docs/design/11-storage-days.md。分類ごとの辞書を使うため）
+ * → 食材の価格（docs/design/10-cost.md。g 換算を使うため）→ レシピの区分・系統（区分の判定に食材の分類を使うため）
  */
 import { and, asc, eq, isNull, lt, or } from 'drizzle-orm'
 import { PRICE_STALE_DAYS } from '../../shared/domain/constants'
@@ -10,6 +11,7 @@ import { representativeLabel } from '../../shared/domain/cost'
 import { fixIngredientByRule } from '../../shared/domain/ingredientAttributes'
 import { priceByRule } from '../../shared/domain/priceRules'
 import { deriveAttributes } from '../../shared/domain/recipeAttributes'
+import { type StorageValues, storageByRule, validStorage } from '../../shared/domain/storageRules'
 import type { EstimateAttributesResponse, StageProgress } from '../../shared/schemas/attributes'
 import type { AiProvider } from '../ai/provider'
 import type { Db } from '../db/client'
@@ -87,6 +89,56 @@ async function ingredientStage(db: Db, ai: () => AiProvider, limit: number, useA
     }),
   )
   return { updated: updates.length + batch.length, remaining: pending.length - batch.length }
+}
+
+// ---------- 日持ち ----------
+
+/**
+ * storage_source が NULL（取り込みのまま）の食材の日持ちと保存場所を、辞書で決め、決まらなければ AI に聞く。
+ * AI の答えが範囲外・矛盾していれば今の値を残し、ai にする（同じ食材を何度も聞かない。分類の段と同じ）
+ */
+async function storageStage(db: Db, ai: () => AiProvider, limit: number, useAi: boolean): Promise<StageProgress> {
+  const rows = await db
+    .select({
+      id: ingredients.id,
+      name: ingredients.name,
+      aliases: ingredients.aliases,
+      category: ingredients.category,
+      attributesSource: ingredients.attributesSource,
+    })
+    .from(ingredients)
+    .where(and(isNull(ingredients.archivedAt), isNull(ingredients.storageSource)))
+    .orderBy(asc(ingredients.name))
+  if (rows.length === 0) return { updated: 0, remaining: 0 }
+  // 分類がまだ取り込みのまま（分類の段の AI 待ち）の食材は、分類が決まってから見る（辞書は分類ごとに引くため）
+  const unsettled = rows.filter((r) => r.attributesSource === null).length
+
+  // 推定中に画面で直された値（manual）は上書きしない
+  const save = (id: string, values: StorageValues | null, source: 'rule' | 'ai') =>
+    db
+      .update(ingredients)
+      .set({ ...(values ?? {}), storageSource: source })
+      .where(and(eq(ingredients.id, id), isNull(ingredients.storageSource)))
+
+  const updates: Parameters<Db['batch']>[0][number][] = []
+  const pending: typeof rows = []
+  for (const row of rows) {
+    if (row.attributesSource === null) continue
+    const values = storageByRule(row)
+    if (values) updates.push(save(row.id, values, 'rule'))
+    else pending.push(row)
+  }
+  await runInChunks(db, updates)
+  if (!useAi || pending.length === 0) return { updated: updates.length, remaining: pending.length + unsettled }
+
+  const batch = pending.slice(0, limit)
+  const result = await ai().estimateStorage(batch.map((p) => ({ key: p.id, name: p.name, category: p.category })))
+  const byKey = new Map(result.items.map((i) => [i.key, i]))
+  await runInChunks(
+    db,
+    batch.map((p) => save(p.id, validStorage(byKey.get(p.id)), 'ai')),
+  )
+  return { updated: updates.length + batch.length, remaining: pending.length - batch.length + unsettled }
 }
 
 // ---------- 価格 ----------
@@ -323,13 +375,19 @@ export async function estimateAttributes(
   if (input.refreshStalePrices) await resetStalePrices(db, new Date())
   const ingredientProgress = await ingredientStage(db, ai, limit, true)
   // 前の段の AI が残っているあいだは、後の段はルールだけで進めて数える
-  // （価格は g 換算を、レシピの区分は食材の分類を使うため）
-  const priceProgress = await priceStage(db, ai, limit, ingredientProgress.remaining === 0)
+  // （日持ちの辞書は分類を、価格は g 換算を、レシピの区分は食材の分類を使うため）
+  const storageProgress = await storageStage(db, ai, limit, ingredientProgress.remaining === 0)
+  const priceProgress = await priceStage(
+    db,
+    ai,
+    limit,
+    ingredientProgress.remaining === 0 && storageProgress.remaining === 0,
+  )
   const recipeProgress = await recipeStage(
     db,
     ai,
     limit,
-    ingredientProgress.remaining === 0 && priceProgress.remaining === 0,
+    ingredientProgress.remaining === 0 && storageProgress.remaining === 0 && priceProgress.remaining === 0,
   )
-  return { ingredients: ingredientProgress, prices: priceProgress, recipes: recipeProgress }
+  return { ingredients: ingredientProgress, storage: storageProgress, prices: priceProgress, recipes: recipeProgress }
 }

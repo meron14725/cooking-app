@@ -130,6 +130,7 @@ describe('POST /api/recipes/attributes/estimate: 食材', () => {
     const fourth = await estimate(1)
     expect(fourth.body).toEqual({
       ingredients: { updated: 0, remaining: 0 },
+      storage: { updated: 0, remaining: 0 },
       prices: { updated: 0, remaining: 0 },
       recipes: { updated: 0, remaining: 0 },
     })
@@ -292,5 +293,97 @@ describe('POST /api/recipes/attributes/estimate: 価格', () => {
     expect(await ingredient(pork.id)).toMatchObject({ priceYen: 150, priceSource: 'default' })
     expect(await ingredient(beef.id)).toMatchObject({ priceYen: 2, priceSource: 'manual' })
     expect(await ingredient(chicken.id)).toMatchObject({ priceYen: 3, priceSource: 'default' })
+  })
+})
+
+describe('POST /api/recipes/attributes/estimate: 日持ち', () => {
+  /** 取り込みのまま（分類ごとの固定値）に戻す。画面や API から作ると manual になるため */
+  const resetStorage = () =>
+    api.sqlite.exec(
+      "UPDATE ingredients SET storage_source = NULL, can_freeze = 1, fridge_days = 7, freezer_days = 30, pantry_days = NULL, default_location = 'fridge'",
+    )
+  const storageSource = (id: string) =>
+    (
+      api.sqlite.prepare('SELECT storage_source FROM ingredients WHERE id = ?').get(id) as {
+        storage_source: string | null
+      }
+    ).storage_source
+
+  it('画面から登録した食材は手入力。日持ちを直すと手入力になる', async () => {
+    const sugar = await addIngredient('グラニュー糖', 'seasoning')
+    expect(storageSource(sugar.id)).toBe('manual')
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'rule' WHERE id = '${sugar.id}'`)
+    // 日持ちを変えずに保存しても rule のまま
+    await api.call('PUT', `/ingredients/${sugar.id}`, {
+      ...base,
+      name: 'グラニュー糖',
+      category: 'seasoning',
+      unit: 'g',
+    })
+    expect(storageSource(sugar.id)).toBe('rule')
+    await api.call('PUT', `/ingredients/${sugar.id}`, {
+      ...base,
+      name: 'グラニュー糖',
+      category: 'seasoning',
+      unit: 'g',
+      fridgeDays: 100,
+    })
+    expect(storageSource(sugar.id)).toBe('manual')
+  })
+
+  it('取り込みのままの食材を辞書で入れ直し、決まらないものを AI に聞く。手入力は変えない', async () => {
+    const sugar = await addIngredient('グラニュー糖', 'seasoning')
+    const katsuo = await addIngredient('かつおぶし', 'dry')
+    const mystery = await addIngredient('謎の野菜', 'vegetable', '個', 100)
+    const mine = await addIngredient('自家製ピクルス', 'other')
+    resetStorage()
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'manual', fridge_days = 20 WHERE id = '${mine.id}'`)
+
+    const res = await estimate()
+    expect(res.body.storage).toEqual({ updated: 3, remaining: 0 })
+    expect(await ingredient(sugar.id)).toMatchObject({
+      canFreeze: false,
+      freezerDays: null,
+      defaultLocation: 'pantry',
+      storageSource: 'rule',
+    })
+    expect((await ingredient(sugar.id)).pantryDays).toBeGreaterThanOrEqual(365)
+    expect(await ingredient(katsuo.id)).toMatchObject({
+      defaultLocation: 'pantry',
+      pantryDays: 180,
+      storageSource: 'rule',
+    })
+    // テスト用の AI は冷蔵 4 日・冷凍 30 日
+    expect(await ingredient(mystery.id)).toMatchObject({ fridgeDays: 4, freezerDays: 30, storageSource: 'ai' })
+    expect(await ingredient(mine.id)).toMatchObject({ fridgeDays: 20, storageSource: 'manual' })
+  })
+
+  it('AI の答えが範囲外・答えなしなら今の値を残し、次からは聞かない', async () => {
+    const bad = await addIngredient('日持ちしない謎の野菜', 'vegetable', '個', 100)
+    const none = await addIngredient('高級な謎の野菜', 'vegetable', '個', 100)
+    resetStorage()
+    expect((await estimate()).body.storage).toEqual({ updated: 2, remaining: 0 })
+    expect(await ingredient(bad.id)).toMatchObject({ fridgeDays: 7, freezerDays: 30, storageSource: 'ai' })
+    expect(await ingredient(none.id)).toMatchObject({ fridgeDays: 7, storageSource: 'ai' })
+    expect((await estimate()).body.storage).toEqual({ updated: 0, remaining: 0 })
+  })
+
+  it('分類の段の AI が残っているあいだは、その食材の日持ちを決めない。価格とレシピも AI に聞かない', async () => {
+    const a = await addIngredient('謎A', 'vegetable')
+    const b = await addIngredient('謎B', 'vegetable')
+    resetSources()
+    resetStorage()
+    const first = await estimate(1)
+    expect(first.body.ingredients).toEqual({ updated: 1, remaining: 1 })
+    // 1 件は分類が決まったが、日持ちの段は AI を使わないので残り 2 件
+    expect(first.body.storage).toEqual({ updated: 0, remaining: 2 })
+    expect(first.body.prices.updated).toBe(0)
+    const second = await estimate(1)
+    expect(second.body.ingredients.remaining).toBe(0)
+    expect(second.body.storage).toEqual({ updated: 1, remaining: 1 })
+    const third = await estimate(1)
+    expect(third.body.storage).toEqual({ updated: 1, remaining: 0 })
+    expect((await ingredient(a.id)).storageSource).toBe('ai')
+    expect((await ingredient(b.id)).storageSource).toBe('ai')
   })
 })

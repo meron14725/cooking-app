@@ -133,6 +133,8 @@ export type Ingredient = {
   isStaple: boolean
   /** 分類と重さをどう決めたか（rule / ai / manual）。null = 取り込みのまま */
   attributesSource: 'rule' | 'ai' | 'manual' | null
+  /** 日持ちと保存場所をどう決めたか（rule / ai / manual）。null = 取り込みのまま（docs/design/11-storage-days.md） */
+  storageSource: 'rule' | 'ai' | 'manual' | null
   /** 代表量あたりの価格（円）。未設定は null */
   priceYen: number | null
   priceSource: PriceSource | null

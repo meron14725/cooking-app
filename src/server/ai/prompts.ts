@@ -1,4 +1,9 @@
-import type { IngredientClassifyItem, PriceEstimateItem, RecipeClassifyItem } from '../../shared/schemas/attributes'
+import type {
+  IngredientClassifyItem,
+  PriceEstimateItem,
+  RecipeClassifyItem,
+  StorageEstimateItem,
+} from '../../shared/schemas/attributes'
 import type { EstimateCaloriesInput } from '../../shared/schemas/recipeDraft'
 import type { MasterRef, SuggestPromptInput, TextDraftPromptInput } from './provider'
 
@@ -109,6 +114,19 @@ key は入力のまま返してください。`
 
 export function priceEstimatePrompt(items: PriceEstimateItem[]): string {
   return `食材:\n${JSON.stringify(items)}`
+}
+
+export const STORAGE_ESTIMATE_SYSTEM = `あなたは日本の家庭の食材管理を手伝うアシスタントです。食材ごとに、買ってきたもの（丸ごと・未開封）の日持ちの目安を、日数（0〜365 の整数）で答えてください。調味料・乾物は開封後の目安で答えます。
+- canFreeze: 家庭の冷凍庫で冷凍してよいか
+- fridgeDays: 冷蔵したときの日数（必ず入れる）
+- freezerDays: 冷凍したときの日数。冷凍できなければ null
+- pantryDays: 常温で置けるときの日数。常温に置けなければ null
+- defaultLocation: ふだんの置き場所。fridge（冷蔵）/ freezer（冷凍）/ pantry（常温）。pantry にするなら pantryDays を入れる。冷凍できないなら freezer にしない
+- preppedFridgeDays / preppedFreezerDays: 切ったり下ごしらえした後の冷蔵・冷凍の日数。ふつうの目安（冷蔵 2 日・冷凍 21 日）でよければ null
+key は入力のまま返してください。`
+
+export function storageEstimatePrompt(items: StorageEstimateItem[]): string {
+  return `食材（category は分類: vegetable 野菜 / meat 肉 / fish 魚 / tofu_egg_dairy 大豆製品・卵・乳製品 / seasoning 調味料 / dry 乾物・缶詰 / other そのほか）:\n${JSON.stringify(items)}`
 }
 
 export const RECIPE_CLASSIFY_SYSTEM = `あなたは家庭料理の献立を手伝うアシスタントです。料理ごとに次を決めてください。

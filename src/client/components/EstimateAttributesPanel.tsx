@@ -5,9 +5,9 @@ import { apiFetch } from '../api/client'
 import { aiErrorMessage } from '../api/recipes'
 import { Button } from './form'
 
-type Totals = { ingredients: number; prices: number; recipes: number }
+type Totals = { ingredients: number; storage: number; prices: number; recipes: number }
 
-const ZERO: Totals = { ingredients: 0, prices: 0, recipes: 0 }
+const ZERO: Totals = { ingredients: 0, storage: 0, prices: 0, recipes: 0 }
 type Status =
   | { kind: 'idle' }
   | { kind: 'running'; updated: Totals; remaining: Totals | null }
@@ -19,7 +19,7 @@ type Status =
 const CALL_TIMEOUT_MS = 90_000
 
 /**
- * 食材の分類・重さ・価格の目安とレシピの区分・系統を「まとめて推定」する（docs/design/09-recommendation-v2.md・10-cost.md）。
+ * 食材の分類・重さ・日持ち・価格の目安とレシピの区分・系統を「まとめて推定」する（docs/design/09-recommendation-v2.md・10-cost.md・11-storage-days.md）。
  * 残りが 0 になるまで API を呼び続ける。止めたり画面を離れたりしたら、そこで止まる（保存済みの分は残る）。
  * 「古い目安を見直す」は、最初の 1 回だけ refreshStalePrices を付けて、1 年より前の目安の価格を入れ直す
  */
@@ -47,14 +47,16 @@ export function EstimateAttributesPanel() {
           signal: AbortSignal.any([controller.signal, AbortSignal.timeout(CALL_TIMEOUT_MS)]),
         })
         updated.ingredients += res.ingredients.updated
+        updated.storage += res.storage.updated
         updated.prices += res.prices.updated
         updated.recipes += res.recipes.updated
         remaining = {
           ingredients: res.ingredients.remaining,
+          storage: res.storage.remaining,
           prices: res.prices.remaining,
           recipes: res.recipes.remaining,
         }
-        if (remaining.ingredients === 0 && remaining.prices === 0 && remaining.recipes === 0) {
+        if (Object.values(remaining).every((n) => n === 0)) {
           setStatus({ kind: 'done', updated: { ...updated } })
           return
         }
@@ -85,7 +87,7 @@ export function EstimateAttributesPanel() {
         <h2 className="font-bold">分類と価格をまとめて推定</h2>
         <p className="mt-1 text-xs leading-relaxed text-ink-muted">
           食材の分類と 1
-          つあたりの重さ、価格の目安、レシピの区分（主菜・副菜など）と味の系統を、名前と材料から決めます。
+          つあたりの重さ、日持ちと保存場所、価格の目安、レシピの区分（主菜・副菜など）と味の系統を、名前と材料から決めます。
           決まらないものだけ AI に聞きます。手で直したものは変えません。献立の提案と金額に使います。
         </p>
       </div>
@@ -113,7 +115,8 @@ export function EstimateAttributesPanel() {
 }
 
 function statusText(status: Exclude<Status, { kind: 'idle' }>): string {
-  const counts = (t: Totals) => `食材 ${t.ingredients} 件、価格 ${t.prices} 件、レシピ ${t.recipes} 件`
+  const counts = (t: Totals) =>
+    `食材 ${t.ingredients} 件、日持ち ${t.storage} 件、価格 ${t.prices} 件、レシピ ${t.recipes} 件`
   const done = `${counts(status.updated)}を直しました`
   const rest = (r: Totals | null) => (r ? `。残りは${counts(r)}です` : '')
   switch (status.kind) {

@@ -4,7 +4,7 @@ import { cuisineSchema, dishTypeSchema } from './recipe'
 
 /**
  * 「まとめて推定」（docs/design/09-recommendation-v2.md）。
- * 食材の分類・重さ → レシピの区分・系統の順に、ルールで決め、残りを limit 件ずつ AI に聞く
+ * 食材の分類・重さ → 日持ち → 価格 → レシピの区分・系統の順に、ルールで決め、残りを limit 件ずつ AI に聞く
  */
 export const estimateAttributesInputSchema = z.object({
   /** 1 回で AI に聞く件数 */
@@ -21,10 +21,34 @@ export type StageProgress = { updated: number; remaining: number }
 
 export type EstimateAttributesResponse = {
   ingredients: StageProgress
+  /** 食材の日持ちと保存場所（docs/design/11-storage-days.md） */
+  storage: StageProgress
   /** 食材の価格の目安（docs/design/10-cost.md） */
   prices: StageProgress
   recipes: StageProgress
 }
+
+/** AI に渡す食材（名前と分類だけ） */
+export type StorageEstimateItem = { key: string; name: string; category: string }
+
+/** 範囲は zod では見ず、validStorage() で確かめる（1 件の範囲外で全部を捨てないため） */
+export const storageEstimateSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        key: z.string(),
+        canFreeze: z.boolean(),
+        fridgeDays: z.number().nullable(),
+        freezerDays: z.number().nullable(),
+        pantryDays: z.number().nullable(),
+        defaultLocation: z.enum(['fridge', 'freezer', 'pantry']),
+        preppedFridgeDays: z.number().nullable(),
+        preppedFreezerDays: z.number().nullable(),
+      }),
+    )
+    .max(40),
+})
+export type StorageEstimateResult = z.infer<typeof storageEstimateSchema>
 
 /** AI に渡す食材（名前・基準単位・代表量の名前だけ） */
 export type PriceEstimateItem = { key: string; name: string; unit: string; basis: string }
