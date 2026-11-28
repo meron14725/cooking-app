@@ -27,7 +27,7 @@
 | 列 | 型 | 内容 |
 |---|---|---|
 | `price_yen` | integer NULL | **代表量あたり**の価格（円、税込みの目安）。NULL = 価格未設定 |
-| `price_source` | text NULL | `default`（まとめて推定で入れた目安）/ `manual`（手で入れた）。`price_yen` が NULL なら NULL |
+| `price_source` | text NULL | `default`（まとめて推定で入れた目安）/ `manual`（手で入れた）/ `researched`（ウェブで調べた値を CSV から反映。docs/data/README.md。まとめて推定・「古い目安を見直す」で上書きしない。編集画面では「調べた値」）。`price_yen` が NULL なら NULL |
 | `price_updated_at` | text NULL | 価格を入れた日時（ISO）。古さの表示に使う |
 
 - **代表量**は今の `representativeQuantity()` と同じ: 代表の販売単位 → 最初の販売単位 → 基準単位 1 つ分（g なら 100g）。画面では「3個入り あたり 198 円」「100g あたり 128 円」のように、代表量の名前と一緒に見せる

@@ -296,6 +296,20 @@ describe('POST /api/recipes/attributes/estimate: 価格', () => {
   })
 })
 
+describe('POST /api/recipes/attributes/estimate: 調べた価格', () => {
+  it('調べた価格（researched）は、古くても推定で上書きしない', async () => {
+    const pork = await addIngredient('豚こま切れ肉', 'meat')
+    api.sqlite.exec(
+      `UPDATE ingredients SET price_yen = 7, price_source = 'researched', price_updated_at = '2020-01-01T00:00:00.000Z' WHERE id = '${pork.id}'`,
+    )
+    const res = await api.call<EstimateAttributesResponse>('POST', '/recipes/attributes/estimate', {
+      refreshStalePrices: true,
+    })
+    expect(res.body.prices).toEqual({ updated: 0, remaining: 0 })
+    expect(await ingredient(pork.id)).toMatchObject({ priceYen: 7, priceSource: 'researched' })
+  })
+})
+
 describe('POST /api/recipes/attributes/estimate: 日持ち', () => {
   /** 取り込みのまま（分類ごとの固定値）に戻す。画面や API から作ると manual になるため */
   const resetStorage = () =>
@@ -424,6 +438,31 @@ describe('POST /api/recipes/attributes/estimate: 日持ち', () => {
     expect(await ingredient(bad.id)).toMatchObject({ fridgeDays: 7, freezerDays: 30, storageSource: 'ai' })
     expect(await ingredient(none.id)).toMatchObject({ fridgeDays: 7, storageSource: 'ai' })
     expect((await estimate()).body.storage).toEqual({ updated: 0, remaining: 0 })
+  })
+
+  it('調べた日持ち（researched）は推定で上書きせず、分類だけを変えても残す', async () => {
+    const x = await addIngredient('かつおぶし', 'vegetable')
+    resetStorage()
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'researched', fridge_days = 12 WHERE id = '${x.id}'`)
+    expect((await estimate()).body.storage).toEqual({ updated: 0, remaining: 0 })
+    expect(await ingredient(x.id)).toMatchObject({ fridgeDays: 12, storageSource: 'researched' })
+    await api.call('PUT', `/ingredients/${x.id}`, {
+      ...base,
+      name: 'かつおぶし',
+      category: 'dry',
+      unit: 'g',
+      fridgeDays: 12,
+    })
+    expect(await ingredient(x.id)).toMatchObject({ category: 'dry', fridgeDays: 12, storageSource: 'researched' })
+    // 日持ちを変えたら手入力
+    await api.call('PUT', `/ingredients/${x.id}`, {
+      ...base,
+      name: 'かつおぶし',
+      category: 'dry',
+      unit: 'g',
+      fridgeDays: 13,
+    })
+    expect(storageSource(x.id)).toBe('manual')
   })
 
   it('分類の段の AI が残っているあいだは、その食材の日持ちを決めない。価格とレシピも AI に聞かない', async () => {

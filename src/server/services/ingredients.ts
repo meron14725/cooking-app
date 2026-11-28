@@ -69,7 +69,8 @@ const STORAGE_FIELDS = [
 /**
  * 日持ちの出どころ（docs/design/11-storage-days.md）
  * - 日持ちか保存場所を画面で変えたら manual
- * - 分類だけを変えたら、手で入れた日持ち（manual）は残し、それ以外は未見直し（NULL）に戻して次のまとめて推定で入れ直す
+ * - 分類だけを変えたら、手で入れた日持ち（manual）と調べた日持ち（researched。分類によらず食材ごとに調べた値）は残し、
+ *   それ以外は未見直し（NULL）に戻して次のまとめて推定で入れ直す
  */
 function nextStorageSource(
   current: Pick<IngredientRow, 'category' | 'storageSource'>,
@@ -77,7 +78,8 @@ function nextStorageSource(
   storageEdited: boolean,
 ): IngredientRow['storageSource'] {
   if (storageEdited) return 'manual'
-  if (nextCategory !== current.category && current.storageSource !== 'manual') return null
+  if (nextCategory !== current.category && current.storageSource !== 'manual' && current.storageSource !== 'researched')
+    return null
   return current.storageSource
 }
 

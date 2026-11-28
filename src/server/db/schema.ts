@@ -40,7 +40,10 @@ export const STORAGE_LOCATIONS = ['fridge', 'freezer', 'pantry'] as const
 export const KIT_LOCATIONS = ['fridge', 'freezer'] as const
 export const INVENTORY_SOURCES = ['shopping', 'leftover', 'manual'] as const
 export const KIT_STATUSES = ['stored', 'cooked', 'discarded'] as const
-export const PRICE_SOURCES = ['default', 'manual'] as const
+/** researched = ウェブで調べた値（docs/data/README.md）。まとめて推定で上書きしない */
+export const PRICE_SOURCES = ['default', 'manual', 'researched'] as const
+/** 日持ちの出どころ。分類の出どころ（ATTRIBUTE_SOURCES）に、ウェブで調べた値（researched）を足したもの */
+export const STORAGE_SOURCES = [...ATTRIBUTE_SOURCES, 'researched'] as const
 export const KIT_ITEM_STATES = ['packed', 'before_cook', 'seasoning_packed'] as const
 
 const inList = (column: string, values: readonly string[]) =>
@@ -81,15 +84,16 @@ export const ingredients = sqliteTable(
     attributesSource: text('attributes_source', { enum: ATTRIBUTE_SOURCES }),
     /**
      * 日持ちと保存場所（can_freeze・fridge/freezer/pantry_days・prepped_*_days・default_location）をどう決めたか
-     * （rule / ai / manual。docs/design/11-storage-days.md）。NULL = 取り込みのまま（未見直し）。manual は「まとめて推定」で上書きしない
+     * （rule / ai / manual / researched。docs/design/11-storage-days.md）。NULL = 取り込みのまま（未見直し）。
+     * manual と researched（ウェブで調べた値）は「まとめて推定」で上書きしない
      */
-    storageSource: text('storage_source', { enum: ATTRIBUTE_SOURCES }),
-    /** 日持ちの出典（AI がウェブで調べたときの URL。最大 3 件。手で直したら空。docs/design/11-storage-days.md） */
+    storageSource: text('storage_source', { enum: STORAGE_SOURCES }),
+    /** 日持ちの出典（AI がウェブで調べた・調べた値の URL。最大 3 件。手で直したら空。docs/design/11-storage-days.md） */
     storageSourceUrls: text('storage_source_urls', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
     // 価格の列は CHECK を付けない（CHECK を足すと SQLite はテーブルを作り直すため。値は zod で確かめる）
     /** 代表量（代表の販売単位 → 最初の販売単位 → 基準単位 1 つ。g なら 100g）あたりの価格（円）。NULL = 未設定 */
     priceYen: integer('price_yen'),
-    /** default = まとめて推定の目安 / manual = 手で入れた。price_yen が NULL なら NULL */
+    /** default = まとめて推定の目安 / manual = 手で入れた / researched = ウェブで調べた。price_yen が NULL なら NULL */
     priceSource: text('price_source', { enum: PRICE_SOURCES }),
     /** 価格を入れた日時（ISO） */
     priceUpdatedAt: text('price_updated_at'),
