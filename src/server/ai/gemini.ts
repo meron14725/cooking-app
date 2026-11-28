@@ -1,9 +1,14 @@
 import { type ZodType, z } from 'zod'
 import {
+  type AiCallOptions,
   ingredientClassifySchema,
+  type PriceEstimateResult,
   priceEstimateSchema,
+  priceResearchSchema,
   recipeClassifySchema,
+  type StorageEstimateResult,
   storageEstimateSchema,
+  storageResearchSchema,
 } from '../../shared/schemas/attributes'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
 import {
@@ -11,18 +16,22 @@ import {
   caloriePrompt,
   EXTRACT_SYSTEM,
   extractPrompt,
+  INGREDIENT_CLASSIFY_RESEARCH,
   INGREDIENT_CLASSIFY_SYSTEM,
   ingredientClassifyPrompt,
   PRICE_ESTIMATE_SYSTEM,
+  PRICE_RESEARCH,
   priceEstimatePrompt,
   RECIPE_CLASSIFY_SYSTEM,
   recipeClassifyPrompt,
   STORAGE_ESTIMATE_SYSTEM,
+  STORAGE_RESEARCH,
   SUGGEST_SYSTEM,
   storageEstimatePrompt,
   suggestPrompt,
   TEXT_DRAFT_SYSTEM,
   textDraftPrompt,
+  withResearch,
 } from './prompts'
 import { AiError, type AiProvider } from './provider'
 
@@ -30,6 +39,8 @@ const DEFAULT_MODEL = 'gemini-3.8-flash'
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models'
 /** 画面は 30 秒で打ち切る。ページ取得 10 秒 + AI 9 秒 × 2 回（再試行）= 28 秒に収める */
 const TIMEOUT_MS = 9_000
+/** Google 検索で調べるとき（まとめて推定のジョブだけ。画面は待たない） */
+export const RESEARCH_TIMEOUT_MS = 120_000
 
 const CONSTRAINT_KEYS = new Set([
   'minimum',
@@ -92,16 +103,37 @@ export class GeminiProvider implements AiProvider {
     return this.generate(CALORIE_SYSTEM, caloriePrompt(input), calorieEstimateSchema)
   }
 
-  classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0]) {
-    return this.generate(INGREDIENT_CLASSIFY_SYSTEM, ingredientClassifyPrompt(items), ingredientClassifySchema)
+  classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0], opts: AiCallOptions = {}) {
+    return this.generate(
+      withResearch(INGREDIENT_CLASSIFY_SYSTEM, INGREDIENT_CLASSIFY_RESEARCH, opts.webSearch),
+      ingredientClassifyPrompt(items),
+      ingredientClassifySchema,
+      opts,
+    )
   }
 
-  estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0]) {
-    return this.generate(PRICE_ESTIMATE_SYSTEM, priceEstimatePrompt(items), priceEstimateSchema)
+  estimatePrices(
+    items: Parameters<AiProvider['estimatePrices']>[0],
+    opts: AiCallOptions = {},
+  ): Promise<PriceEstimateResult> {
+    return this.generate(
+      withResearch(PRICE_ESTIMATE_SYSTEM, PRICE_RESEARCH, opts.webSearch),
+      priceEstimatePrompt(items),
+      opts.webSearch ? priceResearchSchema : priceEstimateSchema,
+      opts,
+    )
   }
 
-  estimateStorage(items: Parameters<AiProvider['estimateStorage']>[0]) {
-    return this.generate(STORAGE_ESTIMATE_SYSTEM, storageEstimatePrompt(items), storageEstimateSchema)
+  estimateStorage(
+    items: Parameters<AiProvider['estimateStorage']>[0],
+    opts: AiCallOptions = {},
+  ): Promise<StorageEstimateResult> {
+    return this.generate(
+      withResearch(STORAGE_ESTIMATE_SYSTEM, STORAGE_RESEARCH, opts.webSearch),
+      storageEstimatePrompt(items),
+      opts.webSearch ? storageResearchSchema : storageEstimateSchema,
+      opts,
+    )
   }
 
   classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
@@ -109,10 +141,10 @@ export class GeminiProvider implements AiProvider {
   }
 
   /** JSON スキーマ付きで生成し、zod で検証する。検証に失敗したら 1 回だけ再試行する */
-  private async generate<T>(system: string, prompt: string, schema: ZodType<T>): Promise<T> {
+  private async generate<T>(system: string, prompt: string, schema: ZodType<T>, opts: AiCallOptions = {}): Promise<T> {
     let lastError: unknown
     for (let attempt = 0; attempt < 2; attempt++) {
-      const text = await this.call(system, prompt, schema)
+      const text = await this.call(system, prompt, schema, opts.webSearch === true)
       try {
         return schema.parse(JSON.parse(text))
       } catch (err) {
@@ -122,7 +154,7 @@ export class GeminiProvider implements AiProvider {
     throw new AiError('AI の応答を読み取れませんでした。もう一度試してください', String(lastError))
   }
 
-  private async call(system: string, prompt: string, schema: ZodType): Promise<string> {
+  private async call(system: string, prompt: string, schema: ZodType, webSearch: boolean): Promise<string> {
     const doFetch = this.opts.fetch ?? fetch
     let res: Response
     try {
@@ -132,15 +164,18 @@ export class GeminiProvider implements AiProvider {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          // 調べるときは Google 検索（grounding）を道具として渡す。構造化出力と一緒に使える
+          ...(webSearch ? { tools: [{ google_search: {} }] } : {}),
           generationConfig: {
             responseMimeType: 'application/json',
             responseJsonSchema: looseJsonSchema(schema),
             temperature: 0.2,
-            // 抽出が主なので考える量は少なくてよい（速さを優先）
-            thinkingConfig: { thinkingLevel: 'low' },
+            // 抽出が主なので考える量は少なくてよい（速さを優先）。
+            // 調べるときは既定のまま（low だと検索せずに答え、画像の URL を出典にすることがあった。2026-11-28 実測）
+            ...(webSearch ? {} : { thinkingConfig: { thinkingLevel: 'low' } }),
           },
         }),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(webSearch ? RESEARCH_TIMEOUT_MS : TIMEOUT_MS),
       })
     } catch (err) {
       throw new AiError('AI に接続できませんでした（タイムアウトなど）', String(err))

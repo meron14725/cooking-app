@@ -79,6 +79,10 @@ npx wrangler secret put CURSOR_API_KEY
 
 `wrangler.jsonc` の `vars` に `"AI_PROVIDER": "gemini"` を足し、[Google AI Studio](https://aistudio.google.com/apikey) のキーを `npx wrangler secret put GEMINI_API_KEY` で入れます。
 
+### まとめて推定のウェブ検索
+
+まとめて推定は、既定で AI にウェブ検索をさせます（docs/design/06-ai.md「ウェブ検索」）。止めるときは `wrangler.jsonc` の `vars` に `"AI_WEB_SEARCH": "off"` を足します。出典の列は migration 0012 で足すので、デプロイの前に `npx wrangler d1 migrations apply cooking-app --remote` を流してください。Container の中身（`container/src`）も変わるので、デプロイで Container のイメージを作り直します。
+
 ## 5. 確認
 
 - スマホで `https://cooking-app.<サブドメイン>.workers.dev` を開く → メールのコードでログイン → ホームに「API: OK」と出る

@@ -216,7 +216,7 @@ describe('まとめて推定のジョブ', () => {
     const status = await runEstimateJob(
       createDb(api.env.DB),
       () => new FakeProvider(),
-      { jobId: 'j1', limit: 20, refreshStalePrices: false },
+      { jobId: 'j1', limit: 20, refreshStalePrices: false, webSearch: false },
       { do: (_name, fn) => fn() },
     )
     expect(status).toBe('done')
@@ -232,6 +232,37 @@ describe('まとめて推定のジョブ', () => {
     expect(isPermanentJobError(new ApiError(503, 'AI_UNAVAILABLE', 'starting'))).toBe(false)
     expect(isPermanentJobError(new ApiError(503, 'AI_STARTING', 'starting'))).toBe(false)
     expect(isPermanentJobError(new AiError('timeout'))).toBe(false)
+  })
+
+  it('既定（AI_WEB_SEARCH なし）では検索ありで進め、1 回 5 件ずつ聞いて出典を残す', async () => {
+    api = createTestApi({ env: { AI_WEB_SEARCH: undefined } })
+    const items = []
+    for (let i = 0; i < 6; i++) items.push(await addIngredient(`謎の食材${i}`))
+    resetSources()
+    expect((await start()).status).toBe(202)
+    await api.workflow.settled()
+    const job = await current()
+    expect(job?.status).toBe('done')
+    // 6 件を 5 件ずつなので、1 回では終わらない（検索なしの 20 件ずつなら 1 回で終わる）
+    expect(job?.rounds).toBeGreaterThan(1)
+    const first = items[0]
+    if (!first) throw new Error('食材がありません')
+    const got = (await api.call<Ingredient>('GET', `/ingredients/${first.id}`)).body
+    expect(got.storageSourceUrls).toEqual([`https://example.com/storage/${first.id}`])
+    expect(got.priceSourceUrls).toEqual([`https://example.com/price/${first.id}`])
+  })
+
+  it('AI_WEB_SEARCH=off なら検索なしで進め、出典は付かない', async () => {
+    const items = []
+    for (let i = 0; i < 6; i++) items.push(await addIngredient(`謎の食材${i}`))
+    resetSources()
+    await start()
+    await api.workflow.settled()
+    expect((await current())?.rounds).toBe(1)
+    const x = items[0]
+    if (!x) throw new Error('食材がありません')
+    const got = (await api.call<Ingredient>('GET', `/ingredients/${x.id}`)).body
+    expect(got).toMatchObject({ storageSource: 'ai', storageSourceUrls: [], priceSourceUrls: [] })
   })
 
   it('ジョブがなければ null。Workflow の設定がなければ 503', async () => {

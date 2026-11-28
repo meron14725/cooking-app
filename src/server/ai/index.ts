@@ -36,3 +36,11 @@ export function getProvider(env: AiEnv): AiProvider {
       throw new ApiError(503, 'AI_NOT_CONFIGURED', `AI プロバイダ「${name}」は使えません`)
   }
 }
+
+/**
+ * まとめて推定で AI にウェブ検索をさせるか（docs/design/06-ai.md「ウェブ検索」）。
+ * 既定は on。AI_WEB_SEARCH=off で止める（検索のない今までの動き。出典は付かない）
+ */
+export function webSearchByDefault(env: Pick<Env, 'AI_WEB_SEARCH'>): boolean {
+  return env.AI_WEB_SEARCH !== 'off'
+}

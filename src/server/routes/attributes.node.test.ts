@@ -445,3 +445,119 @@ describe('POST /api/recipes/attributes/estimate: 日持ち', () => {
     expect((await ingredient(b.id)).storageSource).toBe('ai')
   })
 })
+
+describe('POST /api/recipes/attributes/estimate: ウェブ検索', () => {
+  const estimateWith = (body: Record<string, unknown>) =>
+    api.call<EstimateAttributesResponse>('POST', '/recipes/attributes/estimate', body)
+  const urls = (id: string) =>
+    api.sqlite
+      .prepare('SELECT price_source_urls AS p, storage_source_urls AS s FROM ingredients WHERE id = ?')
+      .get(id) as {
+      p: string
+      s: string
+    }
+  /** 取り込みのまま（日持ちは未見直し、価格は未設定）に戻す */
+  const resetStorageAndPrice = () =>
+    api.sqlite.exec(
+      'UPDATE ingredients SET storage_source = NULL, price_yen = NULL, price_source = NULL, price_updated_at = NULL',
+    )
+
+  it('調べると、出典の付いた答えだけを保存し、出典を食材ごとに残す', async () => {
+    const found = await addIngredient('謎の野菜', 'vegetable', '個', 100)
+    resetStorageAndPrice()
+    const res = await estimateWith({ webSearch: true })
+    expect(res.body.storage).toEqual({ updated: 1, remaining: 0 })
+    expect(res.body.prices).toEqual({ updated: 1, remaining: 0 })
+    expect(await ingredient(found.id)).toMatchObject({
+      fridgeDays: 4,
+      storageSource: 'ai',
+      storageSourceUrls: [`https://example.com/storage/${found.id}`],
+      priceYen: 100,
+      priceSource: 'default',
+      priceSourceUrls: [`https://example.com/price/${found.id}`],
+    })
+  })
+
+  it('出典の付いていない答えは捨て、答えなしと同じに扱う（日持ちは今の値のまま・価格は未設定の印）', async () => {
+    const none = await addIngredient('出典なしの謎の野菜', 'vegetable', '個', 100)
+    resetStorageAndPrice()
+    await estimateWith({ webSearch: true })
+    expect(await ingredient(none.id)).toMatchObject({
+      fridgeDays: 3,
+      storageSource: 'ai',
+      storageSourceUrls: [],
+      priceYen: null,
+      priceSourceUrls: [],
+    })
+    // 印が付いたので、次からは聞かない
+    expect((await estimateWith({ webSearch: true })).body.prices).toEqual({ updated: 0, remaining: 0 })
+  })
+
+  it('検索なしなら出典なしで今までどおり保存する', async () => {
+    const x = await addIngredient('出典なしの謎の野菜', 'vegetable', '個', 100)
+    resetStorageAndPrice()
+    await estimateWith({ webSearch: false })
+    expect(await ingredient(x.id)).toMatchObject({
+      fridgeDays: 4,
+      storageSourceUrls: [],
+      priceYen: 100,
+      priceSourceUrls: [],
+    })
+  })
+
+  it('辞書で決まる食材は検索しても AI に聞かず、出典は空', async () => {
+    const katsuo = await addIngredient('かつおぶし', 'dry')
+    resetStorageAndPrice()
+    await estimateWith({ webSearch: true })
+    expect(await ingredient(katsuo.id)).toMatchObject({ storageSource: 'rule', storageSourceUrls: [] })
+  })
+
+  it('手で入れた値は検索しても上書きせず、手で直すと出典を消す', async () => {
+    const x = await addIngredient('謎の野菜', 'vegetable', '個', 100)
+    resetStorageAndPrice()
+    await estimateWith({ webSearch: true })
+    expect(urls(x.id)).toEqual({
+      p: JSON.stringify([`https://example.com/price/${x.id}`]),
+      s: JSON.stringify([`https://example.com/storage/${x.id}`]),
+    })
+    await api.call('PUT', `/ingredients/${x.id}`, {
+      ...base,
+      name: '謎の野菜',
+      category: 'vegetable',
+      unit: '個',
+      gramsPerUnit: 100,
+      fridgeDays: 5,
+      priceYen: 120,
+    })
+    expect(await ingredient(x.id)).toMatchObject({
+      fridgeDays: 5,
+      storageSource: 'manual',
+      storageSourceUrls: [],
+      priceYen: 120,
+      priceSource: 'manual',
+      priceSourceUrls: [],
+    })
+    await estimateWith({ webSearch: true })
+    expect(await ingredient(x.id)).toMatchObject({ fridgeDays: 5, priceYen: 120 })
+  })
+
+  it('古い目安を見直すと、価格と一緒に出典も消してから調べ直す', async () => {
+    const x = await addIngredient('出典なしの謎の野菜', 'vegetable', '個', 100)
+    resetStorageAndPrice()
+    await estimateWith({ webSearch: false })
+    api.sqlite.exec(
+      `UPDATE ingredients SET price_updated_at = '2000-01-01T00:00:00.000Z', price_source_urls = '["https://old.example.com"]' WHERE id = '${x.id}'`,
+    )
+    await estimateWith({ webSearch: true, refreshStalePrices: true })
+    // 出典のない答えなので未設定のまま。古い出典は残さない
+    expect(await ingredient(x.id)).toMatchObject({ priceYen: null, priceSourceUrls: [] })
+  })
+
+  it('limit を省略すると、検索ありは 1 回 5 件、検索なしは 20 件ずつ聞く', async () => {
+    for (let i = 0; i < 7; i++) await addIngredient(`謎の野菜${i}`, 'vegetable', '個', 100)
+    resetSources()
+    expect((await estimateWith({ webSearch: true })).body.ingredients).toEqual({ updated: 5, remaining: 2 })
+    resetSources()
+    expect((await estimateWith({ webSearch: false })).body.ingredients).toEqual({ updated: 7, remaining: 0 })
+  })
+})

@@ -137,3 +137,26 @@ key は入力のまま返してください。`
 export function recipeClassifyPrompt(items: RecipeClassifyItem[]): string {
   return `料理:\n${JSON.stringify(items)}`
 }
+
+// ---------- ウェブ検索で調べるとき（docs/design/06-ai.md「ウェブ検索」） ----------
+
+const RESEARCH_COMMON = `## 調べ方
+- 答える前に、食材ごとにウェブ検索で調べる。モデルの知識だけで答えない
+- sources: 答えの根拠にしたページの URL（1〜3 件。検索結果やページで実際に見た URL だけ。作らない・推測しない。値が載っているページにし、サイトのトップページや画像の URL にしない）
+- 根拠のページが見つからない・判断できない食材は、値を null にし sources を空にする（推測で埋めない）`
+
+/** 分類と重さ（出典は保存しないが、重さは調べて答える） */
+export const INGREDIENT_CLASSIFY_RESEARCH = `## 調べ方
+- 分類や 1 つあたりの重さに迷う食材は、ウェブ検索でメーカーや売り場のページを見てから答える`
+
+export const PRICE_RESEARCH = `${RESEARCH_COMMON}
+- 価格の情報源は、2026 年の首都圏のスーパーの特売でない通常価格を優先する（総務省の小売物価統計、首都圏スーパーのネットスーパー・ネット通販の商品ページなど）。古い年の価格や特売価格、業務用・ギフト用の価格は使わない
+- basis と量が違う商品しか見つからなければ、basis あたりに換算する`
+
+export const STORAGE_RESEARCH = `${RESEARCH_COMMON}
+- 日持ちの情報源は、公的・一次情報を優先する（農林水産省・消費者庁・自治体・メーカー・生産者団体のページ）。まとめサイトや個人のブログは、ほかに見つからないときだけ
+- 冷蔵・冷凍・常温の日数のうち、根拠のページに書いていないものは、書いてあるものから無理に作らない（fridgeDays が分からなければ null にする）`
+
+/** 検索するときは、ふだんの指示の後ろに調べ方を足す */
+export const withResearch = (system: string, research: string, webSearch: boolean | undefined) =>
+  webSearch ? `${system}\n\n${research}` : system

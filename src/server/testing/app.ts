@@ -17,6 +17,8 @@ export function createTestApi(
     ACCESS_AUD: '',
     ENVIRONMENT: 'local',
     AI_PROVIDER: 'fake',
+    // 本番の既定は検索あり。テストは検索なしを既定にし、検索ありは env で AI_WEB_SEARCH を外して確かめる
+    AI_WEB_SEARCH: 'off',
     ESTIMATE_WORKFLOW: workflow.binding as unknown as Env['ESTIMATE_WORKFLOW'],
     ...opts.env,
   }

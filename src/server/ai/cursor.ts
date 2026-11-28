@@ -1,9 +1,14 @@
 import type { ZodType } from 'zod'
 import {
+  type AiCallOptions,
   ingredientClassifySchema,
+  type PriceEstimateResult,
   priceEstimateSchema,
+  priceResearchSchema,
   recipeClassifySchema,
+  type StorageEstimateResult,
   storageEstimateSchema,
+  storageResearchSchema,
 } from '../../shared/schemas/attributes'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
@@ -13,18 +18,22 @@ import {
   caloriePrompt,
   EXTRACT_SYSTEM,
   extractPrompt,
+  INGREDIENT_CLASSIFY_RESEARCH,
   INGREDIENT_CLASSIFY_SYSTEM,
   ingredientClassifyPrompt,
   PRICE_ESTIMATE_SYSTEM,
+  PRICE_RESEARCH,
   priceEstimatePrompt,
   RECIPE_CLASSIFY_SYSTEM,
   recipeClassifyPrompt,
   STORAGE_ESTIMATE_SYSTEM,
+  STORAGE_RESEARCH,
   SUGGEST_SYSTEM,
   storageEstimatePrompt,
   suggestPrompt,
   TEXT_DRAFT_SYSTEM,
   textDraftPrompt,
+  withResearch,
 } from './prompts'
 import { AiError, type AiProvider } from './provider'
 
@@ -38,6 +47,12 @@ export type AgentFetch = (request: Request) => Promise<Response>
 const BUDGET_MS = 75_000
 const ATTEMPT_MS = 45_000
 const MIN_RETRY_MS = 15_000
+/**
+ * ウェブで調べるとき（まとめて推定のジョブだけ。画面は待たない）。1 回 4 分まで、やり直しを入れて 7 分。
+ * Workflow の step の時間切れ（10 分）に収める。Container 側の上限は container/src/app.ts の MAX_RESEARCH_TIMEOUT_MS
+ */
+export const RESEARCH_BUDGET_MS = 420_000
+export const RESEARCH_ATTEMPT_MS = 240_000
 
 type StructuredReply = { result?: unknown; error?: { code?: string; message?: string } }
 
@@ -61,31 +76,55 @@ export class CursorProvider implements AiProvider {
     return this.generate(CALORIE_SYSTEM, caloriePrompt(input), calorieEstimateSchema)
   }
 
-  classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0]) {
-    return this.generate(INGREDIENT_CLASSIFY_SYSTEM, ingredientClassifyPrompt(items), ingredientClassifySchema)
+  classifyIngredients(items: Parameters<AiProvider['classifyIngredients']>[0], opts: AiCallOptions = {}) {
+    return this.generate(
+      withResearch(INGREDIENT_CLASSIFY_SYSTEM, INGREDIENT_CLASSIFY_RESEARCH, opts.webSearch),
+      ingredientClassifyPrompt(items),
+      ingredientClassifySchema,
+      opts,
+    )
   }
 
-  estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0]) {
-    return this.generate(PRICE_ESTIMATE_SYSTEM, priceEstimatePrompt(items), priceEstimateSchema)
+  estimatePrices(
+    items: Parameters<AiProvider['estimatePrices']>[0],
+    opts: AiCallOptions = {},
+  ): Promise<PriceEstimateResult> {
+    return this.generate(
+      withResearch(PRICE_ESTIMATE_SYSTEM, PRICE_RESEARCH, opts.webSearch),
+      priceEstimatePrompt(items),
+      opts.webSearch ? priceResearchSchema : priceEstimateSchema,
+      opts,
+    )
   }
 
-  estimateStorage(items: Parameters<AiProvider['estimateStorage']>[0]) {
-    return this.generate(STORAGE_ESTIMATE_SYSTEM, storageEstimatePrompt(items), storageEstimateSchema)
+  estimateStorage(
+    items: Parameters<AiProvider['estimateStorage']>[0],
+    opts: AiCallOptions = {},
+  ): Promise<StorageEstimateResult> {
+    return this.generate(
+      withResearch(STORAGE_ESTIMATE_SYSTEM, STORAGE_RESEARCH, opts.webSearch),
+      storageEstimatePrompt(items),
+      opts.webSearch ? storageResearchSchema : storageEstimateSchema,
+      opts,
+    )
   }
 
   classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
     return this.generate(RECIPE_CLASSIFY_SYSTEM, recipeClassifyPrompt(items), recipeClassifySchema)
   }
 
-  private async generate<T>(system: string, prompt: string, schema: ZodType<T>): Promise<T> {
+  private async generate<T>(system: string, prompt: string, schema: ZodType<T>, opts: AiCallOptions = {}): Promise<T> {
     const now = this.opts.now ?? Date.now
     const started = now()
     const jsonSchema = looseJsonSchema(schema)
+    const webSearch = opts.webSearch === true
+    const budget = webSearch ? RESEARCH_BUDGET_MS : BUDGET_MS
+    const perAttempt = webSearch ? RESEARCH_ATTEMPT_MS : ATTEMPT_MS
     let lastError: unknown
     for (let attempt = 0; attempt < 2; attempt++) {
-      const remaining = BUDGET_MS - (now() - started)
+      const remaining = budget - (now() - started)
       if (attempt > 0 && remaining < MIN_RETRY_MS) break
-      const result = await this.call({ system, prompt, jsonSchema }, Math.min(ATTEMPT_MS, remaining))
+      const result = await this.call({ system, prompt, jsonSchema, webSearch }, Math.min(perAttempt, remaining))
       const parsed = schema.safeParse(result)
       if (parsed.success) return parsed.data
       lastError = parsed.error
@@ -93,7 +132,10 @@ export class CursorProvider implements AiProvider {
     throw new AiError('AI の応答を読み取れませんでした。もう一度試してください', String(lastError))
   }
 
-  private async call(body: { system: string; prompt: string; jsonSchema: unknown }, timeoutMs: number) {
+  private async call(
+    body: { system: string; prompt: string; jsonSchema: unknown; webSearch: boolean },
+    timeoutMs: number,
+  ) {
     let res: Response
     try {
       res = await this.opts.fetch(
