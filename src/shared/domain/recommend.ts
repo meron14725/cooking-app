@@ -47,6 +47,8 @@ export type RecIngredient = {
   gramsPerUnit?: number | null
   /** 代表量あたりの価格（円）。未設定は null（docs/design/10-cost.md） */
   priceYen?: number | null
+  /** 削除済みの食材（レシピから参照されていることがあるので渡す）。点数の仮の単価の中央値には入れない */
+  archived?: boolean
   /** 登録順（最初に登録されたものが先頭） */
   packageUnits: RecPackageUnit[]
 }
@@ -201,13 +203,16 @@ const median = (values: number[]): number => {
 /**
  * 点数で使う単価（基準単位あたりの円）。価格があればその単価。未設定なら、同じ分類・同じ基準単位の食材の単価の中央値、
  * それもなければ FALLBACK_PRICE_PER_PACK_YEN を代表量の価格とみなす（未設定の食材を使う案が安く見えないように）。
+ * 中央値には削除済みの食材の価格は入れない（もう買わない食材の古い価格で、今の相場がずれないように）。
  * 画面に出す金額には使わない
  */
 export function scoreUnitPrices(ingredients: Map<string, RecIngredient>): Map<string, number> {
   const groups = new Map<string, number[]>()
   const groupKey = (ing: RecIngredient) => `${ing.category ?? ''}\u0000${ing.unit}`
   for (const ing of ingredients.values()) {
-    if (ing.isStaple || ing.priceYen === null || ing.priceYen === undefined || ing.priceYen <= 0) continue
+    if (ing.isStaple || ing.archived || ing.priceYen === null || ing.priceYen === undefined || ing.priceYen <= 0) {
+      continue
+    }
     const list = groups.get(groupKey(ing)) ?? []
     list.push(ing.priceYen / representativeQuantity(ing))
     groups.set(groupKey(ing), list)

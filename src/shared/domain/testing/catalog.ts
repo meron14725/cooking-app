@@ -2,6 +2,7 @@
  * 提案 v2 のテストと調整のスクリプト（npm run rec:try）で使う、架空の献立データ。
  * 公式レシピの本文やデータは使わない（料理名と材料の組み合わせは一般的なもの）
  */
+import { priceByRule } from '../priceRules'
 import type { RecIngredient, RecRecipe } from '../recommend'
 
 const pkg = (id: string, label: string, quantity: number) => [{ id, label, quantity, isDefault: true }]
@@ -442,4 +443,24 @@ export function syntheticCatalog(n: number): RecRecipe[] {
       parts: Array.from({ length: count }, (_, k) => [ids[(i * 5 + k * 3) % ids.length] as string, 50 + k * 30]),
     })
   })
+}
+
+/**
+ * まとめて推定が済んだ形の食材（docs/design/10-cost.md）。辞書で決まる食材は辞書の値、
+ * 決まらない食材（g の野菜・カレールウ）は AI が答えそうな値を入れる。常備品は入れない
+ */
+const AI_LIKE_PRICES: Record<string, number> = {
+  cabbage: 250, // 1000g（1 個）
+  daikon: 200, // 1000g（1 本）
+  shimeji: 100, // 100g（1 パック）
+  curryRoux: 250, // 200g（1 箱）
+}
+export function pricedFixtureIngredients(): Map<string, RecIngredient> {
+  return new Map(
+    [...fixtureIngredients].map(([id, ing]) => {
+      if (ing.isStaple) return [id, ing]
+      const rule = priceByRule({ ...ing, aliases: [], gramsPerUnit: ing.gramsPerUnit ?? null })
+      return [id, { ...ing, priceYen: rule ?? AI_LIKE_PRICES[id] ?? null }]
+    }),
+  )
 }
