@@ -245,7 +245,7 @@ describe('多様性と別の案（食数付きの exclude）', () => {
     expect(cloneCount(next)).toBe(0)
   })
 
-  it('食数付きなら、同じ料理でも食数が違う案は出せる。古い形（ID だけ）なら料理の組み合わせごと除く', () => {
+  it('食数付きでも古い形（ID だけ）でも、前に出した料理の組み合わせは食数に関係なく除く', () => {
     const small = [get('curry'), get('spinachOhitashi'), get('broccoliSteam')]
     const addedSet = (p: { recipes: { recipeId: string; role: string }[] }) =>
       p.recipes
@@ -253,6 +253,8 @@ describe('多様性と別の案（食数付きの exclude）', () => {
         .map((x) => x.recipeId)
         .sort()
         .join()
+    // 除く前は、ほうれん草だけを足す案がある
+    expect(run({ anchors, catalog: small }).proposals.map(addedSet)).toContain('spinachOhitashi')
     const withServings = run({
       anchors,
       catalog: small,
@@ -263,16 +265,23 @@ describe('多様性と別の案（食数付きの exclude）', () => {
         ],
       ],
     })
-    const keys = withServings.proposals.map((p) =>
+    expect(withServings.proposals.map(addedSet)).not.toContain('spinachOhitashi')
+    const idsOnly = run({ anchors, catalog: small, exclude: [['curry', 'spinachOhitashi']] })
+    expect(idsOnly.proposals.map(addedSet)).not.toContain('spinachOhitashi')
+  })
+
+  it('1 回の案の中に、同じ料理の組み合わせで食数だけ違う案は並ばない', () => {
+    // 候補が少なく刻み 1 だと、食数違いの案ばかりになりやすい
+    const small = [get('curry'), get('spinachOhitashi'), get('broccoliSteam')]
+    const r = run({ anchors, catalog: small, targetMeals: 8, options: { servingsStep: 1, maxProposals: 5 } })
+    const sets = r.proposals.map((p) =>
       p.recipes
-        .map((x) => `${x.recipeId}:${x.servings}`)
+        .map((x) => x.recipeId)
         .sort()
         .join(),
     )
-    expect(keys).not.toContain(['curry:4', 'spinachOhitashi:2'].join())
-    expect(withServings.proposals.map(addedSet)).toContain('spinachOhitashi')
-    const idsOnly = run({ anchors, catalog: small, exclude: [['curry', 'spinachOhitashi']] })
-    expect(idsOnly.proposals.map(addedSet)).not.toContain('spinachOhitashi')
+    expect(sets.length).toBeGreaterThan(1)
+    expect(new Set(sets).size).toBe(sets.length)
   })
 
   it('別の案を重ねると、枠が広がり、いろいろな料理が出る。同じ料理と食数の案は二度出ない', () => {

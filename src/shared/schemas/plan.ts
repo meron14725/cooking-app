@@ -48,8 +48,9 @@ export type PlanCreateInput = z.infer<typeof planCreateSchema>
 export const recommendationsInputSchema = z.object({
   maxProposals: z.number().int().min(1).max(10).optional(),
   /**
-   * もう出した案（「別の案を出す」）。案ごとの料理と食数（{ recipeId, servings }[]）。これらを除いた次点を返す。
-   * 古い形（レシピ ID の配列）も受け付け、そのときは食数を問わずに料理の組み合わせで除く
+   * もう出した案（「別の案を出す」）。案ごとの料理と食数（{ recipeId, servings }[]）。
+   * 同じ料理の組み合わせは食数に関係なく除いた次点を返す（食数は、似ている度合いを比べるのに使う）。
+   * 古い形（レシピ ID の配列）も受け付ける
    */
   exclude: z
     .array(

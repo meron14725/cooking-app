@@ -623,7 +623,8 @@ export function recommend(input: RecommendInput): RecommendResult {
   const featureOf = (r: RecRecipe) => features.get(r.id) as RecipeFeatures
 
   // ---- 前に出した案 ----
-  // 新しい形は「固定を除いた料理と食数」、古い形は「anchor と固定を除いた料理の組み合わせ」で比べる
+  // 料理の組み合わせ（anchor と固定を除いた料理）で比べ、食数だけ違う案も出した案として除く。
+  // 新しい形（食数付き）の食数は、似ている度合い（食数の形）を比べるのに使う
   const exactKey = (entries: { recipeId: string; servings: number }[]) =>
     entries
       .filter((e) => !fixedIds.has(e.recipeId))
@@ -636,16 +637,24 @@ export function recommend(input: RecommendInput): RecommendResult {
       .sort()
       .join('\n')
   const exclude = input.exclude ?? []
-  const excludedExact = new Set<string>()
-  const excludedSets = new Set<string>()
-  for (const p of exclude) {
-    if (p.length > 0 && typeof p[0] !== 'string')
-      excludedExact.add(exactKey(p as { recipeId: string; servings: number }[]))
-    else excludedSets.add(setKey(p as string[]))
-  }
+  const idsOf = (p: ExcludedProposal) =>
+    p.length > 0 && typeof p[0] !== 'string'
+      ? (p as { recipeId: string; servings: number }[]).map((e) => e.recipeId)
+      : (p as string[])
+  const excludedSets = new Set(exclude.map((p) => setKey(idsOf(p))))
   const keyOf = (s: MealScored) => exactKey(s.items.map((i) => ({ recipeId: i.recipe.id, servings: i.servings })))
   const addedKeyOf = (s: MealScored) => setKey(s.added.map((r) => r.id))
-  const isExcluded = (s: MealScored) => excludedExact.has(keyOf(s)) || excludedSets.has(addedKeyOf(s))
+  const isExcluded = (s: MealScored) => excludedSets.has(addedKeyOf(s))
+  /** 同じ料理の組み合わせは、点数のいちばん良い食数の 1 つだけ残す（results は点数順） */
+  const uniqueSets = (list: MealScored[]) => {
+    const seen = new Set<string>()
+    return list.filter((s) => {
+      const key = addedKeyOf(s)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
 
   const profileOf = (items: { recipe: RecRecipe; servings: number | null }[]): Profile => {
     const added = items.filter((i) => !baseIds.has(i.recipe.id)).map((i) => featureOf(i.recipe))
@@ -854,7 +863,7 @@ export function recommend(input: RecommendInput): RecommendResult {
   const aiSuggestionRecommended =
     candidates.length === 0 ||
     (best?.evaluation.maxPerishableLeftoverPacks ?? 0) >= SCORE_WEIGHTS.aiSuggestionLeftoverPacks - EPS
-  let remaining = found.results.filter((s) => !isExcluded(s))
+  let remaining = uniqueSets(found.results.filter((s) => !isExcluded(s)))
   // 探し直しは評価の回数を減らし、呼び出し全体の上限に達したらやめる
   for (
     let extra = 0;
@@ -863,7 +872,7 @@ export function recommend(input: RecommendInput): RecommendResult {
   ) {
     round++
     found = search(round, MAX_EVALUATIONS / 2)
-    remaining = found.results.filter((s) => !isExcluded(s))
+    remaining = uniqueSets(found.results.filter((s) => !isExcluded(s)))
   }
   // 広げても出していない案が残らなければ、出し尽くした（次も同じ結果なので hasMore は false）
   if (remaining.length === 0) return { proposals: [], aiSuggestionRecommended, hasMore: false, evaluations }
@@ -876,7 +885,7 @@ export function recommend(input: RecommendInput): RecommendResult {
     let choice: (typeof pool)[number] | null = null
     let choiceValue = Number.POSITIVE_INFINITY
     for (const c of pool) {
-      if (pickedKeys.has(keyOf(c.s))) continue
+      if (pickedKeys.has(addedKeyOf(c.s))) continue
       let maxSim = 0
       for (const other of [...picked.map((p) => p.profile), ...previous]) {
         maxSim = Math.max(maxSim, similarity(c.profile, other))
@@ -889,9 +898,9 @@ export function recommend(input: RecommendInput): RecommendResult {
     }
     if (!choice) break
     picked.push(choice)
-    pickedKeys.add(keyOf(choice.s))
+    pickedKeys.add(addedKeyOf(choice.s))
   }
-  const left = new Set(remaining.map(keyOf))
+  const left = new Set(remaining.map(addedKeyOf))
   return {
     proposals: picked.map((p) => asProposal(p.s)),
     aiSuggestionRecommended,
