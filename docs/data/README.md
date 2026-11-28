@@ -105,3 +105,20 @@ npx wrangler d1 execute cooking-app --remote --file .research/apply.sql
 ```sh
 npx wrangler d1 time-travel restore cooking-app --bookmark=<3 で控えた bookmark>
 ```
+
+## 食材マスタの手直し（`fixes/`）
+
+COCORO の取り込みで崩れた名前（「ゆでだこ」が「だこ」になったなど）と、分類の誤り（ツナ缶が肉、牛乳が肉など）を直す SQL を `docs/data/fixes/` に置く。リポジトリには直す行だけを書く。
+
+- 名前: `WHERE name = <直す前の名前>` で当てる。手で名前を変えた食材と、直したあとの名前の食材がもうあるものは変えない。前の名前は別名（aliases）に足す（取り込みで同じ名前が来ても当たるように）
+- 分類: `WHERE category = <直す前の分類>` で当て、手で分類を直した食材（`attributes_source = 'manual'`）は変えない。直したら画面で分類を変えたときと同じく `attributes_source = 'manual'` にし、日持ちは `manual`・`researched` なら残し、それ以外（`rule`・`ai`）は未見直し（NULL）に戻して次のまとめて推定で入れ直す。価格は変えない
+- 削除済みの食材は変えない。バインド変数は使わない。何度流しても同じ結果になる
+
+調べた値の反映（上の手順 4）とはどちらが先でもよい（反映は id で当て、CSV の分類列は check にしか使わない）。直したあとの check では、分類を直した行に「分類が本番と違う」の警告が出る。
+
+```sh
+# 3 と同じくバックアップしてから
+npx wrangler d1 execute cooking-app --remote --file docs/data/fixes/2026-11-28-names-categories.sql
+# 直したあとを確かめる
+npx wrangler d1 execute cooking-app --remote --command "SELECT id, name, category, attributes_source, storage_source, price_source FROM ingredients WHERE id IN ('cocoro-ing-86f9291b03fada7c','cocoro-ing-805f098baf856ecc','cocoro-ing-d83186c382956785','cocoro-ing-036510f351f39314','cocoro-ing-17981125f32ac00e','cocoro-ing-1712a3ce4ee5a8fd','cocoro-ing-e29c547b01db675d','cocoro-ing-a12693efc2b59c15','cocoro-ing-607101f2db7772bb','cocoro-ing-ddf0221dc4ddb6c0','cocoro-ing-d6fc79f54304d5c5','cocoro-ing-2dba159552bc9087','cocoro-ing-c8afaca72bca28bf','cocoro-ing-e4cadd5652622bac','cocoro-ing-a82ea8c2a576bcac','cocoro-ing-3856f75b56b5aae4','cocoro-ing-d641ac57da3a45a1','cocoro-ing-074d591a6c97f50f','cocoro-ing-94839dac97c65692','cocoro-ing-bfb3504855a1e61d','cocoro-ing-a4fe68af5dd20369','cocoro-ing-ad648b690e61443d','cocoro-ing-bd6b9237ec46fb69','cocoro-ing-d4671649dd9b1617','cocoro-ing-c53cce4b3f0a9f47','cocoro-ing-c9280853bf8f115c','cocoro-ing-8fdeea17283e59df','cocoro-ing-24c150950eb7dbd7','cocoro-ing-76dbc35de5a3b59e','cocoro-ing-32d8c87c762eecd0','cocoro-ing-c6de1ebb9d25ae64','cocoro-ing-6a19eef6506c92c8','cocoro-ing-b1c61971b6e12175','cocoro-ing-9c18aa122a4a3cad','cocoro-ing-2dd27371446f8a6a') ORDER BY category, name"
+```
