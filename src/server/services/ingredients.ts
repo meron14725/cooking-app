@@ -64,6 +64,21 @@ const STORAGE_FIELDS = [
   'defaultLocation',
 ] as const
 
+/**
+ * 日持ちの出どころ（docs/design/11-storage-days.md）
+ * - 日持ちか保存場所を画面で変えたら manual
+ * - 分類だけを変えたら、手で入れた日持ち（manual）は残し、それ以外は未見直し（NULL）に戻して次のまとめて推定で入れ直す
+ */
+function nextStorageSource(
+  current: Pick<IngredientRow, 'category' | 'storageSource'>,
+  nextCategory: IngredientRow['category'],
+  storageEdited: boolean,
+): IngredientRow['storageSource'] {
+  if (storageEdited) return 'manual'
+  if (nextCategory !== current.category && current.storageSource !== 'manual') return null
+  return current.storageSource
+}
+
 function ingredientValues(input: IngredientInputParsed) {
   const { packageUnits: _, priceYen: __, ...rest } = input
   return rest
@@ -229,6 +244,7 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
   const edited = input.category !== current.category || (input.gramsPerUnit ?? null) !== current.gramsPerUnit
   // 日持ちか保存場所を画面で変えたら manual（docs/design/11-storage-days.md）
   const storageEdited = STORAGE_FIELDS.some((k) => (input[k] ?? null) !== current[k])
+  const storageSource = nextStorageSource(current, input.category, storageEdited)
   await db.batch([
     db
       .update(ingredients)
@@ -236,7 +252,7 @@ export async function updateIngredient(db: Db, id: string, input: IngredientInpu
         ...ingredientValues(input),
         ...price,
         ...(edited ? { attributesSource: 'manual' as const } : {}),
-        ...(storageEdited ? { storageSource: 'manual' as const } : {}),
+        ...(storageSource !== current.storageSource ? { storageSource } : {}),
       })
       .where(eq(ingredients.id, id)),
     db
