@@ -28,7 +28,7 @@ export function useCurrentPlan() {
 
 /**
  * 提案は保存しない計算結果。在庫やレシピが変わったら取り直す。
- * exclude はもう出した案（「別の案を出す」。料理と食数）。それを除いた次の案が返る。
+ * exclude はもう出した案（「別の案を出す」。料理と食数）。同じ料理の組み合わせを食数に関係なく除いた次の案が返る。
  * fixed は鍵で固定した料理と食数。必ず含めて残りを選び直す
  */
 export function useRecommendations(

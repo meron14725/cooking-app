@@ -313,6 +313,24 @@ describe('合計◯食', () => {
     })
   })
 
+  it('食べたい料理の食数だけで合計を超えたら案内を出し、合計を増やすと消える', async () => {
+    mockApi((path) => {
+      if (path === '/plans/current') return { plan: null }
+      if (path === '/plans/defaults') return { targetMeals: 2 }
+      return { items: [summary] }
+    })
+    renderRoutes({ '/plan': <PlanPage /> }, '/plan')
+    fireEvent.click(await screen.findByRole('checkbox', { name: '肉じゃが を食べたい料理にする' }))
+    // 2 食分 = 合計 2 食はちょうどなので出さない
+    expect(screen.queryByText(/選んだ料理だけで/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '肉じゃが の食数を増やす' }))
+    expect(screen.getByRole('status').textContent).toBe(
+      '選んだ料理だけで4食あります（合計は2食）。合計を増やすか、料理や食数を減らしてください',
+    )
+    fireEvent.click(screen.getByRole('button', { name: '合計の食数を増やす' }))
+    expect(screen.queryByText(/選んだ料理だけで/)).toBeNull()
+  })
+
   it('提案の画面で合計を変えると献立に保存し、1 回目から提案し直す', async () => {
     sessionStorage.setItem('plan-proposals:p1', JSON.stringify({ anchors: 'a:1||6', round: 2, shown: [['a', 'b']] }))
     let current = plan
@@ -342,7 +360,7 @@ describe('合計◯食', () => {
 })
 
 describe('献立の提案: 食数だけ違う案', () => {
-  it('同じ料理の組み合わせで食数だけ違う案は 1 枚だけ出し、別の案を出すときは両方を出した案として送る', async () => {
+  it('同じ料理の組み合わせで食数だけ違う案は 1 枚だけ出し、出した案と番号はカードに出したものだけで数える', async () => {
     const twice = { ...proposal('b'), recipes: proposal('b').recipes.map((r) => ({ ...r, servings: 2 })) }
     const fetch = mockApi((path) => {
       if (path === '/plans/current') return { plan }
@@ -356,7 +374,15 @@ describe('献立の提案: 食数だけ違う案', () => {
     fireEvent.click(screen.getByRole('button', { name: '別の案を出す' }))
     await waitFor(() => {
       const calls = fetch.mock.calls.filter(([url]) => String(url).endsWith('/recommendations'))
-      expect(JSON.parse(String(calls[1]?.[1]?.body)).exclude).toHaveLength(3)
+      expect(JSON.parse(String(calls[1]?.[1]?.body)).exclude).toEqual(
+        ['b', 'c'].map((id) => [
+          { recipeId: 'a', servings: 1 },
+          { recipeId: id, servings: 1 },
+        ]),
+      )
     })
+    // 1 回目に出したのは 2 案なので、2 回目は案3 から（案4 からにならない）
+    expect(await screen.findByRole('radio', { name: '案3を選ぶ' })).toBeTruthy()
+    expect(screen.queryByRole('radio', { name: '案5を選ぶ' })).toBeNull()
   })
 })

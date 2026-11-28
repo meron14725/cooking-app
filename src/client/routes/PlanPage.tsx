@@ -197,6 +197,8 @@ function AnchorPicker() {
   const defaults = usePlanDefaults()
   const [targetMeals, setTargetMeals] = useState<number | null>(null)
   const meals = targetMeals ?? defaults.data?.targetMeals ?? DEFAULT_TARGET_MEALS
+  // 食べたい料理だけで合計を超えたら案内する（このまま作ると、食べたい料理の食数を合計に合わせて配り直す）
+  const pickedMeals = picked.reduce((sum, p) => sum + Math.min(p.servings, MAX_SERVINGS_PER_DISH), 0)
 
   const toggle = (id: string, title: string) =>
     setPicked((cur) =>
@@ -246,6 +248,11 @@ function AnchorPicker() {
           </ul>
         )}
         <TargetMeals value={meals} onChange={setTargetMeals} />
+        {pickedMeals > meals && (
+          <p role="status" className="rounded-[18px] bg-sunken px-4 py-2.5 text-sm text-ink">
+            選んだ料理だけで{pickedMeals}食あります（合計は{meals}食）。合計を増やすか、料理や食数を減らしてください
+          </p>
+        )}
       </section>
 
       <div className="flex flex-col gap-3.5">
@@ -582,9 +589,8 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   // 案はレシピの並びで持つ（計算し直して並びや件数が変わっても、選んだ案を取り違えない）
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // 届いた案。同じ料理の組み合わせで食数だけ違う案は 1 つだけカードに出す（出した案としては全部覚える）
-  const fetched = recs.data?.proposals ?? []
-  const proposals = uniqueByRecipes(fetched)
+  // 届いた案。同じ料理の組み合わせで食数だけ違う案は API が 1 つにまとめるが、念のため画面でもまとめる
+  const proposals = uniqueByRecipes(recs.data?.proposals ?? [])
   const hasMore = recs.data?.hasMore ?? false
 
   // カードで変えた食分（料理ごと）。食べたい料理が変わったら捨てる
@@ -640,7 +646,8 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
   )
 
   function showOthers() {
-    setRounds(nextRound(rounds, fetched.map(shownOf)))
+    // 画面に出した案だけを覚える（番号もこの数から続ける）。API は料理の組み合わせで除くので、食数違いも出ない
+    setRounds(nextRound(rounds, proposals.map(shownOf)))
     // 選択は新しい 1 番目に戻す
     setPickedKey(null)
     setError(null)
@@ -650,7 +657,7 @@ function Proposals({ plan, onChosen }: { plan: Plan; onChosen: () => void }) {
     setPickedKey(null)
     setError(null)
   }
-  // 案の番号は回をまたいで続ける（2 回目の 1 番目は「案4」）
+  // 案の番号は回をまたいで続ける（2 回目の 1 番目は「案4」）。出した案は画面に出したものだけなので番号は飛ばない
   const offset = rounds.shown.length
   const found = proposals.findIndex((p) => proposalKey(p) === pickedKey)
   const picked = found === -1 ? 0 : found
