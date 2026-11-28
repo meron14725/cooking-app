@@ -177,3 +177,42 @@ describe('2026-11-28-names-categories.sql', () => {
     expect(t.get('cocoro-ing-ad648b690e61443d')).toMatchObject({ category: 'meat', storage_source: 'rule' })
   })
 })
+
+describe('2026-11-28-canned-goods.sql', () => {
+  const file = '2026-11-28-canned-goods.sql'
+
+  it('魚の缶詰を乾物・缶詰に移す。rule の日持ちは未見直しに戻し、researched と価格は残す。手で直した・分類が違う食材は変えない', () => {
+    const t = setup([
+      // さばの水煮
+      {
+        id: 'cocoro-ing-7861d9e71d0b66de',
+        name: 'さばの水煮',
+        category: 'fish',
+        price_yen: 247,
+        price_source: 'researched',
+      },
+      // ツナ缶（反映のあと）
+      { id: 'cocoro-ing-4078dede92d7b427', name: 'ツナ缶', category: 'fish', storage_source: 'researched' },
+      // ツナ（手で分類を直した）
+      { id: 'cocoro-ing-8d7330c954421f74', name: 'ツナ', category: 'fish', attributes_source: 'manual' },
+      // ツナ水煮缶（もう魚でない）
+      { id: 'cocoro-ing-bf82ec41c9cb988c', name: 'ツナ水煮缶', category: 'other' },
+    ])
+    t.run(file)
+    expect(t.get('cocoro-ing-7861d9e71d0b66de')).toMatchObject({
+      category: 'dry',
+      attributes_source: 'manual',
+      storage_source: null,
+      storage_source_urls: '[]',
+      price_yen: 247,
+      price_source: 'researched',
+    })
+    expect(t.get('cocoro-ing-4078dede92d7b427')).toMatchObject({
+      category: 'dry',
+      storage_source: 'researched',
+      storage_source_urls: '["https://example.com/storage"]',
+    })
+    expect(t.get('cocoro-ing-8d7330c954421f74')).toMatchObject({ category: 'fish', storage_source: 'rule' })
+    expect(t.get('cocoro-ing-bf82ec41c9cb988c')).toMatchObject({ category: 'other', attributes_source: 'rule' })
+  })
+})

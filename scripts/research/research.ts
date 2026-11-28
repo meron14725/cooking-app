@@ -203,16 +203,32 @@ const hasStorageValue = (p: Parsed) =>
   p.location !== null
 
 /**
- * 日持ちを反映できるだけそろっているか。保存場所・冷凍可否は必須。冷蔵日数は必須（常温保存で空なら常温日数を使う。
+ * 冷凍可否に出典がなくても日持ちを反映する分類（ユーザー決定 2026-11-28）。メーカーが未開封の賞味期限だけを
+ * 公表していて冷凍の可否を書かないことが多いため。この分類で冷凍可否が空なら、保存場所と冷蔵日数（常温なら常温日数）
+ * だけを入れ、冷凍可否・冷凍日数は本番の値のまま触らない
+ */
+export const FREEZE_OPTIONAL_CATEGORIES: ReadonlySet<Category> = new Set<Category>(['seasoning', 'dry'])
+
+/**
+ * 日持ちを反映できるだけそろっているか。保存場所・冷凍可否は必須（FREEZE_OPTIONAL_CATEGORIES は冷凍可否なしでよい。
+ * ただし保存場所が冷凍・冷凍日数だけある行は除く）。冷蔵日数は必須（常温保存で空なら常温日数を使う。
  * アプリの辞書と同じ「常温で持つ食材は冷蔵でも同じ日数持つ」扱い）。冷凍できるなら冷凍日数、常温保存なら常温日数も必須
  */
-export function storageComplete(p: Parsed): boolean {
-  if (p.location === null || p.canFreeze === null) return false
+export function storageComplete(p: Parsed, category?: Category): boolean {
+  if (p.location === null) return false
+  if (p.canFreeze === null) {
+    if (!category || !FREEZE_OPTIONAL_CATEGORIES.has(category)) return false
+    if (p.location === 'freezer' || p.freezerDays !== null) return false
+  }
   if (p.fridgeDays === null && !(p.location === 'pantry' && p.pantryDays !== null)) return false
   if (p.canFreeze && p.freezerDays === null) return false
   if (p.location === 'pantry' && p.pantryDays === null) return false
   return true
 }
+
+/** CSV の分類列（「調味料」など）→ 分類の値 */
+export const categoryOfLabel = (label: string): Category | undefined =>
+  CATEGORY_OPTIONS.find((o) => o.label === label)?.value
 
 /** 分類ごとの、ありそうな日持ちの幅（外れたら警告。値は捨てない） */
 const PLAUSIBLE_FRIDGE: Partial<Record<Category, [number, number]>> = {
@@ -249,7 +265,7 @@ export function checkRows(rows: CsvRow[], exported?: ExportedIngredient[]): Chec
     const p = parseRow(row, issues)
     parsed.set(row.id, p)
 
-    const category = CATEGORY_OPTIONS.find((o) => o.label === row.分類)?.value
+    const category = categoryOfLabel(row.分類)
     if (!category) issue('error', `分類が分からない: ${row.分類}`)
 
     const exp = byId?.get(row.id)
@@ -273,11 +289,11 @@ export function checkRows(rows: CsvRow[], exported?: ExportedIngredient[]): Chec
       if ((category === 'meat' || category === 'fish') && p.location === 'pantry') {
         issue('error', `${row.分類}なのに保存場所が常温`)
       }
-      if (storageComplete(p)) storageRows++
+      if (storageComplete(p, category)) storageRows++
       else
         issue(
           'warn',
-          '日持ちがそろっていないので反映しない（保存場所・冷凍可否・冷蔵日数、冷凍可なら冷凍日数、常温なら常温日数）',
+          '日持ちがそろっていないので反映しない（保存場所・冷凍可否〈調味料・乾物・缶詰はなくてよい〉・冷蔵日数、冷凍可なら冷凍日数、常温なら常温日数）',
         )
     }
 
@@ -337,14 +353,21 @@ export function buildSql(rows: CsvRow[], exported: ExportedIngredient[], opts: S
     const exp = byId.get(row.id)
     if (!p || !exp) continue
     const urls = JSON.stringify(p.urls.slice(0, MAX_SOURCE_URLS))
-    if (storageComplete(p)) {
+    if (storageComplete(p, categoryOfLabel(row.分類))) {
+      // 冷凍可否が空（FREEZE_OPTIONAL_CATEGORIES）なら、冷凍可否・冷凍日数は本番の値のまま
+      const freeze =
+        p.canFreeze === null
+          ? []
+          : [
+              `can_freeze = ${lit(p.canFreeze)}`,
+              `freezer_days = ${lit(p.canFreeze ? p.freezerDays : null)}`,
+              ...(p.canFreeze ? [] : ['prepped_freezer_days = NULL']),
+            ]
       const set = [
-        `can_freeze = ${lit(p.canFreeze)}`,
+        ...freeze,
         `fridge_days = ${lit(p.fridgeDays ?? p.pantryDays)}`,
-        `freezer_days = ${lit(p.canFreeze ? p.freezerDays : null)}`,
         `pantry_days = ${lit(p.pantryDays)}`,
         `default_location = ${lit(p.location)}`,
-        ...(p.canFreeze ? [] : ['prepped_freezer_days = NULL']),
         `storage_source = 'researched'`,
         ...(opts.sourceUrls ? [`storage_source_urls = ${lit(urls)}`] : []),
         `updated_at = ${lit(opts.now)}`,
