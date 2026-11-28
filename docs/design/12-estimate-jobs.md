@@ -38,6 +38,8 @@
 
 - `POST /api/recipes/attributes/estimate`（1 回分だけ進める）は、スクリプトとテスト向けに残す。画面は使わない
 - `GET current` は、D1 では実行中なのに Workflow のインスタンスが終わっている（`errored` / `terminated` / `complete` / 見つからない）ときは、`failed` にして返す。実行中のまま残ると次のジョブを始められなくなるため
+  - インスタンスの状態を一時的に読めないだけ（見つからない以外のエラー）なら実行中のまま返す。ただし行の `updated_at` が `STALE_JOB_MS`（60 分。1 回分は時間切れ 10 分 × 4 回と待ち時間で 45 分ほどかかりうる）より古ければ止まったとみなして `failed` にする
+  - `updated_at` は回を進めるたび（件数を足すとき）と終わったときに進む
 
 ## Workflow の中身（`EstimateWorkflow` → `runEstimateJob`）
 
@@ -47,7 +49,7 @@
 2. `record-N`: 直した件数を足し、残りを入れる（件数を足すのを AI の呼び出しと分け、リトライで二重に足さない）
 
 - 全段の残りが 0 になったら `done`
-- step のリトライは 3 回まで（20 秒から指数バックオフ）。AI の設定がないなど、やり直しても同じ失敗は `NonRetryableError` ですぐ失敗にする
+- step のリトライは 3 回まで（20 秒から指数バックオフ）。AI の設定がないなど、やり直しても同じ失敗は `NonRetryableError` ですぐ失敗にする（`isPermanentJobError`: `AI_NOT_CONFIGURED` と 4xx）。Cursor の Container が code なしの 503 を返したときは起動中・不調として `AI_UNAVAILABLE` にし、リトライする
 - リトライしてもだめなら `failed` にし、理由を `error` に入れる。それまでに保存した推定と件数は残る
 - 終わらせるときは `WHERE status = 'running'` を付け、止めたジョブを完了や失敗で上書きしない
 

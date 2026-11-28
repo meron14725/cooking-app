@@ -114,7 +114,12 @@ export class CursorProvider implements AiProvider {
     }
     const reply = (await res.json().catch(() => ({}))) as StructuredReply
     if (res.status === 503) {
-      throw new ApiError(503, reply.error?.code ?? 'AI_NOT_CONFIGURED', reply.error?.message ?? 'AI が使えません')
+      // code のない 503 は Container の起動中・不調など一時的なものとして扱う（設定がないときは Container が AI_NOT_CONFIGURED を返す）
+      throw new ApiError(
+        503,
+        reply.error?.code ?? 'AI_UNAVAILABLE',
+        reply.error?.message ?? 'AI が一時的に使えません。少し待ってもう一度試してください',
+      )
     }
     if (res.status === 504) throw new AiError('AI が時間内に終わりませんでした。もう一度試してください')
     if (!res.ok) throw new AiError('AI がエラーを返しました', { status: res.status, error: reply.error })

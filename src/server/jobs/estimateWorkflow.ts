@@ -8,18 +8,13 @@ import { NonRetryableError } from 'cloudflare:workflows'
 import type { EstimateJobParams } from '../../shared/schemas/estimateJob'
 import { getProvider } from '../ai'
 import { createDb } from '../db/client'
-import { ApiError } from '../errors'
-import { runEstimateJob } from '../services/estimateJobs'
+import { isPermanentJobError, runEstimateJob } from '../services/estimateJobs'
 
 /** 1 回分（AI に limit 件聞く）のリトライ。AI の失敗はしばらく待てば直ることが多いので、間を空けて 3 回まで */
 const STEP_CONFIG = {
   retries: { limit: 3, delay: '20 seconds', backoff: 'exponential' },
   timeout: '10 minutes',
 } as const
-
-/** 設定がない・入力が悪いなど、やり直しても同じ結果になる失敗 */
-const isPermanent = (err: unknown) =>
-  err instanceof ApiError && (err.code === 'AI_NOT_CONFIGURED' || (err.status >= 400 && err.status < 500))
 
 export class EstimateWorkflow extends WorkflowEntrypoint<Env, EstimateJobParams> {
   async run(event: Readonly<WorkflowEvent<EstimateJobParams>>, step: WorkflowStep) {
@@ -31,7 +26,7 @@ export class EstimateWorkflow extends WorkflowEntrypoint<Env, EstimateJobParams>
           try {
             return (await fn()) as never
           } catch (err) {
-            if (isPermanent(err)) throw new NonRetryableError(err instanceof Error ? err.message : String(err))
+            if (isPermanentJobError(err)) throw new NonRetryableError(err instanceof Error ? err.message : String(err))
             throw err
           }
         }) as Promise<T>,

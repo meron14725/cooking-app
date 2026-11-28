@@ -70,6 +70,10 @@ describe('CursorProvider', () => {
         fetch: fakeAgent([json({ error: { code: 'AI_NOT_CONFIGURED', message: 'no key' } }, 503)]).fetch,
       }).estimateCalories(input),
     ).rejects.toMatchObject({ status: 503, code: 'AI_NOT_CONFIGURED' })
+    // code のない 503 は一時的な不調（まとめて推定のジョブはリトライする）
+    await expect(
+      new CursorProvider({ fetch: fakeAgent([json({}, 503)]).fetch }).estimateCalories(input),
+    ).rejects.toMatchObject({ status: 503, code: 'AI_UNAVAILABLE' })
     await expect(
       new CursorProvider({ fetch: fakeAgent([json({ error: { code: 'TIMEOUT' } }, 504)]).fetch }).estimateCalories(
         input,

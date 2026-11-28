@@ -3,6 +3,8 @@ import type { EstimateJob } from '../../shared/schemas/estimateJob'
 import type { Ingredient, IngredientInput } from '../../shared/schemas/ingredient'
 import { FakeProvider } from '../ai/fake'
 import { AiError } from '../ai/provider'
+import { ApiError } from '../errors'
+import { isPermanentJobError, STALE_JOB_MS } from '../services/estimateJobs'
 import { createTestApi } from '../testing/app'
 import { TEST_STEP_RETRIES } from '../testing/workflow'
 
@@ -141,6 +143,56 @@ describe('まとめて推定のジョブ', () => {
     await api.workflow.settled()
     // 失敗のあとに裏で回が進んでも、失敗のまま
     expect(await current()).toMatchObject({ status: 'failed' })
+  })
+
+  describe('サーバー側のジョブの状態を読めないとき', () => {
+    /** インスタンスなしで、実行中のジョブの行だけを作る（updated_at は ms 前） */
+    const insertRunning = (agoMs: number) => {
+      const at = new Date(Date.now() - agoMs).toISOString()
+      api.sqlite
+        .prepare(
+          "INSERT INTO estimate_jobs (id, status, progress, created_at, updated_at) VALUES ('j1', 'running', '{}', ?, ?)",
+        )
+        .run(at, at)
+    }
+
+    it('一時的に読めないだけなら実行中のまま', async () => {
+      insertRunning(60_000)
+      api.workflow.failGet('network connection lost')
+      expect(await current()).toMatchObject({ id: 'j1', status: 'running' })
+    })
+
+    it('読めないまま長く更新されていなければ失敗にする', async () => {
+      insertRunning(STALE_JOB_MS + 60_000)
+      api.workflow.failGet('network connection lost')
+      expect(await current()).toMatchObject({ id: 'j1', status: 'failed' })
+    })
+
+    it('インスタンスが見つからなければすぐ失敗にする', async () => {
+      insertRunning(60_000)
+      api.workflow.failGet('instance.not_found')
+      expect(await current()).toMatchObject({ id: 'j1', status: 'failed' })
+    })
+  })
+
+  it('回を進めるたびと終わったときに updatedAt が進む', async () => {
+    await addIngredient('謎A')
+    resetSources()
+    const job = (await start()).body
+    api.sqlite.prepare("UPDATE estimate_jobs SET updated_at = '2000-01-01T00:00:00.000Z' WHERE id = ?").run(job.id)
+    await api.workflow.settled()
+    const done = await current()
+    expect(done?.status).toBe('done')
+    expect(done?.updatedAt).not.toBe('2000-01-01T00:00:00.000Z')
+    expect(done?.finishedAt).not.toBeNull()
+  })
+
+  it('設定がない・入力が悪い失敗はリトライしない。AI の一時的な 503 はリトライする', () => {
+    expect(isPermanentJobError(new ApiError(503, 'AI_NOT_CONFIGURED', 'no key'))).toBe(true)
+    expect(isPermanentJobError(new ApiError(400, 'BAD_REQUEST', 'bad'))).toBe(true)
+    expect(isPermanentJobError(new ApiError(503, 'AI_UNAVAILABLE', 'starting'))).toBe(false)
+    expect(isPermanentJobError(new ApiError(503, 'AI_STARTING', 'starting'))).toBe(false)
+    expect(isPermanentJobError(new AiError('timeout'))).toBe(false)
   })
 
   it('ジョブがなければ null。Workflow の設定がなければ 503', async () => {
