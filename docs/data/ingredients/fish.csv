@@ -1,54 +1,54 @@
 id,名前,分類,冷蔵日数,冷凍可否,冷凍日数,常温日数,保存場所,価格,価格の単位,出典URL,メモ
-cocoro-ing-9402a19e96529ad9,あさり,魚,,,,,,197,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「あさり」（銘柄: 殻付き）東京都区部2026年1〜10月平均 197円/100g／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-b23373afbe2c002b,あさりの水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-13da3b7e61d876bb,あさり水煮缶の汁,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-eda9dcc5477a6df8,いか,魚,,,,,,,,,価格: 小売物価統計「いか」はあるが1杯の重さの出典がなく換算しない（242円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-b90e2e1a940bdebc,いくら,魚,,,,,,2577,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「いくら」（銘柄: さけ卵・塩漬又はしょう油漬）東京都区部2026年1〜10月平均 2577円/100g／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-05e45af48a2e40aa,いわし,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「いわし」はあるが1尾の重さの出典がなく換算しない（132円/100g）ため空欄
-cocoro-ing-11407b7ece967905,いわしの水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-63eb94bffefbceda,いわしの水煮缶,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-cc88632547c9d80e,かにかまぼこ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-61abbb5e68fd054e,かまぼこ,魚,,,,,,224,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「かまぼこ」（銘柄: 蒸かまぼこ・板付き）東京都区部2026年1〜10月平均 224円/100g／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-65091c6325812043,かれい,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-ae6a7312b00d17d3,さけのあら,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-3bf7ee52d30355aa,さけの切り身,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-8d3d07433f377e4c,さつま揚げ,魚,,,,,,,,,価格: 小売物価統計「揚げかまぼこ」はあるが1枚の重さの出典がなく換算しない（148円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-7861d9e71d0b66de,さばの水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JNV5ZTVCZ0NC9W7V9G,さば（切り身）,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計「さば」はあるが1切れの重さの出典がなく換算しない（172円/100g）ため空欄
-cocoro-ing-e177c1626cec6040,さんま,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「さんま」はあるが1尾の重さの出典がなく換算しない（245円/100g）ため空欄
-cocoro-ing-9f6f895b132a02ef,しじみ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-4bff7302c7640244,たい,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-ddb88e50c6768a29,たいのあら,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
+cocoro-ing-9402a19e96529ad9,あさり,魚,,,,,,197,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 東広島市・水戸市・目黒区・松山市・広島市・千葉県のページを見たが、あさり（貝）の日数がなく空欄／価格: 小売物価統計「あさり」（銘柄: 殻付き）東京都区部2026年1〜10月平均 197円/100g
+cocoro-ing-b23373afbe2c002b,あさりの水煮,魚,,,,1110,,409,1缶,https://www.hagoromofoods.co.jp/products/detail/?id=54 https://greenbeans.com/products/14902560062111/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。はごろもフーズ「あさり」缶（内容総量100g）の賞味期間37ヶ月→1110日、常温。冷凍可否はメーカーに記載なし／価格: イオンネットスーパー はごろもフーズ あさり 100g（1缶）税込409円
+cocoro-ing-13da3b7e61d876bb,あさり水煮缶の汁,魚,,,,1110,,,,https://www.hagoromofoods.co.jp/products/detail/?id=54,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。缶の汁なので缶詰の未開封の日持ち。はごろもフーズ「あさり」缶の賞味期間37ヶ月→1110日、常温。冷凍可否は記載なし／価格: mL単位で1mLあたり1円未満のため空欄
+cocoro-ing-eda9dcc5477a6df8,いか,魚,,,,,,,,,日持ち: 自治体・農水省のページにいかの日数がなく空欄（東広島市は一尾魚・切り身・刺身のみ）／価格: イオンネットスーパーのいかはつぼ抜き200g・カットいかなど重さ売りで、杯数の書かれた商品がない
+cocoro-ing-b90e2e1a940bdebc,いくら,魚,,,,,,2577,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 自治体・農水省のページにいくらの日数がなく空欄／価格: 小売物価統計「いくら」（銘柄: さけ卵・塩漬又はしょう油漬）東京都区部2026年1〜10月平均 2577円/100g
+cocoro-ing-05e45af48a2e40aa,いわし,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: イオンネットスーパーに生のいわし（丸・尾数表示）がない
+cocoro-ing-11407b7ece967905,いわしの水煮,魚,,不可,,1095,,322,1缶,https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14901901019265/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。缶詰の賞味期間は製造日から主に3年→1095日、常温。缶のまま冷凍はお勧めしないので不可（Umios〈旧マルハニチロ〉FAQ）。開封後は別容器で冷蔵し翌日まで。Umios国産いわし水煮として／価格: イオンネットスーパー Umios 国産いわし水煮 150g（1缶）税込322円
+cocoro-ing-63eb94bffefbceda,いわしの水煮缶,魚,,不可,,1095,,322,1缶,https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14901901019265/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。缶詰の賞味期間は製造日から主に3年→1095日、常温。缶のまま冷凍はお勧めしないので不可（Umios〈旧マルハニチロ〉FAQ）。開封後は別容器で冷蔵し翌日まで。Umios国産いわし水煮として／価格: イオンネットスーパー Umios 国産いわし水煮 150g（1缶）税込322円
+cocoro-ing-cc88632547c9d80e,かにかまぼこ,魚,,不可,,,冷蔵,30,1本,https://www.kanetetsu.com/pages/faq https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14970050061111/details,日持ち: かに風味かまぼこは冷凍せず冷蔵保管（カネテツFAQ）、練り製品は開封有無に関わらず冷蔵（Umios FAQ）。未開封の賞味期間の日数は見つからず冷蔵日数は空欄／価格: イオンネットスーパー 一正蒲鉾 オホーツク 10本入(125g) 税込301円÷10本
+cocoro-ing-61abbb5e68fd054e,かまぼこ,魚,,不可,,,冷蔵,224,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.kanetetsu.com/pages/faq https://www.umios.com/jp/inquiry/faq_exp.php,日持ち: かまぼこは冷凍せず冷蔵保管（カネテツFAQ）、練り製品は冷蔵（Umios FAQ）。未開封の賞味期間の日数は見つからず冷蔵日数は空欄／価格: 小売物価統計「かまぼこ」（銘柄: 蒸かまぼこ・板付き）東京都区部2026年1〜10月平均 224円/100g
+cocoro-ing-65091c6325812043,かれい,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパーの冷蔵かれいは荒ほぐし・みりん干し・煮つけのみで、生の切り身がない
+cocoro-ing-ae6a7312b00d17d3,さけのあら,魚,,,,,,,,,日持ち: あらの日数を自治体資料で探したが見つからず空欄（東広島市は一尾魚・切り身のみ）／価格: イオンネットスーパーで鮭のあらを探したが、荒ほぐし（加工品）のみ
+cocoro-ing-3bf7ee52d30355aa,さけの切り身,魚,2,可,14,,冷蔵,485,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268541811/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー 銀鮭切身(養殖・解凍) 90g x 2切 税込970円÷2切。よりどり2点10%OFFは値下げでないので表示価格
+cocoro-ing-8d3d07433f377e4c,さつま揚げ,魚,,,,,冷蔵,32,1枚,https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14549741558607/details,日持ち: 練り製品は開封有無に関わらず冷蔵（Umios FAQ）。日数はちくわ（8日）しかなく、さつま揚げの日数は見つからず空欄。冷凍は野菜入りかどうかで可否が分かれる（カネテツFAQ）ため空欄／価格: イオンネットスーパー トップバリュベストプライス さつま揚 6枚 税込193円÷6枚
+cocoro-ing-7861d9e71d0b66de,さばの水煮,魚,,不可,,1095,,247,1缶,https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14901901417337/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。缶詰の賞味期間は製造日から主に3年→1095日、常温。缶のまま冷凍はお勧めしないので不可（Umios〈旧マルハニチロ〉FAQ）。開封後は別容器で冷蔵し翌日まで。Umiosさば水煮として／価格: イオンネットスーパー Umios さば水煮 150g（1缶）税込247円
+01M8DVZ2JNV5ZTVCZ0NC9W7V9G,さば（切り身）,魚,2,可,14,,冷蔵,431,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14549414718246/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー トップバリュ さば うす塩味 腹骨取り 2枚(180g) 税込862円÷2切。無塩の生さば切り身がなく、うす塩
+cocoro-ing-e177c1626cec6040,さんま,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: イオンネットスーパーに生のさんま（丸・尾数表示）がない
+cocoro-ing-9f6f895b132a02ef,しじみ,魚,,,,,,,,,日持ち: 自治体・農水省のページにしじみ（貝）の日数がなく空欄／価格: イオンネットスーパーのしじみは冷凍の殻付き（青森県産200g 税込495円＝248円/100g）のみで、生のしじみがなく空欄
+cocoro-ing-4bff7302c7640244,たい,魚,2,可,14,,冷蔵,638,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268541743/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）。1切れの切り身として／価格: イオンネットスーパー 愛媛県産 活〆真鯛切身(養殖) 90g x 2切 税込1275円÷2切。よりどり2点10%OFFは値下げでないので表示価格
+cocoro-ing-ddb88e50c6768a29,たいのあら,魚,,,,,,,,,日持ち: あらの日数を自治体資料で探したが見つからず空欄（東広島市は一尾魚・切り身のみ）／価格: イオンネットスーパーで鯛のあらを探したが見つからない
 cocoro-ing-56d5d29fff50d31c,たいやまぐろ など,魚,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-01M8DVZ2JNQVCHJCEW1E16F5FD,たら（切り身）,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-86f9291b03fada7c,だこ,魚,,,,,,578,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「たこ」（銘柄: まだこ・ゆで又は蒸し）東京都区部2026年1〜10月平均 578円/100g、ゆでだことして／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-8226c697c63a7a87,ちくわ,魚,,,,,,,,,価格: 小売物価統計「ちくわ」はあるが1本の重さの出典がなく換算しない（140円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-6471a10c1c7d75f8,ちりめんじゃこ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-b4b63f62b93037dd,ぶり,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計「ぶり」はあるが1切れの重さの出典がなく換算しない（453円/100g）ため空欄
-cocoro-ing-e0e5508feff3ca8f,ほたて,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-597869ee769424fb,ほたて貝柱,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-1b1bb5017bd829d1,ほたて貝柱の缶詰,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
+01M8DVZ2JNQVCHJCEW1E16F5FD,たら（切り身）,魚,2,可,14,,冷蔵,215,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268542016/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー ロシア産 スケソウダラ 70g x 3切 税込646円÷3切（生のたら切り身）。よりどり10%OFFは値下げでないので表示価格
+cocoro-ing-86f9291b03fada7c,ゆでだこ,魚,,,,,,578,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 自治体・農水省のページにたこの日数がなく空欄／価格: 小売物価統計「たこ」（銘柄: まだこ・ゆで又は蒸し）東京都区部2026年1〜10月平均 578円/100g、ゆでだことして
+cocoro-ing-8226c697c63a7a87,ちくわ,魚,8,可,,,冷蔵,32,1本,https://www.umios.com/jp/inquiry/faq_exp.php https://www.kanetetsu.com/pages/faq https://greenbeans.com/products/14970050013417/details,日持ち: ちくわの賞味期間は製造日を含め8日程度、開封有無に関わらず冷蔵（Umios FAQ）。冷凍はできるが早めに（Umios・カネテツFAQ）。冷凍の日数は書かれておらず空欄／価格: イオンネットスーパー 一正蒲鉾 笹竹 ちくわ 5本 税込160円÷5本
+cocoro-ing-6471a10c1c7d75f8,ちりめんじゃこ,魚,,,,,,,,,日持ち: 大阪市中央卸売市場の「釜揚げちりめんは冷凍1か月程度」はあるが、ちりめんじゃこ（乾燥品）の日数ではないため空欄／価格: イオンネットスーパーで味付けなしのちりめんじゃこが見つからない（梅・山椒などの味付き品のみ）
+cocoro-ing-b4b63f62b93037dd,ぶり,魚,2,可,14,,冷蔵,539,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268541712/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー 活〆ぶり切身(養殖) 80g x 2切 税込1078円÷2切（閲覧時は売り切れ表示）
+cocoro-ing-e0e5508feff3ca8f,ほたて,魚,,,,,,,,,日持ち: 自治体・農水省のページにほたての日数がなく空欄／価格: イオンネットスーパーに生のほたてがなく、冷凍の帆立片貝10枚入720g 税込2139円（214円/個）のみのため空欄
+cocoro-ing-597869ee769424fb,ほたて貝柱,魚,,,,,,,,,日持ち: 自治体・農水省のページにほたて貝柱の日数がなく空欄／価格: イオンネットスーパーのほたて貝柱は冷凍400g・500gの重さ売りで個数の書かれた商品がない
+cocoro-ing-1b1bb5017bd829d1,ほたて貝柱の缶詰,魚,,不可,,1095,,711,1缶,https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14901901267192/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。缶詰の賞味期間は製造日から主に3年→1095日、常温。缶のまま冷凍はお勧めしないので不可（Umios〈旧マルハニチロ〉FAQ）。開封後は別容器で冷蔵し翌日まで。Umiosほたて貝柱割り身（缶）として／価格: イオンネットスーパー Umios ほたて貝柱 割り身 65g（1缶）通常の税込711円（閲覧時は値下げ658円表示のため通常価格を使用）
 cocoro-ing-8e99b2ace3e13261,まぐろ,魚,2,可,14,,冷蔵,566,100g,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 刺身のさくは冷蔵2日・冷凍2週間（東広島市）。刺身用のさくとして／価格: 小売物価統計「まぐろ」（銘柄: めばち又はきはだ・刺身用さく・赤身）東京都区部2026年1〜10月平均 566円/100g
-01M8DVZ2JP5P616F2FMGMJ2H6M,むきえび,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-0d5fc6b40dc6f322,アンチョビ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-60ce4b3d61b79a6b,カネテツ ほぼカニ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-04685e82d09e3726,カネテツ サラダプラス ほぼホタテ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-f039cb6911b164e4,カレイ,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JPA8SSN6PNJQH5D1KV,シーフードミックス,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-8d7330c954421f74,ツナ,魚,,,,,,,,,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）はあるが1缶の重さの出典がなく換算しない（161円/70g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-bf82ec41c9cb988c,ツナ水煮缶,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-4078dede92d7b427,ツナ缶,魚,,,,,,,,,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）はあるが1缶の重さの出典がなく換算しない（161円/70g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-075941715b1e3369,マルハニチロ 月花さば水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-5c01f69e6de9cc2b,ムール貝,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-3ae428f8cd842ae8,ロールいか,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-de48556661c31fe7,乾燥桜えび,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
+01M8DVZ2JP5P616F2FMGMJ2H6M,むきえび,魚,,,,,,,,,日持ち: むきえび（生・解凍）の日数は自治体資料になく空欄。冷凍品なら家庭の冷凍庫で2〜3か月（農水省）だが、価格と同じく冷凍品に決めず空欄／価格: イオンネットスーパーのむきえびは冷凍品のみ（トップバリュ天然むきえび150g 税込322円＝215円/100g）で、生（冷蔵）がなく空欄
+cocoro-ing-0d5fc6b40dc6f322,アンチョビ,魚,,,,,,650,100g,https://greenbeans.com/products/14904691140737/details,日持ち: 天長食品「アンチョビフィレ」の未開封の賞味期間を探したが公式に見つからず空欄／価格: イオンネットスーパー 天長食品工業 アンチョビフィレ 28g 税込182円÷28g×100
+cocoro-ing-60ce4b3d61b79a6b,カネテツ ほぼカニ,魚,,不可,,,冷蔵,,,https://www.kanetetsu.com/pages/faq,日持ち: かに風味かまぼこは冷凍せず冷蔵保管（カネテツFAQ）。ほぼカニの商品ページ・FAQに賞味期間の日数がなく冷蔵日数は空欄／価格: イオンネットスーパーにほぼカニがなく（ほぼホタテ・ほぼタラバのみ）空欄
+cocoro-ing-04685e82d09e3726,カネテツ サラダプラス ほぼホタテ,魚,,不可,,,冷蔵,63,1個,https://www.kanetetsu.com/pages/faq https://greenbeans.com/products/14901320148003/details,日持ち: かまぼこ・かに風味かまぼこ類は冷凍せず冷蔵保管（カネテツFAQ）。ほぼホタテの商品ページ・FAQに賞味期間の日数がなく冷蔵日数は空欄／価格: イオンネットスーパー カネテツ ほぼホタテ 6個入 税込376円÷6個。「サラダプラス」の名の商品はなく、ほぼホタテ6個入として
+cocoro-ing-f039cb6911b164e4,カレイ,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパーの冷蔵かれいは荒ほぐし・みりん干し・煮つけのみで、生の切り身がない
+01M8DVZ2JPA8SSN6PNJQH5D1KV,シーフードミックス,魚,,可,60,,冷凍,205,100g,https://www.maff.go.jp/j/heya/sodan/1512/01.html https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14549414730811/details,日持ち: 冷凍食品は家庭の冷凍庫で2〜3ヶ月で使い切る（農水省）、未開封で購入後2〜3か月（Umios FAQ）の下限→60日。冷凍品なので冷蔵の日数は対象外。開封後は1か月程度（Umios）／価格: イオンネットスーパー トップバリュ 3種のシーフードミックス【冷凍】210g 税込430円÷210g×100。WAON POINT進呈は値下げでない
+cocoro-ing-8d7330c954421f74,ツナ,魚,,,,1110,,135,1缶,https://www.hagoromofoods.co.jp/products/detail/1444.html https://greenbeans.com/products/14902560015155/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。はごろもフーズ「シーチキンＬフレーク（70g）」の賞味期間37ヶ月→1110日、常温。冷凍可否はメーカーに記載なし／価格: イオンネットスーパー はごろもフーズ シーチキン New Lフレーク 70g x 4缶 税込538円÷4缶
+cocoro-ing-bf82ec41c9cb988c,ツナ水煮缶,魚,,,,1110,,189,1缶,https://www.hagoromofoods.co.jp/products/detail/76.html https://greenbeans.com/products/14902560001134/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。はごろもフーズ「オイル不使用 シーチキンＬフレーク」（70g）の賞味期間37ヶ月→1110日、常温。冷凍可否はメーカーに記載なし／価格: イオンネットスーパー はごろもフーズ オイル不使用 シーチキン Lフレーク 70g x 4缶 税込754円÷4缶
+cocoro-ing-4078dede92d7b427,ツナ缶,魚,,,,1110,,135,1缶,https://www.hagoromofoods.co.jp/products/detail/1444.html https://greenbeans.com/products/14902560015155/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。はごろもフーズ「シーチキンＬフレーク（70g）」の賞味期間37ヶ月→1110日、常温。冷凍可否はメーカーに記載なし／価格: イオンネットスーパー はごろもフーズ シーチキン New Lフレーク 70g x 4缶 税込538円÷4缶
+cocoro-ing-075941715b1e3369,マルハニチロ 月花さば水煮,魚,,不可,,1095,,452,1缶,https://www.umios.com/jp/inquiry/faq_exp.php https://greenbeans.com/products/14901901145896/details,日持ち: 肉・魚の分類では常温を入れられないので保存場所は空欄（缶詰などは分類を見直せば入れられる）。缶詰の賞味期間は製造日から主に3年→1095日、常温。缶のまま冷凍はお勧めしないので不可（Umios〈旧マルハニチロ〉FAQ）。開封後は別容器で冷蔵し翌日まで／価格: イオンネットスーパー Umios 月花 さば水煮 200g（1缶）税込452円。40WAONPOINTは値下げでない
+cocoro-ing-5c01f69e6de9cc2b,ムール貝,魚,,,,,,,,,日持ち: 自治体・農水省のページにムール貝の日数がなく空欄／価格: イオンネットスーパーのムール貝は冷凍300g・むき身170gなど重さ売りで個数の書かれた商品がない
+cocoro-ing-3ae428f8cd842ae8,ロールいか,魚,,,,,,,,,日持ち: 自治体・農水省のページにいか（ロールいか）の日数がなく空欄／価格: イオンネットスーパーでロールいかを探したが見つからない
+cocoro-ing-de48556661c31fe7,乾燥桜えび,魚,,,,,,3225,100g,https://greenbeans.com/products/14902121395634/details,日持ち: 乾燥桜えびのメーカー公式の未開封の賞味期間が見つからず空欄（トップバリュ品はメーカー情報なし）／価格: イオンネットスーパー トップバリュベストプライス 桜えび(台湾産) 12g 税込387円÷12g×100（乾燥品）
 cocoro-ing-bde183d93e433ccb,小さめのいわし,魚,2,可,14,,冷蔵,132,100g,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「いわし」（銘柄: まいわし・丸）東京都区部2026年1〜10月平均 132円/100g
-cocoro-ing-872492b8d0e785d7,有頭えび,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-9f47a5318efa1a32,桜えび,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-cd41a074eb879ece,棒だら,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-4c6b1c06737fd82b,生ざけ,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-fa9bcb6af24295cd,生たら,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-c2b7fc80a2df79c8,白身魚,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
+cocoro-ing-872492b8d0e785d7,有頭えび,魚,,,,,,177,1尾,https://greenbeans.com/products/14940618151158/details,日持ち: 自治体・農水省のページにえびの日数がなく空欄／価格: イオンネットスーパー 有頭赤海老(解凍・生食用) 6尾(210g) 税込1059円÷6尾。有頭で尾数が書かれた冷蔵品はこれのみ（赤海老）
+cocoro-ing-9f47a5318efa1a32,桜えび,魚,,,,,,3225,100g,https://greenbeans.com/products/14902121395634/details,日持ち: 桜えびのメーカー公式・自治体の日数が見つからず空欄／価格: イオンネットスーパー トップバリュベストプライス 桜えび(台湾産) 12g 税込387円÷12g×100。乾燥の桜えびとして（生の冷凍桜えびは60g 税込862円）
+cocoro-ing-cd41a074eb879ece,棒だら,魚,,,,,,,,,日持ち: 棒だらのメーカー公式・自治体の日数が見つからず空欄／価格: イオンネットスーパーで棒だら・棒鱈を探したが見つからない
+cocoro-ing-4c6b1c06737fd82b,生ざけ,魚,2,可,14,,冷蔵,485,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268541811/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー 銀鮭切身(養殖・解凍) 90g x 2切 税込970円÷2切。よりどり2点10%OFFは値下げでないので表示価格
+cocoro-ing-fa9bcb6af24295cd,生たら,魚,2,可,14,,冷蔵,215,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268542016/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー ロシア産 スケソウダラ 70g x 3切 税込646円÷3切（生のたら切り身）。よりどり10%OFFは値下げでないので表示価格
+cocoro-ing-c2b7fc80a2df79c8,白身魚,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 魚の種類が決まらず空欄（たらならスケソウダラ切身 215円/切れ）
 cocoro-ing-d8def4ae97624b52,肉・魚介類,魚,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-60ba4402afe1593f,金目鯛,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JNNM31VNNWB4DE46ZZ,鮭（切り身）,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
+cocoro-ing-60ba4402afe1593f,金目鯛,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパーの金目鯛は開き干し・冷凍の炙りスライスのみで、生の切り身がない
+01M8DVZ2JNNM31VNNWB4DE46ZZ,鮭（切り身）,魚,2,可,14,,冷蔵,485,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/14560268541811/details,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: イオンネットスーパー 銀鮭切身(養殖・解凍) 90g x 2切 税込970円÷2切。よりどり2点10%OFFは値下げでないので表示価格
