@@ -8,6 +8,8 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # 直近の実行は 1〜1.5 分ほど。止まったときに長く待たないよう 5 分で打ち切る
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
