@@ -1,21 +1,21 @@
 id,名前,分類,冷蔵日数,冷凍可否,冷凍日数,常温日数,保存場所,価格,価格の単位,出典URL,メモ
 cocoro-ing-bd6b9237ec46fb69,「Cook Do®」<豚肉ともやしの四川香味炒め用>3~4人前,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-7c52455d87dd46e7,ささ身,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 鶏肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-ddf0221dc4ddb6c0,はごろもフーズ シーチキンL,肉,,,,,,322,1缶,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）東京都区部2026年1〜10月平均 161円/70gを140gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-ddf0221dc4ddb6c0,はごろもフーズ シーチキンL,肉,,,,,,,,,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）はあるが1缶の重さの出典がなく換算しない（161円/70g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-d6fc79f54304d5c5,はごろもフーズ シーチキンマイルド,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JNDDN804H2T8C1JYK5,ウインナー,肉,,,,,,39,1本,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ソーセージ」（銘柄: ウインナーソーセージ）東京都区部2026年1〜10月平均 195円/100g×20g/本で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+01M8DVZ2JNDDN804H2T8C1JYK5,ウインナー,肉,,,,,,,,,価格: 小売物価統計「ソーセージ」はあるが1本の重さの出典がなく換算しない（195円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-94839dac97c65692,エバラ黄金の味,肉,,,,,,111,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「つゆ・たれ(焼肉のたれ)」（銘柄: 360g「エバラ焼肉のたれ黄金の味」）東京都区部2026年1〜10月平均 398円/360gを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-60825c0214ce15d6,サラミ,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-712672b37b78bc79,シュウマイ,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-32ec690bfdc665f6,スペアリブ,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-4b2773ceda174dcb,スライスハム,肉,,,,,,34,1枚,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ハム」（銘柄: ロースハム）東京都区部2026年1〜10月平均 244円/100g×14g/枚で換算、ロースハムの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-a489c43fb9a7aac2,ハム,肉,,,,,,37,1枚,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ハム」（銘柄: ロースハム）東京都区部2026年1〜10月平均 244円/100g×15g/枚で換算、ロースハムの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-4b2773ceda174dcb,スライスハム,肉,,,,,,,,,価格: 小売物価統計「ハム」はあるが1枚の重さの出典がなく換算しない（244円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-a489c43fb9a7aac2,ハム,肉,,,,,,,,,価格: 小売物価統計「ハム」はあるが1枚の重さの出典がなく換算しない（244円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-ea8f52a19bc50d97,ブロックベーコン,肉,,,,,,270,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ベーコン」（銘柄: ベーコン）東京都区部2026年1〜10月平均 270円/100g、ベーコンの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
 01M8DVZ2JN241DDDTDYE361SMZ,ベーコン,肉,,,,,,270,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ベーコン」（銘柄: ベーコン）東京都区部2026年1〜10月平均 270円/100g／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-bfb3504855a1e61d,マ・マー トマトの果肉たっぷりのナポリタン,肉,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-3a101a0247196625,モツ,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-d641ac57da3a45a1,ローストホールアーモンド,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-34216fee120b4d30,ロースハム,肉,,,,,,37,1枚,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ハム」（銘柄: ロースハム）東京都区部2026年1〜10月平均 244円/100g×15g/枚で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-34216fee120b4d30,ロースハム,肉,,,,,,,,,価格: 小売物価統計「ハム」はあるが1枚の重さの出典がなく換算しない（244円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-09172655a9c60c97,厚切りベーコン,肉,,,,,,270,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ベーコン」（銘柄: ベーコン）東京都区部2026年1〜10月平均 270円/100g、ベーコンの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
 01M8DVZ2JNV3HAWP6MBYN4FW0C,合いびき肉,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: ひき肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-074d591a6c97f50f,大豆と玄米のベジミンチ,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
@@ -41,7 +41,7 @@ cocoro-ing-77a2d9987bd4d132,牛角切り肉,肉,,,,,,,,,日持ち: 公的・一�
 cocoro-ing-abcc30770f0fce67,牛赤身かたまり肉,肉,4,可,30,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 牛のかたまり肉は冷蔵4〜5日の下限・冷凍1か月（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-03d92f383620e301,猪肉,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-0380ce2c61db0faf,砂肝,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-413e8942831e0510,粗びきウインナー,肉,,,,,,88,1本,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ソーセージ」（銘柄: ウインナーソーセージ）東京都区部2026年1〜10月平均 195円/100g×45g/本で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-413e8942831e0510,粗びきウインナー,肉,,,,,,,,,価格: 小売物価統計「ソーセージ」はあるが1本の重さの出典がなく換算しない（195円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 01M8DVZ2JNV35RR2ESV6FSYVFP,豚こま切れ肉,肉,3,可,30,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 薄切り肉は冷蔵3日・冷凍1か月（東広島市）。こま切れ・切り落としは薄切り肉として／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 01M8DVZ2JN8RK4D7YZ2FH0CG60,豚ひき肉,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: ひき肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-348caf57ffd9e130,豚もも薄切り肉,肉,3,可,30,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 薄切り肉は冷蔵3日・冷凍1か月（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
@@ -63,7 +63,7 @@ cocoro-ing-7a055fc2f5b08ea2,鶏ささ身ひき肉,肉,2,可,21,,冷蔵,,,https:/
 cocoro-ing-591e85072f0824c7,鶏だんご,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 01M8DVZ2JNPDGTZ9Z116S0R0S7,鶏ひき肉,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: ひき肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 01M8DVZ2JNTZXXAMDFW2SGDYTG,鶏むね肉,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 鶏肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JN4THPK0QSAM90JAYG,鶏もも肉,肉,2,可,21,,冷蔵,483,1枚,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 鶏肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計「鶏肉」（銘柄: ブロイラー・もも肉）東京都区部2026年1〜10月平均 161円/100g×300g/枚で換算
+01M8DVZ2JN4THPK0QSAM90JAYG,鶏もも肉,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 鶏肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計「鶏肉」はあるが1枚の重さの出典がなく換算しない（161円/100g）ため空欄
 cocoro-ing-885f594049f6acbc,鶏手羽中,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 鶏肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-b62d94d9e59da9dd,鶏手羽先,肉,2,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 鶏肉は冷蔵2日・冷凍3週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-62a222b000f4ae5b,鶏皮,肉,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄

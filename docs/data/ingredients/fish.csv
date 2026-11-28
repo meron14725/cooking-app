@@ -2,9 +2,9 @@ id,名前,分類,冷蔵日数,冷凍可否,冷凍日数,常温日数,保存場�
 cocoro-ing-9402a19e96529ad9,あさり,魚,,,,,,197,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「あさり」（銘柄: 殻付き）東京都区部2026年1〜10月平均 197円/100g／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-b23373afbe2c002b,あさりの水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-13da3b7e61d876bb,あさり水煮缶の汁,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-eda9dcc5477a6df8,いか,魚,,,,,,605,1杯,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「いか」（銘柄: するめいか又はやりいか・丸）東京都区部2026年1〜10月平均 242円/100g×250g/杯で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-eda9dcc5477a6df8,いか,魚,,,,,,,,,価格: 小売物価統計「いか」はあるが1杯の重さの出典がなく換算しない（242円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-b90e2e1a940bdebc,いくら,魚,,,,,,2577,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「いくら」（銘柄: さけ卵・塩漬又はしょう油漬）東京都区部2026年1〜10月平均 2577円/100g／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-05e45af48a2e40aa,いわし,魚,2,可,14,,冷蔵,132,1尾,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「いわし」（銘柄: まいわし・丸）東京都区部2026年1〜10月平均 132円/100g×100g/尾で換算
+cocoro-ing-05e45af48a2e40aa,いわし,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「いわし」はあるが1尾の重さの出典がなく換算しない（132円/100g）ため空欄
 cocoro-ing-11407b7ece967905,いわしの水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-63eb94bffefbceda,いわしの水煮缶,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-cc88632547c9d80e,かにかまぼこ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
@@ -12,19 +12,19 @@ cocoro-ing-61abbb5e68fd054e,かまぼこ,魚,,,,,,224,100g,https://www.e-stat.go
 cocoro-ing-65091c6325812043,かれい,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-ae6a7312b00d17d3,さけのあら,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-3bf7ee52d30355aa,さけの切り身,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-8d3d07433f377e4c,さつま揚げ,魚,,,,,,37,1枚,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「揚げかまぼこ」（銘柄: さつま揚げ）東京都区部2026年1〜10月平均 148円/100g×25g/枚で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-8d3d07433f377e4c,さつま揚げ,魚,,,,,,,,,価格: 小売物価統計「揚げかまぼこ」はあるが1枚の重さの出典がなく換算しない（148円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-7861d9e71d0b66de,さばの水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JNV5ZTVCZ0NC9W7V9G,さば（切り身）,魚,2,可,14,,冷蔵,138,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計「さば」（銘柄: まさば又はごまさば・切り身）東京都区部2026年1〜10月平均 172円/100g×80g/切れで換算
-cocoro-ing-e177c1626cec6040,さんま,魚,2,可,14,,冷蔵,294,1尾,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「さんま」（銘柄: 丸（2026年は3か月分））東京都区部2026年1〜10月平均 245円/100g×120g/尾で換算
+01M8DVZ2JNV5ZTVCZ0NC9W7V9G,さば（切り身）,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計「さば」はあるが1切れの重さの出典がなく換算しない（172円/100g）ため空欄
+cocoro-ing-e177c1626cec6040,さんま,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 一尾魚は冷蔵2日・冷凍2週間（東広島市）／価格: 小売物価統計「さんま」はあるが1尾の重さの出典がなく換算しない（245円/100g）ため空欄
 cocoro-ing-9f6f895b132a02ef,しじみ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-4bff7302c7640244,たい,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-ddb88e50c6768a29,たいのあら,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-56d5d29fff50d31c,たいやまぐろ など,魚,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 01M8DVZ2JNQVCHJCEW1E16F5FD,たら（切り身）,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-86f9291b03fada7c,だこ,魚,,,,,,578,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「たこ」（銘柄: まだこ・ゆで又は蒸し）東京都区部2026年1〜10月平均 578円/100g、ゆでだことして／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-8226c697c63a7a87,ちくわ,魚,,,,,,42,1本,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ちくわ」（銘柄: 焼きちくわ）東京都区部2026年1〜10月平均 140円/100g×30g/本で換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-8226c697c63a7a87,ちくわ,魚,,,,,,,,,価格: 小売物価統計「ちくわ」はあるが1本の重さの出典がなく換算しない（140円/100g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-6471a10c1c7d75f8,ちりめんじゃこ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-b4b63f62b93037dd,ぶり,魚,2,可,14,,冷蔵,453,1切れ,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計「ぶり」（銘柄: 切り身）東京都区部2026年1〜10月平均 453円/100g×100g/切れで換算
+cocoro-ing-b4b63f62b93037dd,ぶり,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計「ぶり」はあるが1切れの重さの出典がなく換算しない（453円/100g）ため空欄
 cocoro-ing-e0e5508feff3ca8f,ほたて,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-597869ee769424fb,ほたて貝柱,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-1b1bb5017bd829d1,ほたて貝柱の缶詰,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
@@ -35,9 +35,9 @@ cocoro-ing-60ce4b3d61b79a6b,カネテツ ほぼカニ,魚,,,,,,,,,日持ち: 公
 cocoro-ing-04685e82d09e3726,カネテツ サラダプラス ほぼホタテ,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-f039cb6911b164e4,カレイ,魚,2,可,14,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 切り身は冷蔵2〜3日の下限・冷凍2週間（東広島市）／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 01M8DVZ2JPA8SSN6PNJQH5D1KV,シーフードミックス,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-8d7330c954421f74,ツナ,魚,,,,,,172,1缶,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）東京都区部2026年1〜10月平均 161円/70gを75gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-8d7330c954421f74,ツナ,魚,,,,,,,,,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）はあるが1缶の重さの出典がなく換算しない（161円/70g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-bf82ec41c9cb988c,ツナ水煮缶,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-cocoro-ing-4078dede92d7b427,ツナ缶,魚,,,,,,334,1缶,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）東京都区部2026年1〜10月平均 161円/70gを145gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-4078dede92d7b427,ツナ缶,魚,,,,,,,,,価格: 小売物価統計「魚介缶詰」（まぐろ油漬70g）はあるが1缶の重さの出典がなく換算しない（161円/70g）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
 cocoro-ing-075941715b1e3369,マルハニチロ 月花さば水煮,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-5c01f69e6de9cc2b,ムール貝,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-3ae428f8cd842ae8,ロールいか,魚,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
