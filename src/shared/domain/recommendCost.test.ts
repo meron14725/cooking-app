@@ -43,6 +43,26 @@ describe('scoreUnitPrices（点数で使う単価）', () => {
     expect(prices.has('salt')).toBe(false)
   })
 
+  it('削除済みの食材の価格は中央値に入れない。削除済みの食材自身の価格はそのまま使う', () => {
+    const map = new Map<string, RecIngredient>([
+      ['a', { ...onion, id: 'a', priceYen: 90 }], // 30 円 / 個
+      ['old', { ...onion, id: 'old', priceYen: 3000, archived: true }], // 1000 円 / 個（削除済み）
+      ['d', { ...onion, id: 'd', priceYen: null }],
+    ])
+    const prices = scoreUnitPrices(map)
+    // 削除済みを入れると (30 + 1000) / 2 = 515 になる
+    expect(prices.get('d')).toBeCloseTo(30)
+    expect(prices.get('old')).toBeCloseTo(1000)
+  })
+
+  it('削除済みの食材しか価格がなければ、仮の価格を使う', () => {
+    const map = new Map<string, RecIngredient>([
+      ['old', { ...onion, id: 'old', priceYen: 3000, archived: true }],
+      ['d', { ...onion, id: 'd', priceYen: null }],
+    ])
+    expect(scoreUnitPrices(map).get('d')).toBeCloseTo(FALLBACK_PRICE_PER_PACK_YEN / 3)
+  })
+
   it('買う金額は買う量 × 単価の合計', () => {
     const prices = new Map([
       ['onion', 50],
@@ -99,5 +119,15 @@ describe('recommend の金額の項', () => {
     }
     const after = run(expensive)
     expect(after.proposals[0]?.recipes.some((x) => x.recipeId === added?.recipeId)).toBe(false)
+  })
+})
+
+describe('pricedFixtureIngredients（調整スクリプト用の、まとめて推定のあとの形）', () => {
+  it('常備品でない食材はすべて価格があり、常備品には入れない', async () => {
+    const { pricedFixtureIngredients } = await import('./testing/catalog')
+    for (const ing of pricedFixtureIngredients().values()) {
+      if (ing.isStaple) expect(ing.priceYen ?? null).toBeNull()
+      else expect(ing.priceYen).toBeGreaterThan(0)
+    }
   })
 })

@@ -7,13 +7,19 @@
 //   npm run rec:try -- --synthetic 600 --anchor syn0 --step 1 --target 8 --rounds 15
 //                                                          # 「別の案を出す」を続けて押し、1 回ごとの時間と評価回数（最悪のとき）を見る
 //   npm run rec:try -- --from-local-d1 --anchor <レシピID>  # ローカルの D1（wrangler dev の .wrangler/state）を使う
+//   npm run rec:try -- --priced --anchor curry --weights cost=0.1  # 架空の食材に価格を入れて（まとめて推定のあとの形）見る
 // 既定は架空のレシピ（src/shared/domain/testing/catalog.ts）。在庫は --from-local-d1 のときだけ、確保分を引かずに使う
-import { spawnSync } from 'node:child_process'
 import { DEFAULT_SERVINGS, DEFAULT_TARGET_MEALS, RECOMMEND_WEIGHTS } from '../src/shared/domain/constants'
+import { costOfEvaluation } from '../src/shared/domain/cost'
 import { todayJst } from '../src/shared/domain/date'
-import { type AvailableStock, type RecIngredient, type RecRecipe, recommend } from '../src/shared/domain/recommend'
-import { fixtureCatalog, fixtureIngredients, syntheticCatalog } from '../src/shared/domain/testing/catalog'
-import type { Cuisine, DishType } from '../src/shared/schemas/recipe'
+import { type AvailableStock, recommend } from '../src/shared/domain/recommend'
+import {
+  fixtureCatalog,
+  fixtureIngredients,
+  pricedFixtureIngredients,
+  syntheticCatalog,
+} from '../src/shared/domain/testing/catalog'
+import { loadLocalD1 } from './localD1'
 
 type Args = {
   anchors: { id: string; servings: number }[]
@@ -21,6 +27,7 @@ type Args = {
   weights: Partial<typeof RECOMMEND_WEIGHTS>
   synthetic: number | null
   fromLocalD1: boolean
+  priced: boolean
   proposals: number
   lambda: number | undefined
   rounds: number
@@ -34,6 +41,7 @@ function parseArgs(argv: string[]): Args {
     weights: {},
     synthetic: null,
     fromLocalD1: false,
+    priced: false,
     proposals: 3,
     lambda: undefined,
     rounds: 0,
@@ -56,6 +64,7 @@ function parseArgs(argv: string[]): Args {
     else if (key === '--step') args.step = Number(value())
     else if (key === '--synthetic') args.synthetic = Number(value())
     else if (key === '--from-local-d1') args.fromLocalD1 = true
+    else if (key === '--priced') args.priced = true
     else if (key === '--weights') {
       for (const pair of value().split(',')) {
         const [k, v] = pair.split('=')
@@ -70,88 +79,6 @@ function parseArgs(argv: string[]): Args {
   return args
 }
 
-// ---------- ローカルの D1 から読む ----------
-
-function query<T>(sql: string): T[] {
-  const res = spawnSync('npx', ['wrangler', 'd1', 'execute', 'cooking-app', '--local', '--json', '--command', sql], {
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-  })
-  if (res.status !== 0) throw new Error(`wrangler d1 execute に失敗しました:\n${res.stderr}`)
-  const parsed = JSON.parse(res.stdout) as { results: T[] }[]
-  return parsed[0]?.results ?? []
-}
-
-type Row = Record<string, string | number | null>
-
-function loadLocalD1(): { catalog: RecRecipe[]; ingredients: Map<string, RecIngredient>; available: AvailableStock[] } {
-  const ingRows = query<Row>(
-    'SELECT id, name, unit, category, grams_per_unit, is_staple, can_freeze, pantry_days, prepped_fridge_days, price_yen FROM ingredients',
-  )
-  const units = query<Row>(
-    'SELECT id, ingredient_id, label, quantity, is_default FROM package_units ORDER BY created_at, id',
-  )
-  const recipeRows = query<Row>(
-    'SELECT id, title, servings, calories_kcal, max_servings_1_6l, hotcook_mode, dish_type, cuisine, cook_minutes, favorite_count, is_favorite, cook_count FROM recipes WHERE archived_at IS NULL',
-  )
-  const parts = query<Row>(
-    'SELECT recipe_id, ingredient_id, quantity FROM recipe_ingredients ORDER BY recipe_id, sort_order',
-  )
-  const stock = query<Row>(
-    'SELECT id, ingredient_id, quantity, expires_on FROM inventory_items WHERE used_up_at IS NULL AND quantity > 0',
-  )
-  const num = (v: Row[string] | undefined) => (v === null || v === undefined ? null : Number(v))
-  const ingredients = new Map<string, RecIngredient>(
-    ingRows.map((r) => [
-      String(r.id),
-      {
-        id: String(r.id),
-        name: String(r.name),
-        unit: String(r.unit),
-        category: String(r.category),
-        gramsPerUnit: num(r.grams_per_unit),
-        isStaple: r.is_staple === 1,
-        canFreeze: r.can_freeze === 1,
-        pantryDays: num(r.pantry_days),
-        preppedFridgeDays: num(r.prepped_fridge_days),
-        priceYen: num(r.price_yen),
-        packageUnits: units
-          .filter((u) => u.ingredient_id === r.id)
-          .map((u) => ({
-            id: String(u.id),
-            label: String(u.label),
-            quantity: Number(u.quantity),
-            isDefault: u.is_default === 1,
-          })),
-      },
-    ]),
-  )
-  const catalog: RecRecipe[] = recipeRows.map((r) => ({
-    id: String(r.id),
-    title: String(r.title),
-    servings: Number(r.servings),
-    caloriesKcal: num(r.calories_kcal),
-    maxServings1_6l: num(r.max_servings_1_6l),
-    hotcookMode: r.hotcook_mode === null ? null : String(r.hotcook_mode),
-    dishType: (r.dish_type as DishType | null) ?? null,
-    cuisine: (r.cuisine as Cuisine | null) ?? null,
-    cookMinutes: num(r.cook_minutes),
-    favoriteCount: num(r.favorite_count),
-    isFavorite: r.is_favorite === 1,
-    cookCount: num(r.cook_count),
-    ingredients: parts
-      .filter((p) => p.recipe_id === r.id)
-      .map((p) => ({ ingredientId: String(p.ingredient_id), quantity: num(p.quantity) })),
-  }))
-  const available = stock.map((s) => ({
-    inventoryItemId: String(s.id),
-    ingredientId: String(s.ingredient_id),
-    quantity: Number(s.quantity),
-    expiresOn: String(s.expires_on),
-  }))
-  return { catalog, ingredients, available }
-}
-
 // ---------- 実行 ----------
 
 const args = parseArgs(process.argv.slice(2))
@@ -159,7 +86,7 @@ const source = args.fromLocalD1
   ? loadLocalD1()
   : {
       catalog: args.synthetic ? [...fixtureCatalog, ...syntheticCatalog(args.synthetic)] : fixtureCatalog,
-      ingredients: fixtureIngredients,
+      ingredients: args.priced ? pricedFixtureIngredients() : fixtureIngredients,
       available: [] as AvailableStock[],
     }
 const byId = new Map(source.catalog.map((r) => [r.id, r]))
@@ -216,6 +143,9 @@ result.proposals.forEach((p, i) => {
   }
   const shopping = p.shopping.map((s) => `${s.name} ${s.packageLabel ?? ''}×${s.packageCount}`).join('、')
   console.log(`  買い物: ${shopping || 'なし'}`)
+  const cost = costOfEvaluation(p, source.ingredients, args.target)
+  const unpriced = cost.hasUnpriced ? `（${cost.unpricedCount} 品未設定）` : ''
+  console.log(`  金額: 買う分 約 ${cost.buyYen} 円 / 1 食あたり 約 ${cost.perMealYen} 円${unpriced}`)
   const leftovers = p.leftovers.filter((l) => l.perishable).map((l) => `${l.name} ${l.packs.toFixed(2)}パック`)
   if (leftovers.length > 0) console.log(`  余り（冷蔵のみ）: ${leftovers.join('、')}`)
   const terms = Object.entries(p.scoreBreakdown ?? {})

@@ -16,7 +16,8 @@
     "db:migrate:local": "wrangler d1 migrations apply cooking-app --local",
     "seed:sql": "tsx scripts/generate-seed-sql.ts",
     "seed:recipes-sql": "tsx scripts/generate-recipe-seed-sql.ts",
-    "rec:try": "tsx scripts/recommend-playground.ts"
+    "rec:try": "tsx scripts/recommend-playground.ts",
+    "rec:cost": "tsx scripts/cost-weight-check.ts"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",

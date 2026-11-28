@@ -23,6 +23,7 @@ export async function loadRecIngredients(db: Db): Promise<Map<string, RecIngredi
         pantryDays: r.pantryDays,
         preppedFridgeDays: r.preppedFridgeDays,
         priceYen: r.priceYen,
+        archived: r.archivedAt !== null,
         packageUnits: units
           .filter((u) => u.ingredientId === r.id)
           .map((u) => ({ id: u.id, label: u.label, quantity: u.quantity, isDefault: u.isDefault })),
