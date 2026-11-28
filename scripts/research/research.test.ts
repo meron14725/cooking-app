@@ -217,4 +217,18 @@ describe('buildSql', () => {
     })
     expect(() => buildSql([wrongUnit], exported, { now, sourceUrls: false })).toThrow('エラー')
   })
+
+  it('販売単位のない書き出し（古い SELECT）では SQL を作らない', async () => {
+    const x = await add({ name: 'キャベツ', category: 'vegetable', unit: '個' })
+    const exported = exportRows().map(({ package_units: _, ...rest }) => rest) as unknown as ExportedIngredient[]
+    const r = row({
+      id: x.id,
+      名前: 'キャベツ',
+      分類: '野菜',
+      価格: '200',
+      価格の単位: '1個',
+      出典URL: 'https://a.example',
+    })
+    expect(() => buildSql([r], exported, { now, sourceUrls: false })).toThrow('package_units')
+  })
 })

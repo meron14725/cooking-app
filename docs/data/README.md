@@ -31,6 +31,12 @@
 - 反映した値の出どころは `storage_source` / `price_source` = `researched`（調べた値）
 - 手入力（`manual`）の値は上書きしない。`researched` は「分類と価格をまとめて推定」で上書きされず、分類だけを画面で変えても残る。画面で値を変えたら `manual` になる
 
+## 分類ごとの CSV
+
+| ファイル | 件数 | 日持ちを反映 | 価格を反映 |
+|---|---|---|---|
+| `ingredients/vegetable.csv`（野菜） | 135 | 33 | 39 |
+
 ## 手順
 
 すべて手元（Cloudflare にログインした `wrangler` がある環境）で、リポジトリの直下で実行する。
@@ -82,7 +88,8 @@ npx wrangler d1 execute cooking-app --remote --file .research/apply.sql
 
 - SQL は 1 行 1 つの `UPDATE`。バインド変数を使わないので、D1 の 1 クエリ 100 変数の上限に当たらない
 - 各文は `WHERE id = … AND archived_at IS NULL AND (… IS NULL OR … <> 'manual')` なので、手入力の値と削除済みの食材は変えない
-- 出典 URL の列（`price_source_urls` / `storage_source_urls`、migration 0012）が本番に入っていれば `--source-urls` を付ける。出典を最大 3 件ずつ入れる
+- 出典 URL の列（`price_source_urls` / `storage_source_urls`、migration 0012）が本番に入っていれば `--source-urls` を付ける。出典を最大 3 件ずつ入れる。0012 がマージされて本番に `migrations apply` されるまでは付けない（列がなくて失敗する）
+- 書き出しに `package_units` がない（上の SELECT 以外で書き出した）ときは SQL を作らない。代表量が分からず価格の換算を誤るため
 
 ### 戻すとき
 
