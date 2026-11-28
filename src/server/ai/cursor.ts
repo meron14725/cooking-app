@@ -1,5 +1,10 @@
 import type { ZodType } from 'zod'
-import { ingredientClassifySchema, priceEstimateSchema, recipeClassifySchema } from '../../shared/schemas/attributes'
+import {
+  ingredientClassifySchema,
+  priceEstimateSchema,
+  recipeClassifySchema,
+  storageEstimateSchema,
+} from '../../shared/schemas/attributes'
 import { calorieEstimateSchema, recipeDraftRawSchema } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
 import { looseJsonSchema } from './gemini'
@@ -14,7 +19,9 @@ import {
   priceEstimatePrompt,
   RECIPE_CLASSIFY_SYSTEM,
   recipeClassifyPrompt,
+  STORAGE_ESTIMATE_SYSTEM,
   SUGGEST_SYSTEM,
+  storageEstimatePrompt,
   suggestPrompt,
   TEXT_DRAFT_SYSTEM,
   textDraftPrompt,
@@ -60,6 +67,10 @@ export class CursorProvider implements AiProvider {
 
   estimatePrices(items: Parameters<AiProvider['estimatePrices']>[0]) {
     return this.generate(PRICE_ESTIMATE_SYSTEM, priceEstimatePrompt(items), priceEstimateSchema)
+  }
+
+  estimateStorage(items: Parameters<AiProvider['estimateStorage']>[0]) {
+    return this.generate(STORAGE_ESTIMATE_SYSTEM, storageEstimatePrompt(items), storageEstimateSchema)
   }
 
   classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {

@@ -5,6 +5,8 @@ import type {
   PriceEstimateResult,
   RecipeClassifyItem,
   RecipeClassifyResult,
+  StorageEstimateItem,
+  StorageEstimateResult,
 } from '../../shared/schemas/attributes'
 import type { EstimateCaloriesInput, RecipeDraftRaw } from '../../shared/schemas/recipeDraft'
 import { ApiError } from '../errors'
@@ -31,6 +33,8 @@ export interface AiProvider {
   classifyIngredients(items: IngredientClassifyItem[]): Promise<IngredientClassifyResult>
   /** 食材の価格の目安（まとめて推定） */
   estimatePrices(items: PriceEstimateItem[]): Promise<PriceEstimateResult>
+  /** 食材の日持ちと保存場所（まとめて推定。docs/design/11-storage-days.md） */
+  estimateStorage(items: StorageEstimateItem[]): Promise<StorageEstimateResult>
   /** レシピの区分と味の系統（まとめて推定） */
   classifyRecipes(items: RecipeClassifyItem[]): Promise<RecipeClassifyResult>
 }

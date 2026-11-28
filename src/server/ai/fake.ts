@@ -103,6 +103,24 @@ export class FakeProvider implements AiProvider {
     return { items: items.map((i) => ({ key: i.key, priceYen: i.name.includes('高級') ? null : 100 })) }
   }
 
+  /** 名前に「高級」があれば答えない。「日持ちしない」なら範囲外（冷蔵 999 日）。ほかは冷蔵 4 日・冷凍 30 日 */
+  async estimateStorage(items: Parameters<AiProvider['estimateStorage']>[0]) {
+    return {
+      items: items
+        .filter((i) => !i.name.includes('高級'))
+        .map((i) => ({
+          key: i.key,
+          canFreeze: true,
+          fridgeDays: i.name.includes('日持ちしない') ? 999 : 4,
+          freezerDays: 30,
+          pantryDays: null,
+          defaultLocation: 'fridge' as const,
+          preppedFridgeDays: null,
+          preppedFreezerDays: null,
+        })),
+    }
+  }
+
   /** 名前に「汁」があれば汁物、ほかは副菜。系統は和 */
   async classifyRecipes(items: Parameters<AiProvider['classifyRecipes']>[0]) {
     return {
