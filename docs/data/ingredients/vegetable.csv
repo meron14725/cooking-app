@@ -1,136 +1,136 @@
 id,名前,分類,冷蔵日数,冷凍可否,冷凍日数,常温日数,保存場所,価格,価格の単位,出典URL,メモ
 cocoro-ing-9a6f22d2d1c11d96,[好みのきのこ],野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-d4671649dd9b1617,「Cook Do®」<白菜のクリーム煮用>3~4人前,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-c53cce4b3f0a9f47,「Cook Do®」<麻婆茄子用>3~4人前,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-d4671649dd9b1617,「Cook Do®」<白菜のクリーム煮用>3~4人前,調味料,,,,,常温,165,100g,https://www.ajinomoto.co.jp/products/detail/?ProductName=cookdo_16 https://greenbeans.com/products/14901001001443/details,日持ち: 味の素公式で未開封は常温保存。賞味期間の日数は公表なし。開封後は冷蔵で丸1日中に使う（メモのみ）／価格: 味の素 CookDo 白菜のクリーム煮用 3～4人前 130g 税込214円を100gに換算
+cocoro-ing-c53cce4b3f0a9f47,「Cook Do®」<麻婆茄子用>3~4人前,調味料,,,,,常温,178,100g,https://www.ajinomoto.co.jp/products/detail/?ProductName=cookdo_1 https://www.ajinomoto.co.jp/products/detail/?ProductName=cookdo_16 https://greenbeans.com/products/14901001000538/details,日持ち: 味の素公式で未開封は常温保存。賞味期間の日数は公表なし。開封後は冷蔵で丸1日中に使う（メモのみ）／価格: 味の素 CookDo 麻婆茄子用 中辛 3～4人前 120g 税込214円を100gに換算
 cocoro-ing-ff080705492a0885,いも類・根菜:じゃがいも、さつまいも、にんじん、大根など,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-5059191412611f3c,いんげん,野菜,,,,,,,,,価格: 小売物価統計「さやいんげん」はあるが1本の重さの出典がなく換算しない（2979円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-0dbbafbb6bb43027,いんげん豆,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-65ae6f76bad193ef,うすいえんどう,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JNMWDEQZZ3STM1TPTC,えのき,野菜,,,,,,,,,価格: 小売物価統計「えのきたけ」はあるが1パックの重さの出典がなく換算しない（667円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-5059191412611f3c,いんげん,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのいんげんは重さ売り（100g・150g）で本数が書かれていない
+cocoro-ing-0dbbafbb6bb43027,いんげん豆,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: さやいんげんとして。冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのいんげんは重さ売り（100g・150g）で本数が書かれていない
+cocoro-ing-65ae6f76bad193ef,うすいえんどう,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーにうすいえんどう（グリンピースの生）がない（豆類はいんげん・きぬさや・スナップエンドウのみ）
+01M8DVZ2JNMWDEQZZ3STM1TPTC,えのき,野菜,,可,30,,冷蔵,96,1パック,https://www.pref.shimane.lg.jp/life/region/kikan/chusankan/column/20230117.html https://www.maitake.co.jp/qa/qa_kinoko.php https://greenbeans.com/products/14922384000809/details,日持ち: 冷凍は約1か月（島根県・エノキタケ）。購入後は冷蔵庫（雪国まいたけ）。冷蔵日数は自治体資料になし（ホクトは使いかけを冷蔵3日以内とするが未開封の日数ではないので入れない）／価格: イオンネットスーパー（Green Beans）「国内産 えのき 150g 1袋」税込96円（2026年11月28日掲載）、1点あたり。1袋を1パックとして
 cocoro-ing-a72bcddefcd098d2,おろしにんにく、おろししょうが,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-ac2ded32461b1486,お好みのきのこ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-788b3456ea76e4f8,かぶ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JM04FECTF31RKSEPDE,かぼちゃ,野菜,,可,30,30,常温,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf,日持ち: 丸ごと冷暗所1〜2か月の下限。加熱して冷凍1〜2か月の下限（松山市）／価格: 小売物価統計「かぼちゃ」はあるが1個の重さの出典がなく換算しない（713円/kg）ため空欄
+cocoro-ing-788b3456ea76e4f8,かぶ,野菜,,可,21,,冷蔵,,,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 葉を切り新聞紙に包んで冷蔵庫（真岡市）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパーのかぶは「500g 3-5個」で個数に幅がある
+01M8DVZ2JM04FECTF31RKSEPDE,かぼちゃ,野菜,,可,30,30,常温,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf,日持ち: 丸ごと冷暗所1〜2か月の下限。加熱して冷凍1〜2か月の下限（松山市）／価格: イオンネットスーパーに丸ごとのかぼちゃがなく、カットのみ
 cocoro-ing-7efa03c5fd5bd04e,かぼちゃ※,野菜,4,可,30,,冷蔵,71,100g,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: カットしたもの冷蔵4〜5日の下限・加熱して冷凍1〜2か月の下限（松山市）／価格: 小売物価統計「かぼちゃ」東京都区部2026年1〜10月平均 713円/kgを100gに換算
-cocoro-ing-a3c87bdbae1f39af,きぬさや,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-8e850752dcc5daa2,きのこ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-622b2d4ab7d6fbd2,きゅうり,野菜,10,可,30,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 切っていないもの冷蔵約10日・冷凍約1か月（目黒区）／価格: 小売物価統計「きゅうり」はあるが1本の重さの出典がなく換算しない（765円/kg）ため空欄
-01M8DVZ2JNA6RK63AG67M7A6BE,ごぼう,野菜,7,可,30,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 土のないもの冷蔵約1週間・冷凍約1か月（目黒区）／価格: 小売物価統計「ごぼう」はあるが1本の重さの出典がなく換算しない（1155円/kg）ため空欄
-01M8DVZ2JMWVHSYDHPEWDW3R5V,さつまいも,野菜,,,,,,,,,価格: 小売物価統計「さつまいも」はあるが1本の重さの出典がなく換算しない（674円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-f9955b8e91cdf358,さやいんげん,野菜,,,,,,298,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「さやいんげん」東京都区部2026年1〜10月平均 2979円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-b5ed99e7d3a6a34b,しいたけ,野菜,,,,,,,,,価格: 小売物価統計「生しいたけ」はあるが1枚の重さの出典がなく換算しない（1859円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-3a592b576ca34488,しいたけのもどし汁,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-ebdb3bb3e8341cc1,しいたけの戻し汁,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-e2363d744510e96d,ししとう,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JN6R7D54786NV23A8G,しめじ,野菜,,,,,,,,,価格: 小売物価統計「しめじ」はあるが1パックの重さの出典がなく換算しない（841円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-a3c87bdbae1f39af,きぬさや,野菜,,可,21,,,930,100g,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922352200101/details,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパー（Green Beans）「国内産 きぬさや 30g 1パック」税込279円（2026年11月28日掲載）、30gを100gあたりに換算
+cocoro-ing-8e850752dcc5daa2,きのこ,野菜,,,,,,,,,日持ち: 種類が決まらない総称の行（複数・種類未定の食材の行）／価格: 種類が決まらない総称の行（複数・種類未定の食材の行）
+cocoro-ing-622b2d4ab7d6fbd2,きゅうり,野菜,10,可,30,,冷蔵,129,1本,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://greenbeans.com/products/14922341000705/details,日持ち: 切っていないもの冷蔵約10日・冷凍約1か月（目黒区）／価格: イオンネットスーパー（Green Beans）「国内産 きゅうり 3本 1袋」税込387円（2026年11月28日掲載）、3で割った値
+01M8DVZ2JNA6RK63AG67M7A6BE,ごぼう,野菜,7,可,30,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 土のないもの冷蔵約1週間・冷凍約1か月（目黒区）／価格: イオンネットスーパーのごぼうは「100g(2-3本)」で本数に幅がある
+01M8DVZ2JMWVHSYDHPEWDW3R5V,さつまいも,野菜,,可,21,,常温,430,1本,https://www.pref.chiba.lg.jp/ryuhan/pbmgm/zukan/yasai/satsumaimo.html https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://greenbeans.com/products/14922361000815/details,日持ち: 冷蔵庫は避け新聞紙に包んで常温（千葉県・真岡市）。冷凍は野菜の目安3週間（農水省）。常温日数は資料になし／価格: イオンネットスーパー（Green Beans）「茨城県産 さつまいも(紅優甘) 1本」税込430円（2026年11月28日掲載）、1点あたり
+cocoro-ing-f9955b8e91cdf358,さやいんげん,野菜,,可,21,,,298,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: 小売物価統計「さやいんげん」東京都区部2026年1〜10月平均 2979円/kgを100gに換算
+cocoro-ing-b5ed99e7d3a6a34b,しいたけ,野菜,,可,30,,冷蔵,47,1枚,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://greenbeans.com/products/14582146347438/details,日持ち: パックのまま野菜室（松山市・真岡市）。生のまま冷凍可（松山市）、冷凍野菜はおよそ1か月以内（広島市）。冷蔵日数は資料になし／価格: イオンネットスーパー（Green Beans）「［鮮度+］【有機】福島県産 生しいたけ(菌床栽培) 100g(6個)」税込279円（2026年11月28日掲載）、6で割った値。有機。個数が書かれた商品がこれだけ
+cocoro-ing-3a592b576ca34488,しいたけのもどし汁,野菜,,,,,,,,,日持ち: 干ししいたけを戻した汁で、売られている商品がない／価格: 干ししいたけを戻した汁で、売られている商品がない
+cocoro-ing-ebdb3bb3e8341cc1,しいたけの戻し汁,野菜,,,,,,,,,日持ち: 干ししいたけを戻した汁で、売られている商品がない／価格: 干ししいたけを戻した汁で、売られている商品がない
+cocoro-ing-e2363d744510e96d,ししとう,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのししとうは50gで本数が書かれていない
+01M8DVZ2JN6R7D54786NV23A8G,しめじ,野菜,,可,30,,冷蔵,171,1パック,https://www.pref.shimane.lg.jp/life/region/kikan/chusankan/column/20230117.html https://www.maitake.co.jp/qa/qa_kinoko.php https://greenbeans.com/products/14549414724643/details,日持ち: 冷凍は約1か月（島根県・ブナシメジ／雪国まいたけ）。購入後は冷蔵庫（雪国まいたけ）。冷蔵日数は自治体資料になし（ホクトは使いかけを冷蔵3日以内）／価格: イオンネットスーパー（Green Beans）「国内産 カットぶなしめじ 10％増量 1袋 100g トップバリュ」税込171円（2026年11月28日掲載）、1点あたり。1袋を1パックとして
 cocoro-ing-23504d4ddedd2d21,しめじ、まいたけ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-01M8DVZ2JNHF02CHBAPQ82AEQH,しょうが,野菜,,,,,,253,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-bf0d6e12fe07369c,しょうが(市販のチューブ入りでも可),野菜,,,,,,253,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算、生のしょうがの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
+01M8DVZ2JNHF02CHBAPQ82AEQH,しょうが,野菜,,可,21,,,253,100g,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: すりおろして冷凍可（真岡市）。冷凍は野菜の目安3週間（農水省）。保存場所は真岡市が野菜室、松山市が冷暗所と分かれるので空欄。日数は資料になし／価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算
+cocoro-ing-bf0d6e12fe07369c,しょうが(市販のチューブ入りでも可),野菜,,可,21,,,253,100g,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 生のしょうがとして。すりおろして冷凍可（真岡市）。冷凍は野菜の目安3週間（農水省）。保存場所は真岡市が野菜室、松山市が冷暗所と分かれるので空欄。日数は資料になし／価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算、生のしょうがの価格
 cocoro-ing-29886cb5a30ca80d,しょうが、にんにく,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-8b34a66e2b93c56d,しょうが、白ねぎの青い部分,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-4486340117e03a4a,しょうがの絞り汁,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JK9P8YPYP8TV5GQNZG,じゃがいも,野菜,60,可,21,60,常温,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 常温・冷蔵とも約2か月（目黒区）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「じゃがいも」はあるが1個の重さの出典がなく換算しない（571円/kg）ため空欄
+cocoro-ing-4486340117e03a4a,しょうがの絞り汁,野菜,,,,,,,,,日持ち: しょうがを絞った汁で、売られている商品がない／価格: しょうがを絞った汁で、売られている商品がない
+01M8DVZ2JK9P8YPYP8TV5GQNZG,じゃがいも,野菜,60,可,21,60,常温,107,1個,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14978862073902/details,日持ち: 常温・冷蔵とも約2か月（目黒区）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 じゃがいも 360g(2個)」税込214円（2026年11月28日掲載）、2で割った値
 cocoro-ing-de8ba495a0cc31b8,すりおろしにんにく、すりおろししょうが,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-e19787dac1460997,たけのこ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-6ca8757c04dd0204,たけのこの水煮,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-805f098baf856ecc,たオクラ(飾り用),野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: オクラとして。冷蔵1週間・冷凍2か月（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-ef781ae9bdc5c90e,とうがらし,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-70b1fe80f269783b,とうもろこし,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JNM7DMHH18GJ3T08SG,なす,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵1週間・冷凍2か月（農水省）／価格: 小売物価統計「なす」はあるが1本の重さの出典がなく換算しない（795円/kg）ため空欄
-cocoro-ing-8adda62e5a0126b3,にら,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JKX11CE2ZZ8M450CPP,にんじん,野菜,7,可,21,,冷蔵,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1〜2週間の下限（松山市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「にんじん」はあるが1本の重さの出典がなく換算しない（492円/kg）ため空欄
-01M8DVZ2JNQCETKMMN4FVQVPRK,にんにく,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-e19787dac1460997,たけのこ,野菜,,,,,,134,100g,https://greenbeans.com/products/14549414519577/details,日持ち: 生のたけのこはゆでて水につけて保存（真岡市）とあるが日数なし／価格: イオンネットスーパー（Green Beans）「オーガニックたけのこ水煮 ホール小 200g トップバリュ グリーンアイ」税込268円（2026年11月28日掲載）、200gを100gあたりに換算。水煮。有機のみ掲載
+cocoro-ing-6ca8757c04dd0204,たけのこの水煮,野菜,,,,,,134,100g,https://greenbeans.com/products/14549414519577/details,日持ち: トップバリュ公式で未開封の賞味期限が見つからない／価格: イオンネットスーパー（Green Beans）「オーガニックたけのこ水煮 ホール小 200g トップバリュ グリーンアイ」税込268円（2026年11月28日掲載）、200gを100gあたりに換算。有機のみ掲載
+cocoro-ing-805f098baf856ecc,ゆでたオクラ(飾り用),野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: オクラとして。冷蔵1週間・冷凍2か月（農水省）／価格: イオンネットスーパーのオクラは「130g 1袋」で本数が書かれていない
+cocoro-ing-ef781ae9bdc5c90e,とうがらし,野菜,,,,,,,,,日持ち: 生か乾燥か決まらず、どちらも自治体・農水省の資料に日数なし／価格: イオンネットスーパーは万願寺・韓国唐辛子などの品種のみで、本数が書かれていない
+cocoro-ing-70b1fe80f269783b,とうもろこし,野菜,,可,60,,,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷凍2か月（農水省）。冷蔵ではなく冷凍がおすすめとあり冷蔵日数なし／価格: イオンネットスーパーで生のとうもろこしの検索結果が0件（時期外）
+01M8DVZ2JNM7DMHH18GJ3T08SG,なす,野菜,7,可,60,,冷蔵,129,1本,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14922343300704/details,日持ち: 冷蔵1週間・冷凍2か月（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 無選別長なす 1袋 (3本入)」税込387円（2026年11月28日掲載）、3で割った値
+cocoro-ing-8adda62e5a0126b3,にら,野菜,7,可,21,,冷蔵,214,1束,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922328000100/details,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 にら 1袋」税込214円（2026年11月28日掲載）、1点あたり。1袋を1束として
+01M8DVZ2JKX11CE2ZZ8M450CPP,にんじん,野菜,7,可,21,,冷蔵,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1〜2週間の下限（松山市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパーのにんじんは「450g 3-4本」などで本数に幅がある
+01M8DVZ2JNQCETKMMN4FVQVPRK,にんにく,野菜,,可,21,,冷蔵,,,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: ラップして野菜室・すりおろして冷凍可（真岡市）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパーのにんにくは1個売りで、片の数が書かれていない
 cocoro-ing-01b2db0b6254b067,にんにく、しょうが,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-f9f21f9f34487540,はごろもフーズ シャキッと!コーン,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JMPVR0ZJ4ED3F65CCY,ほうれん草,野菜,7,可,21,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 冷蔵7日・茹でて冷凍3〜4週間の下限（東広島市）／価格: 小売物価統計「ほうれんそう」はあるが1袋の重さの出典がなく換算しない（1098円/kg）ため空欄
+cocoro-ing-f9f21f9f34487540,はごろもフーズ シャキッと!コーン,野菜,,,,1110,,171,1缶,https://www.hagoromofoods.co.jp/products/detail/1254.html https://greenbeans.com/products/14902560226063/details,日持ち: 賞味期間37ヶ月（はごろもフーズ・190g缶）を1か月30日で換算。保存場所・冷凍の記載なし／価格: はごろもフーズ シャキッとコーン 190g 1缶 税込171円
+01M8DVZ2JMPVR0ZJ4ED3F65CCY,ほうれん草,野菜,7,可,21,,冷蔵,247,1袋,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/12000040129476/details,日持ち: 冷蔵7日・茹でて冷凍3〜4週間の下限（東広島市）／価格: イオンネットスーパー（Green Beans）「［鮮度+］栃木県産 ほうれんそう 200g 1袋」税込247円（2026年11月28日掲載）、1点あたり
 cocoro-ing-921c1003e8dc1f6e,ほうれん草、小松菜,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-01M8DVZ2JN21KW1XS86BBXBPCT,まいたけ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-a5b78c935f5ac4e8,みつ葉,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JNNGBFFKEQTJ74PM8M,もやし,野菜,,,,,,,,,価格: 小売物価統計「もやし」はあるが1袋の重さの出典がなく換算しない（179円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-01M8DVZ2JNAFHG4DYNYW03VED7,れんこん,野菜,,,,,,134,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「れんこん」東京都区部2026年1〜10月平均 1337円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
+01M8DVZ2JN21KW1XS86BBXBPCT,まいたけ,野菜,,可,30,,冷蔵,193,1パック,https://www.maitake.co.jp/qa/qa_kinoko.php https://greenbeans.com/products/14979754554158/details,日持ち: 冷凍は1か月ほど・購入後は冷蔵庫（雪国まいたけ）。冷蔵日数は資料になし（ホクトは使いかけを冷蔵3日以内）／価格: イオンネットスーパー（Green Beans）「［鮮度+］新潟県産 雪国まいたけ「極」 100g 1パック」税込193円（2026年11月28日掲載）、1点あたり
+cocoro-ing-a5b78c935f5ac4e8,みつ葉,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのみつばは1袋で重さが書かれていない
+01M8DVZ2JNNGBFFKEQTJ74PM8M,もやし,野菜,,可,21,,冷蔵,52,1袋,https://www.saladcosmo.co.jp/faq/faq-003/ https://www.saladcosmo.co.jp/faq/faq-004/ https://greenbeans.com/products/14904123004385/details,日持ち: チルド室・冷蔵室で保存、冷凍は食感が落ちるが可（サラダコスモ）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパー（Green Beans）「サラダコスモ 有機緑豆もやし 200g」税込52円（2026年11月28日掲載）、1点あたり。1袋
+01M8DVZ2JNAFHG4DYNYW03VED7,れんこん,野菜,2,可,30,,冷蔵,134,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://cn-portal.pref.kochi.lg.jp/eco_magazine/7497/,日持ち: 酢水につけて冷蔵約2〜3日の下限、酢水にくぐらせて冷凍約1か月（高知県）／価格: 小売物価統計「れんこん」東京都区部2026年1〜10月平均 1337円/kgを100gに換算
 cocoro-ing-0c4e76f328ac7efd,れんこん、にんじん,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-8f0cd6f738b88777,れんこんまたはじゃがいも,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-43885bcda9e9c940,アクが少なく、煮くずれしにくい旬の野菜,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-f1b7d0945d86f301,アスパラガス,野菜,,,,,,,,,価格: 小売物価統計「アスパラガス」はあるが1本の重さの出典がなく換算しない（2537円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-a81e024ee9b7a97c,イタリアンパセリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-acbc6443784638d8,エリンギ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-d5e27e0e6a0c7390,オクラ,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵1週間・冷凍2か月（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-6536e8325213a282,カットトマト,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-8bb2414190571d48,カリフラワー,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-51a6eaa8aa8b56b6,キムチ,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「キムチ」東京都区部2026年1〜10月平均 1092円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-01M8DVZ2JM7D7Z4G8WCNEMCRBY,キャベツ,野菜,14,可,30,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 冷蔵約2週間・冷凍約1か月（目黒区）／価格: 小売物価統計「キャベツ」はあるが1個の重さの出典がなく換算しない（223円/kg）ため空欄
+cocoro-ing-f1b7d0945d86f301,アスパラガス,野菜,,可,21,,冷蔵,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 立てて野菜室（松山市・真岡市）、ゆでて冷凍可（真岡市）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパーに生のアスパラガスがない（冷凍カットのみ）
+cocoro-ing-a81e024ee9b7a97c,イタリアンパセリ,野菜,,可,21,,,1783,100g,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14996369050615/details,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: 国内産 イタリアンパセリ 12g 税込214円を100gに換算
+cocoro-ing-acbc6443784638d8,エリンギ,野菜,,可,30,,冷蔵,150,100g,https://www.pref.shimane.lg.jp/life/region/kikan/chusankan/column/20230117.html https://www.maitake.co.jp/qa/qa_kinoko.php https://greenbeans.com/products/14979754556381/details,日持ち: 冷凍は約1か月（島根県・エリンギ／雪国まいたけ）。購入後は冷蔵庫（雪国まいたけ）。冷蔵日数は資料になし／価格: ［鮮度+］新潟県産 雪国えりんぎ 100g 1パック 税込150円
+cocoro-ing-d5e27e0e6a0c7390,オクラ,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵1週間・冷凍2か月（農水省）／価格: イオンネットスーパーのオクラは「130g 1袋」で本数が書かれていない
+cocoro-ing-6536e8325213a282,カットトマト,野菜,,,,,,35,100g,https://greenbeans.com/products/14902121124494/details,日持ち: カゴメ公式の家庭用商品ページに賞味期間の記載なし／価格: カットトマト 400g トップバリュベストプライス 税込139円を100gに換算
+cocoro-ing-8bb2414190571d48,カリフラワー,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのカリフラワーは1個売りで重さが書かれていない
+cocoro-ing-51a6eaa8aa8b56b6,キムチ,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: メーカー公式で未開封の賞味期限が見つからない／価格: 小売物価統計「キムチ」東京都区部2026年1〜10月平均 1092円/kgを100gに換算
+01M8DVZ2JM7D7Z4G8WCNEMCRBY,キャベツ,野菜,14,可,30,,冷蔵,322,1個,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://greenbeans.com/products/12000040395673/details,日持ち: 冷蔵約2週間・冷凍約1か月（目黒区）／価格: イオンネットスーパー（Green Beans）「［鮮度+］群馬県産 キャベツ 1個」税込322円（2026年11月28日掲載）、1点あたり
 cocoro-ing-4f22244280449a7e,キャベツ、白菜など,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-8fdeea17283e59df,コーンスターチ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-8d109f1bf2b5dc7d,ゴーヤ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵1週間・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-8fdeea17283e59df,コーンスターチ,調味料,,,,,,79,100g,https://greenbeans.com/products/14549741558515/details,日持ち: トップバリュ公式で未開封の賞味期限が見つからない／価格: コーンスターチ 150g トップバリュベストプライス 税込119円を100gに換算
+cocoro-ing-8d109f1bf2b5dc7d,ゴーヤ,野菜,7,可,30,,冷蔵,430,1本,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14922349300128/details,日持ち: 冷蔵1週間・冷凍1か月（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 ゴーヤー 1本」税込430円（2026年11月28日掲載）、1点あたり
 cocoro-ing-0bc50ec1c523f44f,サラダ菜、ラディッシュ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-c9751663dc725a44,サンチュ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-81b351a5bd3f5614,スイートコーン,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-9c15e288c622c0ce,ズッキーニ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-38c5480bd9dfd749,セロリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JMK9KN3XM2Y3BSXNXS,チンゲン菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JNE5N3PBNC5VE8378C,トマト,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍2か月（農水省）／価格: 小売物価統計「トマト」はあるが1個の重さの出典がなく換算しない（880円/kg）ため空欄
-cocoro-ing-3d502f44d0109e97,トマトジュース,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-c20c7b8476a94b21,トマトピューレ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-24c150950eb7dbd7,ドライパセリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-debdd15325d7b61c,ニラ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-8ccf7ef9facb436a,パクチー,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-9f7305594a9ed5a6,パセリ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-99bf59e2ab485e32,パセリのみじん切り,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-5536b7c8ea41bad6,パプリカ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-c5cbb9c00446eb6e,ビーツ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JN998209MMS5NC175Y,ピーマン,野菜,14,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵2週間・冷凍2か月（農水省）／価格: 小売物価統計「ピーマン」はあるが1個の重さの出典がなく換算しない（1199円/kg）ため空欄
+cocoro-ing-c9751663dc725a44,サンチュ,野菜,,不可,,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: サラダに使う葉物は冷凍を避ける（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパーのサンチュは7枚入りで重さが書かれていない
+cocoro-ing-81b351a5bd3f5614,スイートコーン,野菜,,可,60,,,133,100g,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14901810005434/details,日持ち: 生のとうもろこしとして。冷凍2か月（農水省）。冷蔵日数なし／価格: イオンネットスーパー（Green Beans）「オーガニック カーネルコーン【冷凍】 250g」税込333円（2026年11月28日掲載）、250gを100gあたりに換算。冷凍のカーネルコーン
+cocoro-ing-9c15e288c622c0ce,ズッキーニ,野菜,,可,21,,,279,1本,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922342700116/details,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパー（Green Beans）「国内産 ズッキーニ 1本」税込279円（2026年11月28日掲載）、1点あたり
+cocoro-ing-38c5480bd9dfd749,セロリ,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのセロリーは150gパックで、1本の商品がない
+01M8DVZ2JMK9KN3XM2Y3BSXNXS,チンゲン菜,野菜,,可,21,,冷蔵,,,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青菜類として野菜室に立てて保存・ゆでて冷凍可（真岡市）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパーのチンゲンサイは1袋で株数が書かれていない
+01M8DVZ2JNE5N3PBNC5VE8378C,トマト,野菜,7,可,60,,冷蔵,194,1個,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14922344000238/details,日持ち: 冷蔵7〜10日の下限・冷凍2か月（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 トマト 2個 1袋」税込387円（2026年11月28日掲載）、2で割った値
+cocoro-ing-3d502f44d0109e97,トマトジュース,野菜,,,,,,,,,日持ち: カゴメ公式は開封後の目安のみで、缶の未開封の賞味期間が見つからない／価格: イオンネットスーパーのトマトジュースはボトル・パックのみで缶がない
+cocoro-ing-c20c7b8476a94b21,トマトピューレ,野菜,,,,,,129,100g,https://greenbeans.com/products/14901306300784/details,日持ち: カゴメ トマトピューレー（200g）の公式ページに賞味期間の記載なし／価格: カゴメ トマトピューレ 200g 税込258円を100gに換算
+cocoro-ing-24c150950eb7dbd7,ドライパセリ,調味料,,,,760,,5200,100g,"https://housefoods.jp/products/catalog/cd_1,084041.html https://greenbeans.com/products/10000045104630/details",日持ち: ギャバン3.5gパセリとして。製造後2年1ヵ月（未開封）を730+30日で換算。保存場所の記載なし／価格: ハウス ギャバン パセリ 3.5g 税込182円を100gに換算
+cocoro-ing-debdd15325d7b61c,ニラ,野菜,7,可,21,,冷蔵,214,1束,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922328000100/details,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 にら 1袋」税込214円（2026年11月28日掲載）、1点あたり。1袋を1束として
+cocoro-ing-8ccf7ef9facb436a,パクチー,野菜,,可,21,,,965,100g,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14560178471123/details,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパー（Green Beans）「【有機】茨城県産 HATAKEカンパニー パクチー 20g」税込193円（2026年11月28日掲載）、20gを100gあたりに換算。有機のみ掲載
+cocoro-ing-9f7305594a9ed5a6,パセリ,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのパセリは1袋で重さが書かれていない
+cocoro-ing-99bf59e2ab485e32,パセリのみじん切り,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: パセリとして。冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのパセリは1袋で重さが書かれていない
+cocoro-ing-5536b7c8ea41bad6,パプリカ,野菜,7,可,30,,冷蔵,279,1個,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14548449533473/details,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: イオンネットスーパー（Green Beans）「[鮮度+] 栃木県産 パプリカ(赤) 1個」税込279円（2026年11月28日掲載）、1点あたり。赤の価格
+cocoro-ing-c5cbb9c00446eb6e,ビーツ,野菜,,,,,,,,,日持ち: 缶詰のビーツのメーカー公式で賞味期限が見つからない／価格: 単位が缶だが、イオンネットスーパーには生のビーツしかない
+01M8DVZ2JN998209MMS5NC175Y,ピーマン,野菜,14,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵2週間・冷凍2か月（農水省）／価格: イオンネットスーパーのピーマンは「4-6個」で個数に幅がある
 cocoro-ing-8fef4c952878b3b0,ピーマンまたはパプリカ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-e64fb8490cadade6,フリルレタス,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JMZPDQKJ9H3PKZQT0E,ブロッコリー,野菜,2,可,30,,冷蔵,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf,日持ち: 冷蔵2〜3日の下限。茹でて冷凍約1か月（松山市）／価格: 小売物価統計「ブロッコリー」はあるが1個の重さの出典がなく換算しない（718円/kg）ため空欄
+cocoro-ing-e64fb8490cadade6,フリルレタス,野菜,,不可,,,,238,100g,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14549741417584/details,日持ち: サラダに使う葉物は冷凍を避ける（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパー（Green Beans）「トップバリュ減の恵み 茨城県産 フリルレタス 90g」税込214円（2026年11月28日掲載）、90gを100gあたりに換算
+01M8DVZ2JMZPDQKJ9H3PKZQT0E,ブロッコリー,野菜,2,可,30,,冷蔵,,,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf,日持ち: 冷蔵2〜3日の下限。茹でて冷凍約1か月（松山市）／価格: イオンネットスーパーの野菜売り場に丸ごとのブロッコリーがない（スプラウトのみ）
 cocoro-ing-7fe35a15f6801ae6,ブロッコリー など,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-1e8c651b884311f6,プチトマト,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: トマトの冷蔵7〜10日の下限・ミニトマトも丸ごと冷凍2か月（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-069cc10a39b924a8,ホクト ブナシメジ,野菜,,,,,,84,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しめじ」東京都区部2026年1〜10月平均 841円/kgを100gに換算、しめじの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-417ba90f837ea638,ホクト ブナピー,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-49b72564a528c343,ホクト マイタケ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-e517f607b798b598,ホワイトアスパラガス,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-0757b8b4444f255d,ホールトマト,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-c1244cbff0cafc9b,レタス,野菜,14,可,21,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 冷蔵約2週間・冷凍約3週間（目黒区。冷凍は加熱料理用）／価格: 小売物価統計「レタス」はあるが1個の重さの出典がなく換算しない（517円/kg）ため空欄
-cocoro-ing-b8075fa09d9cbc68,万能ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青ねぎとして冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-57ae721cfce4fcb6,八尾若ごぼう,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-15128d5904a62a3f,冬瓜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-413457893a2a5508,冷凍枝豆,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JM904287YKFYFNYZ3S,大根,野菜,10,可,21,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 冷蔵約10日・冷凍約3週間（目黒区）／価格: 小売物価統計「だいこん」はあるが1本の重さの出典がなく換算しない（220円/kg）ため空欄
+cocoro-ing-1e8c651b884311f6,プチトマト,野菜,7,可,60,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: トマトの冷蔵7〜10日の下限・ミニトマトも丸ごと冷凍2か月（農水省）／価格: イオンネットスーパーのミニトマトは重さ売りで個数が書かれていない
+cocoro-ing-069cc10a39b924a8,ホクト ブナシメジ,野菜,,可,30,,冷蔵,84,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.pref.shimane.lg.jp/life/region/kikan/chusankan/column/20230117.html https://www.maitake.co.jp/qa/qa_kinoko.php,日持ち: 冷凍は約1か月（島根県・ブナシメジ／雪国まいたけ）。購入後は冷蔵庫（雪国まいたけ）。冷蔵日数は自治体資料になし（ホクトは使いかけを冷蔵3日以内）／価格: 小売物価統計「しめじ」東京都区部2026年1〜10月平均 841円/kgを100gに換算、しめじの価格
+cocoro-ing-417ba90f837ea638,ホクト ブナピー,野菜,,,,,,171,100g,https://greenbeans.com/products/14985761100028/details,日持ち: ブナピーの公式の日数が見つからず空欄（ブナシメジの値は使わない）／価格: イオンネットスーパー（Green Beans）「長野県産 ホクト ブナピー 100g 1袋」税込171円（2026年11月28日掲載）、100gを100gあたりに換算
+cocoro-ing-49b72564a528c343,ホクト マイタケ,野菜,,可,30,,冷蔵,,,https://www.maitake.co.jp/qa/qa_kinoko.php,日持ち: 冷凍は1か月ほど・購入後は冷蔵庫（雪国まいたけ）。冷蔵日数は資料になし（ホクトは使いかけを冷蔵3日以内）／価格: イオンネットスーパーにホクトのマイタケがなく空欄（雪国まいたけはあるが別の商品）
+cocoro-ing-e517f607b798b598,ホワイトアスパラガス,野菜,,,,,,,,,日持ち: ホワイトアスパラガスの公的資料が見つからず空欄（緑のアスパラガスの値は使わない）／価格: イオンネットスーパーは瓶詰 330g のみで本数が書かれていない
+cocoro-ing-0757b8b4444f255d,ホールトマト,野菜,,,,,,139,1缶,https://greenbeans.com/products/14902121124500/details,日持ち: カゴメ公式の家庭用商品ページに賞味期間の記載なし／価格: ホールトマト 400g トップバリュベストプライス 1缶 税込139円
+cocoro-ing-c1244cbff0cafc9b,レタス,野菜,14,可,21,,冷蔵,258,1個,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://greenbeans.com/products/14922334000101/details,日持ち: 冷蔵約2週間・冷凍約3週間（目黒区。冷凍は加熱料理用）／価格: イオンネットスーパー（Green Beans）「国内産 レタス(こぶり) 1個」税込258円（2026年11月28日掲載）、1点あたり。こぶりの1個
+cocoro-ing-b8075fa09d9cbc68,万能ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青ねぎとして冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパーの万能ねぎは1袋で重さが書かれていない
+cocoro-ing-57ae721cfce4fcb6,八尾若ごぼう,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーに若ごぼう（葉ごぼう）がない
+cocoro-ing-15128d5904a62a3f,冬瓜,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーで冬瓜・とうがんの検索結果が0件
+cocoro-ing-413457893a2a5508,冷凍枝豆,野菜,,,,,,146,100g,https://greenbeans.com/products/14549741413487/details,日持ち: 冷凍えだまめのメーカー公式で賞味期限が見つからない／価格: 北海道十勝産塩味えだまめ【冷凍】 220g トップバリュ 税込322円を100gに換算（国産を選んだ）
+01M8DVZ2JM904287YKFYFNYZ3S,大根,野菜,10,可,21,,冷蔵,279,1本,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://greenbeans.com/products/12000040499173/details,日持ち: 冷蔵約10日・冷凍約3週間（目黒区）／価格: イオンネットスーパー（Green Beans）「［鮮度+］国内産 だいこん 1本」税込279円（2026年11月28日掲載）、1点あたり
 cocoro-ing-28ab5d716d6ba71c,好みのきのこ,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-dfdc679e5d1622d7,好みの野菜,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-01M8DVZ2JMA66AZKGR067AYSSJ,小松菜,野菜,3,可,21,,冷蔵,,,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: 冷蔵約3日・冷凍約3週間（目黒区）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-d9a670b00ad507f7,小玉ねぎ,野菜,14,可,21,30,常温,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 玉ねぎとして。常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-a9df68f8214b5be2,山菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-0f28e084caf9ff4a,春キャベツ,野菜,,,,,,22,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「キャベツ」東京都区部2026年1〜10月平均 223円/kgを100gに換算、キャベツの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-2f75bf4a87ccb55e,枝豆,野菜,,,,,,167,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「えだまめ」東京都区部2026年1〜10月平均 1672円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-53561cad861ac4e0,炒め玉ねぎペースト,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-01M8DVZ2JJD608EATBWFHHVV0F,玉ねぎ,野菜,14,可,21,30,常温,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「たまねぎ」はあるが1個の重さの出典がなく換算しない（447円/kg）ため空欄
-01M8DVZ2JM8EMEEJ8Z3C70X74W,白菜,野菜,14,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵2〜3週間の下限（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計「はくさい」はあるが1個の重さの出典がなく換算しない（265円/kg）ため空欄
+01M8DVZ2JMA66AZKGR067AYSSJ,小松菜,野菜,3,可,21,,冷蔵,214,1袋,https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html https://greenbeans.com/products/12000040129551/details,日持ち: 冷蔵約3日・冷凍約3週間（目黒区）／価格: イオンネットスーパー（Green Beans）「［鮮度+］埼玉県産 こまつな 200g 1袋」税込214円（2026年11月28日掲載）、1点あたり
+cocoro-ing-d9a670b00ad507f7,小玉ねぎ,野菜,14,可,21,30,常温,36,1個,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922366300101/details,日持ち: 玉ねぎとして。常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 北海道産 ペコロス 6個 1パック 税込214円を6個で割った
+cocoro-ing-a9df68f8214b5be2,山菜,野菜,,,,,,,,,日持ち: 種類が決まらない総称の行（複数・種類未定の食材の行）／価格: 種類が決まらない総称の行（複数・種類未定の食材の行）
+cocoro-ing-0f28e084caf9ff4a,春キャベツ,野菜,14,可,30,,冷蔵,22,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.city.meguro.tokyo.jp/recycle/kurashi/gomi/hozonhouhou.html,日持ち: キャベツとして。冷蔵約2週間・冷凍約1か月（目黒区）／価格: 小売物価統計「キャベツ」東京都区部2026年1〜10月平均 223円/kgを100gに換算、キャベツの価格
+cocoro-ing-2f75bf4a87ccb55e,枝豆,野菜,,可,21,,,167,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: 小売物価統計「えだまめ」東京都区部2026年1〜10月平均 1672円/kgを100gに換算
+cocoro-ing-53561cad861ac4e0,炒め玉ねぎペースト,野菜,,,,545,,139,1袋,"https://housefoods.jp/products/catalog/cd_1,089566,chk,nikomi.html https://greenbeans.com/products/10000049715535/details",日持ち: ハウス カレーパートナー炒めたまねぎペースト（40g）として。製造後1年6ヵ月（未開封）を365+180日で換算。保存場所の記載なし／価格: ハウス カレーパートナー炒めたまねぎペースト 40g 1袋 税込139円
+01M8DVZ2JJD608EATBWFHHVV0F,玉ねぎ,野菜,14,可,21,30,常温,86,1個,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/12000040689949/details,日持ち: 常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパー（Green Beans）「[鮮度+] 北海道産 たまねぎ 360g(2個)」税込171円（2026年11月28日掲載）、2で割った値
+01M8DVZ2JM8EMEEJ8Z3C70X74W,白菜,野菜,14,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵2〜3週間の下限（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパーは1/4カットとミニはくさいのみで、丸ごとの1個がない
 cocoro-ing-69d3c5acab76f493,白菜、にんじん、しいたけなど,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-90f473f2463eb569,白菜、生しいたけなど,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-40afaad99ddb0112,白菜キムチ,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「キムチ」東京都区部2026年1〜10月平均 1092円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-77572ef793c8e328,白髪ねぎ,野菜,,,,,,84,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ねぎ」東京都区部2026年1〜10月平均 835円/kgを100gに換算、ねぎの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-5459926f9054734a,糸みつ葉,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-1648bcddbffbb8a1,紅しょうが,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-688593f29f0f3d5b,細ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青ねぎとして冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-5e74f06a187dae10,絹さや,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-cc72dd7abda886e0,緑豆もやし,野菜,,,,,,,,,価格: 小売物価統計「もやし」はあるが1袋の重さの出典がなく換算しない（179円/kg）ため空欄／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-da6ad41378f036b5,緑黄色野菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-7ba55ac3a50289f2,芽キャベツ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-27c2f1e85a1d4931,葉つきのかぶ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-40afaad99ddb0112,白菜キムチ,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: メーカー公式で未開封の賞味期限が見つからない／価格: 小売物価統計「キムチ」東京都区部2026年1〜10月平均 1092円/kgを100gに換算
+cocoro-ing-77572ef793c8e328,白髪ねぎ,野菜,7,可,30,,冷蔵,84,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.city.mito.lg.jp/site/gomi/91226.html https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 長ねぎとして。冷蔵1週間（水戸市）、冷凍1か月（東広島市）／価格: 小売物価統計「ねぎ」東京都区部2026年1〜10月平均 835円/kgを100gに換算、ねぎの価格
+cocoro-ing-5459926f9054734a,糸みつ葉,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーのみつばは1袋で重さが書かれていない
+cocoro-ing-1648bcddbffbb8a1,紅しょうが,野菜,,,,,,195,100g,https://greenbeans.com/products/14901810486752/details,日持ち: メーカー公式で未開封の賞味期限が見つからない／価格: 紅しょうが 60g トップバリュベストプライス 税込117円を100gに換算
+cocoro-ing-688593f29f0f3d5b,細ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 青ねぎとして冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパーの小ねぎは冷凍カットのみ、生は重さが書かれていない
+cocoro-ing-5e74f06a187dae10,絹さや,野菜,,可,21,,,930,100g,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922352200101/details,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: 国内産 きぬさや 30g 税込279円を100gに換算
+cocoro-ing-cc72dd7abda886e0,緑豆もやし,野菜,,可,21,,冷蔵,52,1袋,https://www.saladcosmo.co.jp/faq/faq-003/ https://www.saladcosmo.co.jp/faq/faq-004/ https://greenbeans.com/products/14904123004385/details,日持ち: チルド室・冷蔵室で保存、冷凍は食感が落ちるが可（サラダコスモ）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパー（Green Beans）「サラダコスモ 有機緑豆もやし 200g」税込52円（2026年11月28日掲載）、1点あたり。1袋
+cocoro-ing-da6ad41378f036b5,緑黄色野菜,野菜,,,,,,,,,日持ち: 種類が決まらない総称の行（複数・種類未定の食材の行）／価格: 種類が決まらない総称の行（複数・種類未定の食材の行）
+cocoro-ing-7ba55ac3a50289f2,芽キャベツ,野菜,,可,21,,,,,https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。冷蔵日数は目黒区・水戸市・東広島市・松山市・真岡市・広島市・農水省の資料に冷蔵日数なし／価格: イオンネットスーパーの芽キャベツは冷凍600gのみで個数が書かれていない
+cocoro-ing-27c2f1e85a1d4931,葉つきのかぶ,野菜,,可,21,,冷蔵,,,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 葉を切り新聞紙に包んで冷蔵庫（真岡市）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパーのかぶは「500g 3-5個」で個数に幅がある
 cocoro-ing-e0bc52cd2eeb33e5,葉・果菜:ほうれん草、小松菜、ブロッコリー、かぼちゃ、白菜、キャベツなど,野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
 cocoro-ing-2a887a1009c5f32a,蒸しブロッコリー,野菜,3,可,30,,冷蔵,72,100g,https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: 茹でたもの冷蔵3〜4日の下限・冷凍約1か月（松山市）／価格: 小売物価統計「ブロッコリー」東京都区部2026年1〜10月平均 718円/kgを100gに換算、生のブロッコリーの価格
-cocoro-ing-5a1827466b58503a,豆もやし,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-93620b77644a5c15,豆苗,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-0560b5d9a2274849,貝割れ菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-886eca4171f7ef53,赤パプリカ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-31a5dca9b96b0f8e,赤玉ねぎ,野菜,14,可,21,30,常温,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 玉ねぎとして。常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-3376ee6b68479fda,里いも,野菜,,,,,,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「さといも」東京都区部2026年1〜10月平均 1093円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-dac5927ab5177f69,野菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-5a1827466b58503a,豆もやし,野菜,,可,21,,冷蔵,52,1袋,https://www.saladcosmo.co.jp/faq/faq-003/ https://www.saladcosmo.co.jp/faq/faq-004/ https://greenbeans.com/products/14904123004804/details,日持ち: チルド室・冷蔵室で保存、冷凍は食感が落ちるが可（サラダコスモ）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパー（Green Beans）「サラダコスモ 岐阜県産 黒豆もやし 200g」税込52円（2026年11月28日掲載）、1点あたり。1袋
+cocoro-ing-93620b77644a5c15,豆苗,野菜,2,可,21,,冷蔵,106,1袋,https://www.murakamifarm.com/s/contact/faq/toumyou/ https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14904123500191/details,日持ち: 購入後2〜3日の下限・冷蔵、冷凍可で加熱用（村上農園）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパー（Green Beans）「[鮮度+] サラダコスモ 豆苗 1袋」税込106円（2026年11月28日掲載）、1点あたり
+cocoro-ing-0560b5d9a2274849,貝割れ菜,野菜,2,,,,冷蔵,63,1パック,https://www.murakamifarm.com/s/contact/faq/kaiware/ https://greenbeans.com/products/14904123002299/details,日持ち: 購入から2〜3日の下限・冷蔵（村上農園）。冷凍の記載なし／価格: イオンネットスーパー（Green Beans）「サラダコスモ 有機かいわれ大根 1パック」税込63円（2026年11月28日掲載）、1点あたり。有機のみ掲載
+cocoro-ing-886eca4171f7ef53,赤パプリカ,野菜,7,可,30,,冷蔵,279,1個,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14548449533473/details,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: イオンネットスーパー（Green Beans）「[鮮度+] 栃木県産 パプリカ(赤) 1個」税込279円（2026年11月28日掲載）、1点あたり
+cocoro-ing-31a5dca9b96b0f8e,赤玉ねぎ,野菜,14,可,21,30,常温,193,1個,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922366400191/details,日持ち: 玉ねぎとして。常温1〜2か月の下限・冷蔵2週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパー（Green Beans）「国内産 赤たまねぎ 1個」税込193円（2026年11月28日掲載）、1点あたり
+cocoro-ing-3376ee6b68479fda,里いも,野菜,,可,21,,常温,109,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵庫に入れず新聞紙に包んで常温（松山市）。皮をむいたものは2〜3日（メモのみ）。冷凍は野菜の目安3週間（農水省）。常温日数は資料になし／価格: 小売物価統計「さといも」東京都区部2026年1〜10月平均 1093円/kgを100gに換算
+cocoro-ing-dac5927ab5177f69,野菜,野菜,,,,,,,,,日持ち: 種類が決まらない総称の行（複数・種類未定の食材の行）／価格: 種類が決まらない総称の行（複数・種類未定の食材の行）
 cocoro-ing-6aec7bba9edf4200,野菜(キャベツ、大根、にんじんなど),野菜,,,,,,,,,日持ち: 複数・種類未定の食材の行／価格: 複数・種類未定の食材の行
-cocoro-ing-2db2905129dc7ed6,針生姜,野菜,,,,,,253,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算、しょうがの価格／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-6d0c9671e03a8231,長いも,野菜,,,,,,95,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「ながいも」東京都区部2026年1〜10月平均 952円/kgを100gに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-01M8DVZ2JMZ4Q718HMVBK0DXBH,長ねぎ,野菜,14,可,30,,冷蔵,,,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html,日持ち: 冷蔵は青い部分2週間・白い部分3週間の短いほう、冷凍1か月（東広島市）／価格: 小売物価統計「ねぎ」はあるが1本の重さの出典がなく換算しない（835円/kg）ため空欄
-cocoro-ing-b65fa3cdc0696053,青じそ,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-0d8577b2ebf759ae,青ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-21d19dea08edbe02,青菜,野菜,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に品目がなく空欄
-cocoro-ing-7da2119e9bf58db6,黄パプリカ,野菜,7,可,30,,冷蔵,,,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: 小売物価統計に品目がなく空欄
+cocoro-ing-2db2905129dc7ed6,針生姜,野菜,,可,21,,,253,100g,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.city.matsuyama.ehime.jp/kurashi/gomi/kanren/kateisyokurosu.files/hozon.pdf https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,日持ち: しょうがとして（切ったものの資料はない）。すりおろして冷凍可（真岡市）。冷凍は野菜の目安3週間（農水省）。保存場所は真岡市が野菜室、松山市が冷暗所と分かれるので空欄。日数は資料になし／価格: 小売物価統計「しょうが」東京都区部2026年1〜10月平均 2527円/kgを100gに換算、しょうがの価格
+cocoro-ing-6d0c9671e03a8231,長いも,野菜,,可,21,,,95,100g,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷凍は野菜の目安3週間（農水省）。保存場所・日数は自治体・農水省の資料になし／価格: 小売物価統計「ながいも」東京都区部2026年1〜10月平均 952円/kgを100gに換算
+01M8DVZ2JMZ4Q718HMVBK0DXBH,長ねぎ,野菜,14,可,30,,冷蔵,140,1本,https://www.city.higashihiroshima.lg.jp/soshiki/seikatsukankyo/14/syouhiseikatu/37555.html https://greenbeans.com/products/12000040308642/details,日持ち: 冷蔵は青い部分2週間・白い部分3週間の短いほう、冷凍1か月（東広島市）／価格: イオンネットスーパー（Green Beans）「［鮮度+］栃木県産 長ねぎ 2本 1袋」税込279円（2026年11月28日掲載）、2で割った値
+cocoro-ing-b65fa3cdc0696053,青じそ,野菜,,可,21,,冷蔵,15,1枚,https://www.city.moka.lg.jp/material/files/group/22/20140501-114413.pdf https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html https://greenbeans.com/products/14922375100105/details,日持ち: 瓶に水を張り軸をつけて冷蔵庫（真岡市）。冷凍は野菜の目安3週間（農水省）。冷蔵日数は資料になし／価格: イオンネットスーパー（Green Beans）「国内産 大葉 10枚 1袋」税込150円（2026年11月28日掲載）、10で割った値
+cocoro-ing-0d8577b2ebf759ae,青ねぎ,野菜,7,可,21,,冷蔵,,,https://www.city.mito.lg.jp/site/gomi/91226.html https://www.maff.go.jp/j/keikaku/syokubunka/culture/wagohan/articles/2203/spe7_03.html,日持ち: 冷蔵1週間（水戸市）。冷凍は野菜の目安3週間（農水省）／価格: イオンネットスーパーに青ねぎの本数が書かれた商品がない
+cocoro-ing-21d19dea08edbe02,青菜,野菜,,,,,,,,,日持ち: 種類が決まらない総称の行（複数・種類未定の食材の行）／価格: 種類が決まらない総称の行（複数・種類未定の食材の行）
+cocoro-ing-7da2119e9bf58db6,黄パプリカ,野菜,7,可,30,,冷蔵,279,1個,https://www.maff.go.jp/j/pr/aff/2007/spe1_05.html https://greenbeans.com/products/14548449533480/details,日持ち: 冷蔵7〜10日の下限・冷凍1か月（農水省）／価格: イオンネットスーパー（Green Beans）「[鮮度+] 栃木県産 パプリカ(黄) 1個」税込279円（2026年11月28日掲載）、1点あたり
