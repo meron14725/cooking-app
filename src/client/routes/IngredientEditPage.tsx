@@ -11,6 +11,7 @@ import {
   type IngredientInput,
   ingredientInputSchema,
   LOCATION_OPTIONS,
+  type PriceSource,
   type StorageLocation,
 } from '../../shared/schemas/ingredient'
 import { ApiRequestError } from '../api/client'
@@ -154,12 +155,18 @@ function priceFieldValue(f: FormState, saved: Ingredient | undefined): string {
   return String(rescalePrice(saved.priceYen, representativeQuantity(saved), representativeQuantity(formUnits(f))))
 }
 
-/** 「目安（自動）· 2026-11-27」「手入力 · 2026-11-27（1 年以上前の価格）」 */
+const PRICE_SOURCE_LABELS: Record<PriceSource, string> = {
+  default: '目安（自動）',
+  manual: '手入力',
+  researched: '調べた値',
+}
+
+/** 「目安（自動）· 2026-11-27」「手入力 · 2026-11-27（1 年以上前の価格）」「調べた値 · 2026-11-28」 */
 function priceNote(i: Ingredient | undefined): { text: string; stale: boolean } | null {
   if (!i || i.priceYen === null || !i.priceUpdatedAt) return null
   const date = todayJst(new Date(i.priceUpdatedAt))
   const stale = diffDays(date, todayJst()) > PRICE_STALE_DAYS
-  return { text: `${i.priceSource === 'manual' ? '手入力' : '目安（自動）'} · ${date}`, stale }
+  return { text: `${PRICE_SOURCE_LABELS[i.priceSource ?? 'default']} · ${date}`, stale }
 }
 
 const UNIT_SUGGESTIONS = ['個', '本', '枚', '袋', 'パック', '丁', '株', '切れ', '缶', 'g', 'ml']
