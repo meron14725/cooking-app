@@ -16,8 +16,8 @@ cocoro-ing-ed5c21779d5c3592,ホイップ,豆腐・卵・乳製品,,,,,,,,,日持
 cocoro-ing-246364346e6f801f,ホイップクリーム,豆腐・卵・乳製品,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-0fad9fea9e56698e,マスカルポーネチーズ,豆腐・卵・乳製品,,不可,,,冷蔵,,,https://www.meiji.co.jp/meiji-shokuiku/know/keep/,日持ち: チーズ類は冷凍保存しない（明治）。日数は書かれていない／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-4c69965673c01ab8,モッツァレラチーズ,豆腐・卵・乳製品,,,,,冷蔵,,,https://www.meiji.co.jp/meiji-shokuiku/know/keep/,日持ち: チーズ類は10℃以下（明治）。日数・冷凍の可否はこの種類について書かれていない／価格: 小売物価統計に同じ品目・銘柄がなく空欄
-01M8DVZ2JPJA3DQGV05WKTNGQZ,卵,豆腐・卵・乳製品,,,,,,32,1個,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「鶏卵」（銘柄: 白色卵10個入り・サイズ混合）東京都区部2026年1〜10月平均 319円/10個を1個あたりに換算／日持ち: 公的・一次情報で日数が確かめられず空欄
-cocoro-ing-6ba821750872f773,卵(お好みで切る),豆腐・卵・乳製品,,,,,,32,1個,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0,価格: 小売物価統計「鶏卵」（銘柄: 白色卵10個入り・サイズ混合）東京都区部2026年1〜10月平均 319円/10個を1個あたりに換算、卵の価格／日持ち: 複数・種類未定の食材の行
+01M8DVZ2JPJA3DQGV05WKTNGQZ,卵,豆腐・卵・乳製品,,,,,,32,1個,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.stat.go.jp/data/kouri/doukou/zuhyou/202609.xlsx,価格: 小売物価統計「鶏卵」（基本銘柄: 白色卵・パック詰（10個入り）・サイズ混合、調査単位 1パック）東京都区部2026年1〜10月平均 319円/パックを10個で割った値。重さは使わず、1個は基本銘柄の「10個入り」による／日持ち: 公的・一次情報で日数が確かめられず空欄
+cocoro-ing-6ba821750872f773,卵(お好みで切る),豆腐・卵・乳製品,,,,,,32,1個,https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0 https://www.stat.go.jp/data/kouri/doukou/zuhyou/202609.xlsx,価格: 小売物価統計「鶏卵」（基本銘柄: 白色卵・パック詰（10個入り）・サイズ混合、調査単位 1パック）東京都区部2026年1〜10月平均 319円/パックを10個で割った値。重さは使わず、1個は基本銘柄の「10個入り」による、卵の価格／日持ち: 複数・種類未定の食材の行
 cocoro-ing-082343c6e41fd1c3,卵白,豆腐・卵・乳製品,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 cocoro-ing-a1a02b0b6d5bc2dc,卵黄,豆腐・卵・乳製品,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
 01M8DVZ2JP99BCSW3ZZGF1N3SA,厚揚げ,豆腐・卵・乳製品,,,,,,,,,日持ち: 公的・一次情報で日数が確かめられず空欄／価格: 小売物価統計に同じ品目・銘柄がなく空欄
