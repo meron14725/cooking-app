@@ -112,6 +112,28 @@ describe('checkRows', () => {
   it('空欄だけの行は問題にしない', () => {
     expect(checkRows([row({ id: '1', 名前: '謎', 分類: 'その他', メモ: '見つからない' })]).issues).toEqual([])
   })
+
+  it('調味料・乾物・缶詰は冷凍可否が空でも日持ちを反映する。ほかの分類と、冷凍の値がある行は反映しない', () => {
+    const base = { 常温日数: '365', 保存場所: '常温', 出典URL: 'https://a.example' }
+    const result = checkRows([
+      row({ id: 's', 名前: 'しょうゆ', 分類: '調味料', ...base }),
+      row({ id: 'd', 名前: 'さば水煮', 分類: '乾物・缶詰', ...base }),
+      row({
+        id: 'f',
+        名前: 'わかめ',
+        分類: '乾物・缶詰',
+        冷蔵日数: '30',
+        保存場所: '冷蔵',
+        出典URL: 'https://a.example',
+      }),
+      row({ id: 'o', 名前: 'こんにゃく', 分類: 'その他', ...base }),
+      row({ id: 'z', 名前: '冷凍うどん', 分類: '調味料', ...base, 保存場所: '冷凍', 常温日数: '' }),
+      row({ id: 'y', 名前: 'みそ', 分類: '調味料', ...base, 冷凍日数: '60' }),
+    ])
+    expect(result.storageRows).toBe(3)
+    const warned = result.issues.filter((i) => i.message.startsWith('日持ちがそろっていない')).map((i) => i.id)
+    expect(warned.sort()).toEqual(['o', 'y', 'z'])
+  })
 })
 
 describe('buildSql', () => {
@@ -198,6 +220,52 @@ describe('buildSql', () => {
       freezerDays: null,
       fridgeDays: 3650,
       pantryDays: 3650,
+      storageSource: 'researched',
+    })
+  })
+
+  it('調味料・乾物・缶詰で冷凍可否が空なら、冷凍可否と冷凍日数は本番の値のまま残す', async () => {
+    const soy = await add({ name: 'しょうゆ', category: 'seasoning', unit: 'mL', canFreeze: true, freezerDays: 90 })
+    const salt = await add({ name: '塩', category: 'seasoning', unit: 'g', canFreeze: false, freezerDays: null })
+    api.sqlite.exec(`UPDATE ingredients SET storage_source = 'rule' WHERE id IN ('${soy.id}', '${salt.id}')`)
+    const sql = buildSql(
+      [
+        row({
+          id: soy.id,
+          名前: 'しょうゆ',
+          分類: '調味料',
+          常温日数: '540',
+          保存場所: '常温',
+          出典URL: 'https://a.example/1',
+        }),
+        row({
+          id: salt.id,
+          名前: '塩',
+          分類: '調味料',
+          冷蔵日数: '400',
+          保存場所: '冷蔵',
+          出典URL: 'https://a.example/2',
+        }),
+      ],
+      exportRows(),
+      { now, sourceUrls: true },
+    )
+    expect(sql.join('\n')).not.toMatch(/can_freeze|freezer_days/)
+    for (const s of sql) api.sqlite.exec(s)
+    expect(await get(soy.id)).toMatchObject({
+      canFreeze: true,
+      freezerDays: 90,
+      fridgeDays: 540,
+      pantryDays: 540,
+      defaultLocation: 'pantry',
+      storageSource: 'researched',
+    })
+    expect(await get(salt.id)).toMatchObject({
+      canFreeze: false,
+      freezerDays: null,
+      fridgeDays: 400,
+      pantryDays: null,
+      defaultLocation: 'fridge',
       storageSource: 'researched',
     })
   })
