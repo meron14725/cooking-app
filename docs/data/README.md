@@ -36,6 +36,8 @@
 | ファイル | 件数 | 日持ちを反映 | 価格を反映 |
 |---|---|---|---|
 | `ingredients/vegetable.csv`（野菜） | 135 | 33 | 39 |
+| `ingredients/meat.csv`（肉） | 69 | 31 | 14 |
+| `ingredients/fish.csv`（魚） | 53 | 15 | 15 |
 
 ## 手順
 
