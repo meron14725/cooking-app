@@ -15,6 +15,8 @@ interface Env {
   AI_PROVIDER?: string
   /** Cursor SDK を動かす Container（docs/design/08-agent.md） */
   AGENT?: DurableObjectNamespace<import('./agent/container').AgentContainer>
+  /** 「分類と価格をまとめて推定」のジョブを動かす Workflow（docs/design/12-estimate-jobs.md） */
+  ESTIMATE_WORKFLOW?: Workflow<import('../shared/schemas/estimateJob').EstimateJobParams>
   /** Cursor の User API key（wrangler secret put CURSOR_API_KEY）。Container に環境変数で渡す */
   CURSOR_API_KEY?: string
   /** 使うモデル。空なら composer-2.5 */

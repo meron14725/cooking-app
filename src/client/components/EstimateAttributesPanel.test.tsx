@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, screen } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { EstimateJob, EstimateJobStatus } from '../../shared/schemas/estimateJob'
 import { mockApi, renderRoutes } from '../testing/render'
 import { EstimateAttributesPanel } from './EstimateAttributesPanel'
 
@@ -9,102 +10,102 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-const progress = (
-  ingredients: [number, number],
-  recipes: [number, number],
-  prices: [number, number] = [0, 0],
-  storage: [number, number] = [0, 0],
-) => ({
-  ingredients: { updated: ingredients[0], remaining: ingredients[1] },
-  storage: { updated: storage[0], remaining: storage[1] },
-  prices: { updated: prices[0], remaining: prices[1] },
-  recipes: { updated: recipes[0], remaining: recipes[1] },
-})
+const job = (
+  status: EstimateJobStatus,
+  updated: [number, number, number, number],
+  remaining: [number, number, number, number] | null,
+  extra: Partial<EstimateJob> = {},
+): EstimateJob => {
+  const stage = (i: number) => ({
+    updated: updated[i] as number,
+    remaining: remaining ? (remaining[i] as number) : null,
+  })
+  return {
+    id: 'job1',
+    status,
+    refreshStalePrices: false,
+    progress: { ingredients: stage(0), storage: stage(1), prices: stage(2), recipes: stage(3) },
+    rounds: remaining ? 1 : 0,
+    error: null,
+    createdAt: '2026-11-28T00:00:00.000Z',
+    updatedAt: '2026-11-28T00:00:00.000Z',
+    finishedAt: status === 'running' ? null : '2026-11-28T00:01:00.000Z',
+    ...extra,
+  }
+}
 
-describe('分類と価格をまとめて推定', () => {
-  it('残りが 0 になるまで呼び続け、直した件数を足して出す', async () => {
-    const replies = [
-      progress([30, 20], [0, 50], [100, 40]),
-      progress([20, 0], [0, 50], [20, 20]),
-      progress([0, 0], [40, 10], [20, 0]),
-      progress([0, 0], [10, 0]),
-    ]
-    const fetch = mockApi(() => replies.shift())
-    renderRoutes({ '/': <EstimateAttributesPanel /> }, '/')
-    fireEvent.click(screen.getByRole('button', { name: '推定を始める' }))
+/** POST と GET を分けて返す（GET current は replies を順に返し、最後の 1 つを繰り返す） */
+function api(replies: (EstimateJob | null)[], onPost: (path: string, body: unknown) => unknown = () => replies[0]) {
+  let i = 0
+  return mockApi((path, body) => {
+    if (path === '/recipes/attributes/jobs/current') {
+      const j = replies[Math.min(i, replies.length - 1)] ?? null
+      i++
+      return { job: j }
+    }
+    return onPost(path, body)
+  })
+}
+
+/** 最初の読み込みが終わってボタンが押せるようになってから押す */
+async function clickWhenEnabled(name: string) {
+  const button = (await screen.findByRole('button', { name })) as HTMLButtonElement
+  await waitFor(() => expect(button.disabled).toBe(false))
+  fireEvent.click(button)
+}
+
+const posts = (fetch: ReturnType<typeof mockApi>) =>
+  fetch.mock.calls
+    .filter(([, init]) => init?.method === 'POST')
+    .map(([url, init]) => ({ url: String(url), body: init?.body }))
+
+describe('分類と価格をまとめて推定（ジョブ）', () => {
+  it('始めるとサーバーにジョブを作り、終わるまで読み直して件数を出す', async () => {
+    const fetch = api([
+      null,
+      job('running', [30, 0, 0, 0], [20, 40, 100, 50]),
+      job('done', [50, 40, 140, 50], [0, 0, 0, 0]),
+    ])
+    renderRoutes({ '/': <EstimateAttributesPanel pollMs={10} /> }, '/')
+    await clickWhenEnabled('推定を始める')
     expect(
-      await screen.findByText('食材 50 件、日持ち 0 件、価格 140 件、レシピ 50 件を直しました。すべて終わりました'),
+      await screen.findByText('食材 50 件、日持ち 40 件、価格 140 件、レシピ 50 件を直しました。すべて終わりました'),
     ).toBeTruthy()
-    expect(fetch).toHaveBeenCalledTimes(4)
-    // ふつうに始めたら古い目安は見直さない
-    expect(fetch.mock.calls.every(([, init]) => JSON.parse(String(init?.body)).refreshStalePrices === undefined)).toBe(
-      true,
-    )
+    expect(posts(fetch)).toEqual([{ url: '/api/recipes/attributes/jobs', body: '{}' }])
     expect(screen.getByRole('button', { name: 'もう一度推定する' })).toBeTruthy()
   })
 
-  it('止めたら次を呼ばない', async () => {
-    let resolveSecond: (v: unknown) => void = () => {}
-    let calls = 0
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (_: unknown, init?: RequestInit) => {
-        calls++
-        if (calls === 1) return Response.json(progress([5, 10], [0, 3]))
-        return new Promise((resolve, reject) => {
-          resolveSecond = resolve
-          init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
-        })
-      }),
+  it('開き直すと、実行中のジョブの進み具合が見える。止めるとサーバーのジョブを止める', async () => {
+    const running = job('running', [5, 0, 0, 0], [10, 3, 0, 2])
+    const fetch = api([running], (path) =>
+      path.endsWith('/stop') ? job('stopped', [5, 0, 0, 0], [10, 3, 0, 2]) : running,
     )
-    renderRoutes({ '/': <EstimateAttributesPanel /> }, '/')
-    fireEvent.click(screen.getByRole('button', { name: '推定を始める' }))
-    await screen.findByText(/残りは食材 10 件、日持ち 0 件、価格 0 件、レシピ 3 件です/)
-    fireEvent.click(screen.getByRole('button', { name: '止める' }))
+    renderRoutes({ '/': <EstimateAttributesPanel pollMs={60_000} /> }, '/')
     expect(
       await screen.findByText(
-        '止めました。食材 5 件、日持ち 0 件、価格 0 件、レシピ 0 件を直しました。残りは食材 10 件、日持ち 0 件、価格 0 件、レシピ 3 件です',
+        '推定しています… 食材 5 件、日持ち 0 件、価格 0 件、レシピ 0 件を直しました。残りは食材 10 件、日持ち 3 件、価格 0 件、レシピ 2 件です',
       ),
     ).toBeTruthy()
-    resolveSecond(Response.json(progress([0, 0], [0, 0])))
-    expect(calls).toBe(2)
+    fireEvent.click(screen.getByRole('button', { name: '止める' }))
+    await waitFor(() => expect(posts(fetch).map((p) => p.url)).toEqual(['/api/recipes/attributes/jobs/job1/stop']))
   })
 
-  it('失敗したら理由を出して止まる', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        Response.json({ error: { code: 'AI_NOT_CONFIGURED', message: 'AI の設定がありません' } }, { status: 503 }),
-      ),
-    )
+  it('失敗したジョブは理由とそこまでの件数を出す', async () => {
+    api([job('failed', [3, 1, 0, 0], [7, 2, 5, 5], { error: 'AI の応答がありませんでした' })])
     renderRoutes({ '/': <EstimateAttributesPanel /> }, '/')
-    fireEvent.click(screen.getByRole('button', { name: '推定を始める' }))
-    expect(await screen.findByText('AI の設定がありません')).toBeTruthy()
+    expect(await screen.findByText('AI の応答がありませんでした')).toBeTruthy()
     expect(
-      screen.getByText('途中で止まりました。食材 0 件、日持ち 0 件、価格 0 件、レシピ 0 件を直しました'),
+      screen.getByText(/^途中で止まりました。食材 3 件、日持ち 1 件、価格 0 件、レシピ 0 件を直しました/),
     ).toBeTruthy()
   })
 
-  it('「古い目安を見直す」は最初の 1 回だけ refreshStalePrices を付ける', async () => {
-    const replies = [progress([0, 0], [0, 0], [10, 5]), progress([0, 0], [0, 0], [5, 0])]
-    const fetch = mockApi(() => replies.shift())
-    renderRoutes({ '/': <EstimateAttributesPanel /> }, '/')
-    fireEvent.click(screen.getByRole('button', { name: '古い目安を見直す' }))
+  it('「古い目安を見直す」は refreshStalePrices を付けてジョブを作る', async () => {
+    const fetch = api([null, job('done', [0, 0, 15, 0], [0, 0, 0, 0], { refreshStalePrices: true })])
+    renderRoutes({ '/': <EstimateAttributesPanel pollMs={10} /> }, '/')
+    await clickWhenEnabled('古い目安を見直す')
     expect(
       await screen.findByText('食材 0 件、日持ち 0 件、価格 15 件、レシピ 0 件を直しました。すべて終わりました'),
     ).toBeTruthy()
-    const bodies = fetch.mock.calls.map(([, init]) => JSON.parse(String(init?.body)))
-    expect(bodies).toEqual([{ refreshStalePrices: true }, {}])
-  })
-
-  it('日持ちの件数と残りも出し、日持ちが残っていれば続ける', async () => {
-    const replies = [progress([0, 0], [0, 0], [0, 0], [30, 12]), progress([0, 0], [0, 0], [0, 0], [12, 0])]
-    const fetch = mockApi(() => replies.shift())
-    renderRoutes({ '/': <EstimateAttributesPanel /> }, '/')
-    fireEvent.click(screen.getByRole('button', { name: '推定を始める' }))
-    expect(
-      await screen.findByText('食材 0 件、日持ち 42 件、価格 0 件、レシピ 0 件を直しました。すべて終わりました'),
-    ).toBeTruthy()
-    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(posts(fetch).map((p) => JSON.parse(String(p.body)))).toEqual([{ refreshStalePrices: true }])
   })
 })

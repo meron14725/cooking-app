@@ -47,6 +47,14 @@
     "bindings": [{ "name": "AGENT", "class_name": "AgentContainer" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AgentContainer"] }],
+  // 「分類と価格をまとめて推定」をサーバー側で最後まで進める（docs/design/12-estimate-jobs.md）
+  "workflows": [
+    {
+      "name": "cooking-app-estimate",
+      "binding": "ESTIMATE_WORKFLOW",
+      "class_name": "EstimateWorkflow"
+    }
+  ],
   // vite dev では Container を作らない（.dev.vars で AI_PROVIDER=fake にする）。本物で試すときは wrangler dev
   "dev": { "enable_containers": false },
   "observability": { "enabled": true }

@@ -8,6 +8,7 @@
  */
 import { sql } from 'drizzle-orm'
 import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { ESTIMATE_JOB_STATUSES, type EstimateJobProgress } from '../../shared/schemas/estimateJob'
 import { PLAN_RECIPE_ROLES, PLAN_STATUSES } from '../../shared/schemas/plan'
 import { ATTRIBUTE_SOURCES, CUISINES, DISH_TYPES, RECIPE_SOURCE_TYPES, STEP_PHASES } from '../../shared/schemas/recipe'
 import { ulid } from '../../shared/ulid'
@@ -385,5 +386,29 @@ export const mealKitItems = sqliteTable(
     index('meal_kit_items_kit_idx').on(t.mealKitId),
     index('meal_kit_items_ingredient_idx').on(t.ingredientId, t.state),
     check('meal_kit_items_state_check', inList('state', KIT_ITEM_STATES)),
+  ],
+)
+
+// ---------- まとめて推定のジョブ（docs/design/12-estimate-jobs.md） ----------
+
+export const estimateJobs = sqliteTable(
+  'estimate_jobs',
+  {
+    /** Workflow のインスタンス ID と同じ */
+    id: id(),
+    status: text('status', { enum: ESTIMATE_JOB_STATUSES }).notNull(),
+    refreshStalePrices: bool('refresh_stale_prices').notNull().default(false),
+    /** 段ごとの直した件数（合計）と残り（JSON。EstimateJobProgress） */
+    progress: text('progress', { mode: 'json' }).$type<EstimateJobProgress>().notNull(),
+    rounds: integer('rounds').notNull().default(0),
+    error: text('error'),
+    finishedAt: text('finished_at'),
+    ...timestamps,
+  },
+  (t) => [
+    check('estimate_jobs_status_check', inList('status', ESTIMATE_JOB_STATUSES)),
+    // 同時に動かせるジョブは 1 つまで
+    uniqueIndex('estimate_jobs_one_running').on(t.status).where(sql`status = 'running'`),
+    index('estimate_jobs_created_idx').on(t.createdAt),
   ],
 )

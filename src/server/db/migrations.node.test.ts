@@ -31,12 +31,13 @@ beforeEach(() => {
 })
 
 describe('マイグレーション', () => {
-  it('11 テーブルができる', () => {
+  it('12 テーブルができる', () => {
     const tables = db
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all()
       .map((r) => r.name)
     expect(tables).toEqual([
+      'estimate_jobs',
       'ingredients',
       'inventory_items',
       'meal_kit_items',
@@ -49,6 +50,15 @@ describe('マイグレーション', () => {
       'recipes',
       'shopping_items',
     ])
+  })
+
+  it('実行中のまとめて推定のジョブは 1 つまで（estimate_jobs_one_running）', () => {
+    const insert = (id: string, status: string) =>
+      db.prepare("INSERT INTO estimate_jobs (id, status, progress) VALUES (?, ?, '{}')").run(id, status)
+    insert('a', 'running')
+    insert('b', 'done')
+    insert('c', 'failed')
+    expect(() => insert('d', 'running')).toThrow(/UNIQUE/)
   })
 
   it('SQL で直接入れても created_at / updated_at と既定値が入る', () => {
